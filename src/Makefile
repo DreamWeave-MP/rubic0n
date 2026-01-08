@@ -98,7 +98,7 @@ XCFLAGS=
 # enabled by default. Some other features that *might* break some existing
 # code (e.g. __pairs or os.execute() return values) can be enabled here.
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
-#XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
+XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
 #
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
 #XCFLAGS+= -DLUAJIT_DISABLE_JIT
@@ -127,7 +127,7 @@ XCFLAGS=
 # realloc usually doesn't return addresses in the right address range.
 # OTOH this option is mandatory for Valgrind's memcheck tool on x64 and
 # the only way to get useful results from it for all other architectures.
-#XCFLAGS+= -DLUAJIT_USE_SYSMALLOC
+XCFLAGS+= -DLUAJIT_USE_SYSMALLOC
 #
 # This define is required to run LuaJIT under Valgrind. The Valgrind
 # header files must be installed. You should enable debug information, too.
