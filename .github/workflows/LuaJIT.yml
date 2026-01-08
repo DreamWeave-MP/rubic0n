@@ -1,0 +1,71 @@
+name: LuaJIT-Main
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - v2.1-agentzh
+  pull_request:
+    branches: [ v2.1-agentzh ]
+
+
+jobs:
+  Build-Release:
+    strategy:
+      matrix:
+        target_system: [ ubuntu-latest, windows-latest, macos-latest ]
+    runs-on: ${{ matrix.target_system }}
+    env:
+      BUILD_EXT_BIN: ${{ matrix.target_system == 'windows-latest' && '.exe' || '' }}
+      BUILD_EXT_DYN: ${{ matrix.target_system == 'windows-latest' && '.dll' || '.so' }}
+      BUILD_EXT_STAT: ${{ matrix.target_system == 'windows-latest' && '.lib' || '.a' }}
+      BUILD_PREFIX: ${{ matrix.target_system != 'windows-latest' && 'lib' || ''}}
+      LIB_NAME: ${{ matrix.target_system == 'windows-latest' && 'lua51' || 'luajit' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+
+      - name: Build
+        run: |
+          ${{ runner.os == 'macOS' && 'export MACOSX_DEPLOYMENT_TARGET="11.7" && make' || runner.os == 'Linux' && 'make' || 'cd src && ./msvcbuild.bat && cd ..'}}
+
+      - name: Make Archive
+        shell: bash
+        run: |
+          mkdir bin include lib lua
+          cd src
+          mv jit ../bin
+          mv luajit${{ env.BUILD_EXT_BIN }} ../bin
+          mv ${{ env.BUILD_PREFIX }}${{ env.LIB_NAME }}${{ env.BUILD_EXT_DYN }} ../bin
+          mv ${{ env.BUILD_PREFIX }}${{ env.LIB_NAME }}${{ env.BUILD_EXT_STAT }} ../lib
+          mv lauxlib.h lua.h lua.hpp luaconf.h luajit.h lualib.h ../include
+          cd ..
+          7z a -t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on LuaJIT-${{ runner.os }}.7z COPYRIGHT bin include lib lua README
+
+
+      - name: Upload Release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: Stable-CI
+          files: LuaJIT-${{ runner.os }}.7z
+          body: |
+            CI Build for Dreamweave LuaJIT Fork
+
+      - name: Upload Artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            COPYRIGHT
+            bin
+            include
+            lib
+            lua
+            README
+          name: LuaJIT-${{ runner.os }}
