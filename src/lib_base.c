@@ -42,6 +42,20 @@
 
 #define LJLIB_MODULE_base
 
+#if LJ_HASFFI
+static int base_load_ffi(lua_State *L)
+{
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_getfield(L, -1, LUA_FFILIBNAME);
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);
+    luaopen_ffi(L);
+  }
+  lua_remove(L, -2);
+  return FFH_RES(1);
+}
+#endif
+
 LJLIB_ASM(assert)		LJLIB_REC(.)
 {
   lj_lib_checkany(L, 1);
@@ -251,6 +265,14 @@ LJLIB_CF(unpack)
 LJLIB_CF(select)		LJLIB_REC(.)
 {
   int32_t n = (int32_t)(L->top - L->base);
+#if LJ_HASFFI
+  if (n == 1 && tvisstr(L->base)) {
+    GCstr *name = strV(L->base);
+    const char *p = strdata(name);
+    if (name->len == 3 && p[0] == 'f' && p[1] == 'f' && p[2] == 'i')
+      return base_load_ffi(L);
+  }
+#endif
   if (n >= 1 && tvisstr(L->base) && *strVdata(L->base) == '#') {
     setintV(L->top-1, n-1);
     return 1;
