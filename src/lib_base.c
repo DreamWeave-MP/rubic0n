@@ -11,6 +11,8 @@
 #define lib_base_c
 #define LUA_LIB
 
+#include <string.h>
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
@@ -42,8 +44,25 @@
 
 #define LJLIB_MODULE_base
 
+static int _gc_str_eq_lit(GCstr *name, const char *lit, MSize len)
+{
+  return name->len == len && memcmp(strdata(name), lit, len) == 0;
+}
+
+static int _get_require_function(lua_State *L)
+{
+  lua_getfield(L, LUA_GLOBALSINDEX, "require");
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);
+    luaopen_package(L);
+    lua_pop(L, 1);
+    lua_getfield(L, LUA_GLOBALSINDEX, "require");
+  }
+  return FFH_RES(1);
+}
+
 #if LJ_HASFFI
-static int base_load_ffi(lua_State *L)
+static int _get_ffi_library(lua_State *L)
 {
   lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_getfield(L, -1, LUA_FFILIBNAME);
@@ -265,14 +284,15 @@ LJLIB_CF(unpack)
 LJLIB_CF(select)		LJLIB_REC(.)
 {
   int32_t n = (int32_t)(L->top - L->base);
-#if LJ_HASFFI
   if (n == 1 && tvisstr(L->base)) {
     GCstr *name = strV(L->base);
-    const char *p = strdata(name);
-    if (name->len == 3 && p[0] == 'f' && p[1] == 'f' && p[2] == 'i')
-      return base_load_ffi(L);
+    if (_gc_str_eq_lit(name, "require", 7))
+      return _get_require_function(L);
+  #if LJ_HASFFI
+    if (_gc_str_eq_lit(name, "ffi", 3))
+      return _get_ffi_library(L);
+  #endif
   }
-#endif
   if (n >= 1 && tvisstr(L->base) && *strVdata(L->base) == '#') {
     setintV(L->top-1, n-1);
     return 1;
