@@ -30,9 +30,9 @@ static const luaL_Reg lj_lib_load[] = {
 };
 
 static const luaL_Reg lj_lib_preload[] = {
-// #if LJ_HASFFI
-//   { LUA_FFILIBNAME,	luaopen_ffi },
-// #endif
+#if LJ_HASFFI
+  { LUA_FFILIBNAME,	luaopen_ffi },
+#endif
   { NULL,		NULL }
 };
 
@@ -44,12 +44,6 @@ LUALIB_API void luaL_openlibs(lua_State *L)
     lua_pushstring(L, lib->name);
     lua_call(L, 1, 0);
   }
-
-  lua_getglobal(L, "table");
-  lua_pushcfunction(L, luaopen_ffi);
-  lua_setfield(L, -2, "_ffi");
-  lua_pop(L, 1);
-
   luaL_findtable(L, LUA_REGISTRYINDEX, "_PRELOAD",
 		 sizeof(lj_lib_preload)/sizeof(lj_lib_preload[0])-1);
   for (lib = lj_lib_preload; lib->func; lib++) {
