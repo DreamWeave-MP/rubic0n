@@ -47,7 +47,6 @@ LUALIB_API void luaL_openlibs(lua_State *L)
 
   lua_getglobal(L, "table");
   lua_pushcfunction(L, luaopen_ffi);
-  lua_call(L, 0, 1);
   lua_setfield(L, -2, "_ffi");
   lua_pop(L, 1);
 
