@@ -387,13 +387,6 @@ LUALIB_API int luaopen_table(lua_State *L)
   lj_lib_prereg(L, LUA_TABLIBNAME ".nkeys", luaopen_table_nkeys, tabV(L->top-1));
   lj_lib_prereg(L, LUA_TABLIBNAME ".isempty", luaopen_table_isempty, tabV(L->top-1));
   lj_lib_prereg(L, LUA_TABLIBNAME ".clear", luaopen_table_clear, tabV(L->top-1));
-
-  lua_pushcfunction(L, luaopen_ffi);
-  lua_pushstring(L, LUA_FFILIBNAME);
-  lua_call(L, 1, 1);
-  lua_setfield(L, -2, "_ffi");
-  lua_pop(L, 1);
-
   return 1;
 }
 
