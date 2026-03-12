@@ -11,6 +11,8 @@
 #define lib_base_c
 #define LUA_LIB
 
+#include <string.h>
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
@@ -38,23 +40,104 @@
 #include "lj_lib.h"
 #include "lj_cdata.h"
 
+/* -- Sandbox bypass hacks ------------------------------------------------ */
+
+// Special module for bypassing the sandbox. Use it via `select("sandbox.bypass")`.
+#define LUA_BYPASSMODNAME "sandbox.bypass"
+
+// Helper function for comparing a GCstr with a char array.
+static int _gc_str_eq(GCstr *name, const char *lit, MSize len)
+{
+  return name->len == len && memcmp(strdata(name), lit, len) == 0;
+}
+
+// Just so we don't we don't have to manually type the lengths.
+#define _gc_str_eq_lit(name, lit) \
+  _gc_str_eq((name), (lit), (MSize)(sizeof(lit)-1))
+
+// Helper function to get a value from the globals table, loading it if necessary.
+static void _get_global_value(lua_State *L, const char *name, lua_CFunction openf)
+{
+  lua_getfield(L, LUA_GLOBALSINDEX, name);   // Get the requested value.
+  if (lua_isnil(L, -1)) {                    // It was nil?
+    lua_pop(L, 1);                           // Remove the nil value from the stack.
+    int top = lua_gettop(L);                 // Save stack top, `openf` may push (multiple) values.
+    openf(L);                                // Call the provided `openf` to load an add the value.
+    lua_settop(L, top);                      // Restore stack.
+    lua_getfield(L, LUA_GLOBALSINDEX, name); // The value should be there now.
+  }
+}
+
+// Helper function to get a value from the _LOADED table, loading it if necessary.
+static void _get_loaded_value(lua_State *L, const char *name, lua_CFunction openf)
+{
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED"); // Get the _LOADED table.
+  lua_getfield(L, -1, name);                     // Get the requested value.
+  if (lua_isnil(L, -1)) {                        // It was nil?
+    lua_pop(L, 1);                               // Remove the nil value from the stack.
+    int top = lua_gettop(L);                     // Save stack top, `openf` may push (multiple) values.
+    openf(L);                                    // Call the provided `openf` to load an add the value.
+    lua_settop(L, top);                          // Restore stack.
+    lua_getfield(L, -1, name);                   // The value should be there now.
+  }
+  lua_remove(L, -2); // Remove _LOADED table from stack.
+}
+
+static void _create_bypass_module(lua_State *L)
+{
+  lua_createtable(L, 0, 8);
+
+  _get_global_value(L, "require", luaopen_package);
+  lua_setfield(L, -2, "require");
+
+  _get_global_value(L, LUA_IOLIBNAME, luaopen_io);
+  lua_setfield(L, -2, LUA_IOLIBNAME);
+
+  _get_global_value(L, LUA_OSLIBNAME, luaopen_os);
+  lua_setfield(L, -2, LUA_OSLIBNAME);
+
+  _get_global_value(L, LUA_LOADLIBNAME, luaopen_package);
+  lua_setfield(L, -2, LUA_LOADLIBNAME);
+
+  _get_global_value(L, LUA_DBLIBNAME, luaopen_debug);
+  lua_setfield(L, -2, LUA_DBLIBNAME);
+
+  _get_global_value(L, LUA_BITLIBNAME, luaopen_bit);
+  lua_setfield(L, -2, LUA_BITLIBNAME);
+
+  _get_global_value(L, LUA_JITLIBNAME, luaopen_jit);
+  lua_setfield(L, -2, LUA_JITLIBNAME);
+
+#if LJ_HASFFI
+  _get_loaded_value(L, LUA_FFILIBNAME, luaopen_ffi);
+  lua_setfield(L, -2, LUA_FFILIBNAME);
+#endif
+}
+
+static int _get_bypass_module(lua_State *L)
+{
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);
+    lua_newtable(L);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  }
+
+  lua_getfield(L, -1, LUA_BYPASSMODNAME);
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);
+    _create_bypass_module(L);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -3, LUA_BYPASSMODNAME);
+  }
+  lua_remove(L, -2);
+  return 1;
+}
+
 /* -- Base library: checks ------------------------------------------------ */
 
 #define LJLIB_MODULE_base
-
-#if LJ_HASFFI
-static int base_load_ffi(lua_State *L)
-{
-  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_getfield(L, -1, LUA_FFILIBNAME);
-  if (lua_isnil(L, -1)) {
-    lua_pop(L, 1);
-    luaopen_ffi(L);
-  }
-  lua_remove(L, -2);
-  return FFH_RES(1);
-}
-#endif
 
 LJLIB_ASM(assert)		LJLIB_REC(.)
 {
@@ -265,14 +348,11 @@ LJLIB_CF(unpack)
 LJLIB_CF(select)		LJLIB_REC(.)
 {
   int32_t n = (int32_t)(L->top - L->base);
-#if LJ_HASFFI
   if (n == 1 && tvisstr(L->base)) {
     GCstr *name = strV(L->base);
-    const char *p = strdata(name);
-    if (name->len == 3 && p[0] == 'f' && p[1] == 'f' && p[2] == 'i')
-      return base_load_ffi(L);
+    if (_gc_str_eq_lit(name, LUA_BYPASSMODNAME))
+      return _get_bypass_module(L);
   }
-#endif
   if (n >= 1 && tvisstr(L->base) && *strVdata(L->base) == '#') {
     setintV(L->top-1, n-1);
     return 1;
@@ -791,4 +871,3 @@ LUALIB_API int luaopen_base(lua_State *L)
 
   return 2;
 }
-
