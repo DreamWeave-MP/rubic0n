@@ -340,36 +340,6 @@ LJLIB_CF(table_clear)	LJLIB_REC(.)
   return 0;
 }
 
-static int luaopen_table_new(lua_State *L)
-{
-  return lj_lib_postreg(L, lj_cf_table_new, FF_table_new, "new");
-}
-
-static int luaopen_table_clone(lua_State *L)
-{
-  return lj_lib_postreg(L, lj_cf_table_clone, FF_table_clone, "clone");
-}
-
-static int luaopen_table_nkeys(lua_State *L)
-{
-  return lj_lib_postreg(L, lj_cf_table_nkeys, FF_table_nkeys, "nkeys");
-}
-
-static int luaopen_table_isarray(lua_State *L)
-{
-  return lj_lib_postreg(L, lj_cf_table_isarray, FF_table_isarray, "isarray");
-}
-
-static int luaopen_table_isempty(lua_State *L)
-{
-  return lj_lib_postreg(L, lj_cf_table_isempty, FF_table_isempty, "isempty");
-}
-
-static int luaopen_table_clear(lua_State *L)
-{
-  return lj_lib_postreg(L, lj_cf_table_clear, FF_table_clear, "clear");
-}
-
 /* ------------------------------------------------------------------------ */
 
 #include "lj_libdef.h"
