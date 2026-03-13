@@ -169,7 +169,7 @@ LJLIB_CF(table_concat)		LJLIB_REC(.)
   return 1;
 }
 
-LJLIB_NOREG LJLIB_CF(table_clone) LJLIB_REC(.)
+LJLIB_CF(table_clone) LJLIB_REC(.)
 {
   GCtab *src = lj_lib_checktab(L, 1);
   GCtab *dup = lj_tab_dup_helper(L, src, 1);
@@ -180,7 +180,7 @@ LJLIB_NOREG LJLIB_CF(table_clone) LJLIB_REC(.)
   return 1;
 }
 
-LJLIB_NOREG LJLIB_CF(table_isarray) LJLIB_REC(.)
+LJLIB_CF(table_isarray) LJLIB_REC(.)
 {
   GCtab *src = lj_lib_checktab(L, 1);
 
@@ -190,7 +190,7 @@ LJLIB_NOREG LJLIB_CF(table_isarray) LJLIB_REC(.)
   return 1;
 }
 
-LJLIB_NOREG LJLIB_CF(table_nkeys) LJLIB_REC(.)
+LJLIB_CF(table_nkeys) LJLIB_REC(.)
 {
   GCtab *src = lj_lib_checktab(L, 1);
 
@@ -200,7 +200,7 @@ LJLIB_NOREG LJLIB_CF(table_nkeys) LJLIB_REC(.)
   return 1;
 }
 
-LJLIB_NOREG LJLIB_CF(table_isempty) LJLIB_REC(.)
+LJLIB_CF(table_isempty) LJLIB_REC(.)
 {
   GCtab *src = lj_lib_checktab(L, 1);
 
@@ -326,7 +326,7 @@ LJLIB_CF(table_pack)
 }
 #endif
 
-LJLIB_NOREG LJLIB_CF(table_new)		LJLIB_REC(.)
+LJLIB_CF(table_new)		LJLIB_REC(.)
 {
   int32_t a = lj_lib_checkint(L, 1);
   int32_t h = lj_lib_checkint(L, 2);
@@ -334,7 +334,7 @@ LJLIB_NOREG LJLIB_CF(table_new)		LJLIB_REC(.)
   return 1;
 }
 
-LJLIB_NOREG LJLIB_CF(table_clear)	LJLIB_REC(.)
+LJLIB_CF(table_clear)	LJLIB_REC(.)
 {
   lj_tab_clear(lj_lib_checktab(L, 1));
   return 0;
@@ -381,12 +381,6 @@ LUALIB_API int luaopen_table(lua_State *L)
   lua_getglobal(L, "unpack");
   lua_setfield(L, -2, "unpack");
 #endif
-  lj_lib_prereg(L, LUA_TABLIBNAME ".new", luaopen_table_new, tabV(L->top-1));
-  lj_lib_prereg(L, LUA_TABLIBNAME ".clone", luaopen_table_clone, tabV(L->top-1));
-  lj_lib_prereg(L, LUA_TABLIBNAME ".isarray", luaopen_table_isarray, tabV(L->top-1));
-  lj_lib_prereg(L, LUA_TABLIBNAME ".nkeys", luaopen_table_nkeys, tabV(L->top-1));
-  lj_lib_prereg(L, LUA_TABLIBNAME ".isempty", luaopen_table_isempty, tabV(L->top-1));
-  lj_lib_prereg(L, LUA_TABLIBNAME ".clear", luaopen_table_clear, tabV(L->top-1));
   return 1;
 }
 
