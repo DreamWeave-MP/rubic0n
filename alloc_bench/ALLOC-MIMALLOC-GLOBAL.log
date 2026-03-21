@@ -1,0 +1,1313 @@
+[23:35:33.392 *] Crash handler installed
+[23:35:34.249 *] Loading config file: /etc/openmw/openmw.cfg
+[23:35:34.249 *] Loading config file: /home/s3kshun8/.config/openmw/openmw.cfg
+[23:35:34.249 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DistantSeafloor/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/engineFeatures/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Weather/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/ObjectsClutter/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/openmw.cfg
+[23:35:34.250 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Leveling/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Quests/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Monochrome/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Animation/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/VisualEffectsImprovements/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DifficultyEnhancements/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DetailDevil/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Combat/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/override/openmw.cfg
+[23:35:34.251 *] Loading config file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/openmw.cfg
+[23:35:34.253 *] Logs dir: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings
+[23:35:34.253 *] User data dir: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../savedData/sw0rdsinger
+[23:35:34.253 *] Screenshots dir: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../savedData/sw0rdsinger/screenshots
+[23:35:34.253 I] OpenMW version 0.51.0
+[23:35:34.253 I] Revision: ebcdbb152e
+[23:35:34.253 I] Loading settings file: /etc/openmw/defaults.bin
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/settings.cfg
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/settings.cfg
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings.cfg
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/engineFeatures/settings.cfg
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/settings.cfg
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Monochrome/settings.cfg
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/settings.cfg
+[23:35:34.254 I] Loading settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/settings.cfg
+[23:35:34.255 I] Using default (English) font encoding.
+[23:35:34.255 W] No such dir: /home/s3kshun8/.config/openmw/resources/vfs-mw
+[23:35:34.255 E] Resources dir /home/s3kshun8/.config/openmw/resources doesn't match OpenMW binary, the game may work incorrectly.
+[23:35:34.255 I] OSG version: 3.6.5
+[23:35:34.255 I] SDL version: 2.32.64
+[23:35:34.255 I] Loading shader settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/shaders.yaml
+[23:35:34.393 I] OpenGL Vendor: NVIDIA Corporation
+[23:35:34.393 I] OpenGL Renderer: NVIDIA GeForce RTX 2070 Super/PCIe/SSE2
+[23:35:34.393 I] OpenGL Version: 4.6.0 NVIDIA 590.48.01
+[23:35:34.393 I] Using reverse-z depth buffer
+[23:35:34.397 I] Adding BSA archive /home/s3kshun8/.config/openmw/Morrowind/Data Files/Morrowind.bsa
+[23:35:34.402 I] Adding BSA archive /home/s3kshun8/.config/openmw/Morrowind/Data Files/Tribunal.bsa
+[23:35:34.405 I] Adding BSA archive /home/s3kshun8/.config/openmw/Morrowind/Data Files/Bloodmoon.bsa
+[23:35:34.406 I] Adding data directory /home/s3kshun8/.config/openmw/resources/vfs
+[23:35:34.406 I] Adding data directory /usr/share/games/openmw/resources/vfs-mw
+[23:35:34.406 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/Data Files
+[23:35:34.433 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DistantSeafloor/00 Core
+[23:35:34.433 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DistantSeafloor/01 Patch for TOTSP 2.2.2 Solstheim location
+[23:35:34.433 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DistantSeafloor/01 Patch for vanilla Solstheim location
+[23:35:34.433 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/engineFeatures/WeaponSheathing/Data Files
+[23:35:34.434 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/engineFeatures/GraphicHerbalismMWSEandOpenMWEdition/00 Core + Vanilla Meshes
+[23:35:34.434 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/engineFeatures/GraphicHerbalismMWSEandOpenMWEdition/00 Correct UV Ore + README
+[23:35:34.435 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/engineFeatures/GraphicHerbalismMWSEandOpenMWEdition/01 Optional - Smoothed Meshes
+[23:35:34.435 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/TamrielData/00 Data Files
+[23:35:34.508 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/TamrielData/01 Data Files - Normal Maps
+[23:35:34.508 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/h3lp_yours3lf
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/StatsWindowExtenderOpenMW
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/ZModUtils
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/static_switching_system
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/tagger
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/omwse
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Dependencies/pr0f1l3r
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/ProjectCyrodiil/00 Core
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/SkyrimHomeOfTheNords/00 Core
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/SkyrimHomeOfTheNords/01 Grass for MGEXE and OpenMW
+[23:35:34.509 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/TamrielRebuilt/00 Core
+[23:35:34.510 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/TamrielRebuiltIntroductionQuestHelpaKhajiitreachtheCityofGoodPeople
+[23:35:34.510 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/Provincial Beginning/00 Core
+[23:35:34.510 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Project Tamriel/Provincial Beginning/01 HQ Audio For OpenMW
+[23:35:34.510 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/UnofficialMorrowindOfficialPluginsPatched
+[23:35:34.510 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/UnofficialMorrowindOfficialPluginsPatched/Compatibility
+[23:35:34.510 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/PatchforPurists
+[23:35:34.510 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/MorrowindOptimizationPatch/00 Core
+[23:35:34.514 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/MorrowindOptimizationPatch/01 Lake Fjalding Anti-Suck
+[23:35:34.514 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/MorrowindOptimizationPatch/02 Weapon Sheathing Patch
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/MorrowindOptimizationPatch/03 Chuzei Fix
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/MorrowindOptimizationPatch/04 Better Vanilla Textures
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/MorrowindOptimizationPatch/05 Graphic Herbalism Patch
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/JammingsOff/Jammings off(v1.1)/ver1.0(only_Xnif_files)/Data Files
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/FixedBonelordArms
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/DistantFixesLuaEdition
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/DistantEbonTowerforOpenMW
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Performance,Patches,Consistency/ExpansionDelay
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Weather/KirelsInteriorWeather
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/ObjectsClutter/OpenMWContainersAnimated/Containers Animated
+[23:35:34.515 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/ObjectsClutter/OpenMWContainersAnimated/Optional
+[23:35:34.516 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/GlowintheDahrk/00 Core
+[23:35:34.516 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/GlowintheDahrk/01 Hi Res Window Texture Replacer
+[23:35:34.516 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/GlowintheDahrk/03 Telvanni Dormers on Vvardenfell
+[23:35:34.516 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/GlowintheDahrk/04 Raven Rock Glass Windows
+[23:35:34.516 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/GlowintheDahrk/07 Telvanni Tower Interior Glow OpenMW
+[23:35:34.516 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/MorrowindInteriorsProject
+[23:35:34.517 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/MorrowindInteriorsProject/Data Files
+[23:35:34.517 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/Nordsshutyourwindows/00 Core
+[23:35:34.517 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Architecture/Nordsshutyourwindows/05 Purist Sunrays
+[23:35:34.517 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/Mackon's Humanoid Heads
+[23:35:34.518 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/NewHairsforMacKomsHeads
+[23:35:34.518 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/ExpressiveEyesforMacKomsHeads
+[23:35:34.519 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/ExpressiveEyesforMacKomsHeads/05 TR Heads Replacer Patch
+[23:35:34.520 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/ExpressiveEyesforMacKomsHeads/06 Uviriths Legacy Races Redone Compatibility Patch
+[23:35:34.520 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/DandionsFamiliarLooksOpenMWTexturePathFix
+[23:35:34.520 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/TRheadsreplacerMacKomsheads
+[23:35:34.520 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/TRHeadsandHairreplacerMackomsHeadsandvariouspatches/00 TR and PT Mackom's Heads and Hair
+[23:35:34.522 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/TRHeadsandHairreplacerMackomsHeadsandvariouspatches/01 TR Hair Textures Upscaled
+[23:35:34.522 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/TRHeadsandHairreplacerMackomsHeadsandvariouspatches/02 TR Argonian Faces Upscaled
+[23:35:34.522 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/TRHeadsandHairreplacerMackomsHeadsandvariouspatches/04 OAAB Mackom's Heads and Hair
+[23:35:34.522 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/TRHeadsandHairreplacerMackomsHeadsandvariouspatches/05 Sload and Slavers Mackom's Heads and Hair
+[23:35:34.522 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/TRHeadsandHairreplacerMackomsHeadsandvariouspatches/07 The Seedy Plates Mackom's Heads and Hair
+[23:35:34.522 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/DandionsMackomStlyeFixedNormalsforopenmwandTES3MP
+[23:35:34.523 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/MackomsStyleTRPatch
+[23:35:34.526 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/MackomsStyleTRPatch/Better Bodies TR and Vanilla
+[23:35:34.526 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/MacKomsKhajiit
+[23:35:34.527 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/KhajiitHeadPack
+[23:35:34.527 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/WhiskersPatchforMMHVersionAllNPCsandBaseReplace
+[23:35:34.527 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/NewBeastBodiesCleanVersion
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/VurtsArgoniansRetexture/liztail
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/NPCs/VurtsArgoniansRetexture/TR
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/friendlyAutosave
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/PauseControl
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/OblivionLockpicking
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/dynamic actors
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/freshLoot/00 Core
+[23:35:34.528 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/animatedPickupAndShopAround
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/hawk3ye
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/GRIP
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/t4rg3t5
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/Dead Mer Tell No Tales
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/Brute Force
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Gameplay/visual_soulgems
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Leveling/OblivionLeveling
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Leveling/SkillEvolution/00 Core
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Quests/AFFresh
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Quests/WilhelmoftheAedra
+[23:35:34.529 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/S3maphoreOpenMWMusicManagementfromtheFuture/00 Core
+[23:35:34.530 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/S3maphoreOpenMWMusicManagementfromtheFuture/01 Tamriel Rebuilt Playlists
+[23:35:34.530 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/S3maphoreOpenMWMusicManagementfromtheFuture/02 Project Cyrodiil Playlists
+[23:35:34.530 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/S3maphoreOpenMWMusicManagementfromtheFuture/03 Muse Expansion Playlists
+[23:35:34.531 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/S3maphoreOpenMWMusicManagementfromtheFuture/05 Secrets of the Crystal City
+[23:35:34.531 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/S3maphoreOpenMWMusicManagementfromtheFuture/06 Songbook of the North
+[23:35:34.531 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/S3maphoreOpenMWMusicManagementfromtheFuture/10 Inns and Taverns
+[23:35:34.531 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/ProjectCyrodiilMusicAnvilandSutch/00 Core
+[23:35:34.531 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/TamrielRebuiltOriginalSoundtrack/00 core
+[23:35:34.532 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/CaptainCreepy/00 CORE
+[23:35:34.532 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/CaptainCreepy/01 TAVERNS
+[23:35:34.532 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/Morrow Winds
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Telvanni
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Empire
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Tomb (GOTY)
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Hlaalu
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Ashlander
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Redoran
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSEEXPANSIONsixthhouse
+[23:35:34.533 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Daedric
+[23:35:34.534 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Music/MUSE Expansion - Dwemer (Vanilla - Tribunal)
+[23:35:34.534 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/VanillaStyleHDIconsforAttributesandSkills
+[23:35:34.534 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/LoadingScreensDiversified/00 Core
+[23:35:34.534 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/AlternativeTrueTypeFonts
+[23:35:34.534 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/BigIcons/07 8X Textured
+[23:35:34.534 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/LoadingScreensDiversified/03 Main Menu Replacer
+[23:35:34.535 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/CantonsontheGlobalMap
+[23:35:34.535 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/GonzosSplashScreens/00 Core
+[23:35:34.535 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/GonzosSplashScreens/01 Monopteryx Addon
+[23:35:34.535 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/GonzosSplashScreens/02 Wagner Map Addon
+[23:35:34.535 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/OpenMWSkyrimStyleQuestNotifications
+[23:35:34.535 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/SkyrimStyleQuestNotificationsLegendaryEdition
+[23:35:34.536 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/SkyrimStyleQuestNotificationsGreatPatchHub
+[23:35:34.537 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/ZerkishHotkeysImproved
+[23:35:34.537 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/UserInterface/QuestMenu
+[23:35:34.538 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Monochrome/monochromeUserInterface
+[23:35:34.538 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Monochrome/monochromeUISupplement/00 Textures
+[23:35:34.538 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Monochrome/birr
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/MOMWPostProcessingPack/01 XE-Shaders
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/MOMWPostProcessingPack/02 OMWFX-Shaders
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/MOMWPostProcessingPack/03 ZesterersVolumetricClouds
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/MOMWPostProcessingPack/04 WareyaOpenMWShaders
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/MOMWPostProcessingPack/05 EpochPostProcessShaders
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/MOMWPostProcessingPack/06 EpochReshadePorts
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/PostProcessingShaders/MOMWPostProcessingPack/07 ZesterersSSAO
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Animation/Simply Walking (WS Edition)
+[23:35:34.539 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/VisualEffectsImprovements/openmwImpactEffects
+[23:35:34.540 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/VisualEffectsImprovements/dynamicCamera
+[23:35:34.540 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/VisualEffectsImprovements/Magic Diversity
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/VisualEffectsImprovements/NoShieldSparkle
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DifficultyEnhancements/BMS/00 Core
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DifficultyEnhancements/HBFS/00 Core
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DifficultyEnhancements/HBFS/01 GMST
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DifficultyEnhancements/Fair Care/00 Core
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DifficultyEnhancements/Take Cover/00 Core
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DetailDevil/Devilish Skooma Overhaul
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DetailDevil/Devilish Magic Mushrooms
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DetailDevil/Devilish Alcohol
+[23:35:34.541 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/DetailDevil/Devilish Shrink Spell
+[23:35:34.542 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../Mods/Combat/chim_2090
+[23:35:34.542 I] Adding data directory /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/override/.
+[23:35:34.592 I] Preferred locales: gmst en
+[23:35:34.592 I] Initializing LuaUtil::LuaState with profiler
+[23:35:34.592 I] Lua version: Lua 5.1.4 (LuaJIT 2.1.1773225703)
+[23:35:34.592 I] Loading keybindings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/input_v3.xml
+[23:35:34.593 I] Loading TrueType font file fonts/pelagiad.omwfont
+[23:35:34.602 I] Loading TrueType font file fonts/omwayembedt.omwfont
+[23:35:34.605 I] Loading TrueType font file fonts/dejavulgcsansmono.omwfont
+[23:35:34.618 I] Initializing OpenAL...
+[23:35:34.623 I] Opened "JLab Studio"
+[23:35:34.623 I]   ALC Version: 1.1
+[23:35:34.623 I]   ALC Extensions: ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE ALC_EXT_debug ALC_EXT_DEDICATED ALC_EXT_direct_context ALC_EXT_disconnect ALC_EXT_EFX ALC_EXT_thread_local_context ALC_SOFT_device_clock ALC_SOFT_HRTF ALC_SOFT_loopback ALC_SOFT_loopback_bformat ALC_SOFT_output_limiter ALC_SOFT_output_mode ALC_SOFT_pause_device ALC_SOFT_reopen_device ALC_SOFT_system_events
+[23:35:34.630 I]   Vendor: OpenAL Community
+[23:35:34.630 I]   Renderer: OpenAL Soft
+[23:35:34.630 I]   Version: 1.1 ALSOFT 1.25.1
+[23:35:34.630 I]   Extensions: AL_EXT_ALAW AL_EXT_BFORMAT AL_EXT_debug AL_EXT_direct_context AL_EXT_DOUBLE AL_EXT_EXPONENT_DISTANCE AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS AL_EXT_MULAW AL_EXT_MULAW_BFORMAT AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET AL_EXT_source_distance_model AL_EXT_SOURCE_RADIUS AL_EXT_STATIC_BUFFER AL_EXT_STEREO_ANGLES AL_LOKI_quadriphonic AL_SOFT_bformat_ex AL_SOFT_bformat_hoa AL_SOFT_block_alignment AL_SOFT_buffer_length_query AL_SOFT_callback_buffer AL_SOFTX_convolution_effect AL_SOFT_deferred_updates AL_SOFT_direct_channels AL_SOFT_direct_channels_remix AL_SOFT_effect_target AL_SOFT_events AL_SOFT_gain_clamp_ex AL_SOFTX_hold_on_disconnect AL_SOFT_loop_points AL_SOFTX_map_buffer AL_SOFT_MSADPCM AL_SOFT_source_latency AL_SOFT_source_length AL_SOFTX_source_panning AL_SOFT_source_resampler AL_SOFT_source_spatialize AL_SOFT_source_start_delay AL_SOFT_UHJ AL_SOFT_UHJ_ex
+[23:35:34.630 I] HRTF disabled
+[23:35:34.630 V] Using idle priority for thread=140212648437440
+[23:35:34.630 I] Allocated 256 sound sources
+[23:35:34.630 I] Low-pass filter supported
+[23:35:34.630 I] EAX Reverb supported
+[23:35:34.630 I] Enumerated output devices:
+[23:35:34.630 I]   JLab Studio  Yeti Stereo Microphone Analog Stereo  Built-in Audio Analog Stereo
+[23:35:34.630 I] Enumerated HRTF names:
+[23:35:34.630 I]   Default HRTF  Built-In HRTF
+[23:35:34.636 I] Loading Lua storage "/home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/global_storage.bin" (2968635 bytes)
+[23:35:34.727 I] Loading Lua storage "/home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/player_storage.bin" (605383 bytes)
+[23:35:34.752 I] Loading content file builtin.omwscripts
+[23:35:34.754 I] Loading content file Morrowind.esm
+[23:35:34.883 I] Loading content file Tribunal.esm
+[23:35:34.903 I] Loading content file distant_seafloor_2.00.esm
+[23:35:34.929 I] Loading content file Bloodmoon.esm
+[23:35:34.951 W] Scaling image 'splash/26 warrior v.png' from (3840,2160) to (4096,2048)
+[23:35:34.958 I] Loading content file distant seafloor bloodmoon patch.esp
+[23:35:34.959 I] Loading content file correctUV Ore Replacer_respawning.esp
+[23:35:34.959 I] Loading content file correctUV Ore Replacer_fixed.esp
+[23:35:34.959 I] Loading content file Tamriel_Data.esm
+[23:35:35.513 I] Loading content file H3lp Yours3lf.esp
+[23:35:35.514 I] Loading content file StatsWindow.ESP
+[23:35:35.514 I] Loading content file StatsWindow.omwscripts
+[23:35:35.514 I] Loading content file ZModUtils.omwscripts
+[23:35:35.514 I] Loading content file Static Switching System.esp
+[23:35:35.514 I] Loading content file ModTags.omwscripts
+[23:35:35.514 I] Loading content file Pr0f1l3r.esp
+[23:35:35.514 I] Loading content file Cyr_Main.esm
+[23:35:35.583 I] Loading content file Sky_Main.esm
+[23:35:35.622 I] Loading content file TR_Mainland.esm
+[23:35:35.970 I] Loading content file TR_Dra-VashaI-V2.esp
+[23:35:35.971 I] Loading content file provincial-beginning-anvil.esp
+[23:35:35.971 I] Loading content file provincial-beginning-anvil.omwscripts
+[23:35:35.971 I] Loading content file adamantiumarmor.esp
+[23:35:35.971 I] Loading content file AreaEffectArrows.esp
+[23:35:35.971 I] Loading content file bcsounds.esp
+[23:35:35.971 I] Loading content file EBQ_Artifact.esp
+[23:35:35.972 I] Loading content file entertainers.esp
+[23:35:35.972 I] Loading content file LeFemmArmor.esp
+[23:35:35.972 I] Loading content file master_index.esp
+[23:35:35.973 I] Loading content file Siege at Firemoth.esp
+[23:35:35.973 I] Loading content file Patch for Purists.esm
+[23:35:35.990 I] Loading content file Patch for Purists - Semi-Purist Fixes.ESP
+[23:35:35.990 I] Loading content file Patch for Purists - Book Typos.ESP
+[23:35:35.992 I] Loading content file Lake Fjalding Anti-Suck.ESP
+[23:35:35.992 I] Loading content file distant-fixes-lua-edition.omwscripts
+[23:35:35.992 I] Loading content file DistantEbonTower.ESP
+[23:35:35.992 I] Loading content file Expansion Delay.ESP
+[23:35:35.992 I] Loading content file k_weather.esp
+[23:35:35.992 I] Loading content file Containers Animated.esp
+[23:35:35.993 I] Loading content file GITD_Telvanni_Dormers.ESP
+[23:35:35.993 I] Loading content file GITD_WL_RR_Interiors.esp
+[23:35:35.993 I] Loading content file MorrowindInteriorsProject_Bloodmoon.ESP
+[23:35:35.993 I] Loading content file MorrowindInteriorsProject.ESP
+[23:35:35.994 I] Loading content file Hag Hair for MacKom.ESP
+[23:35:35.994 I] Loading content file Familiar  Looks - Unique Characters MacKom-ed.esp
+[23:35:35.994 I] Loading content file Better Bodies TR.ESP
+[23:35:35.995 I] Loading content file MK_Khajiit.esp
+[23:35:35.995 I] Loading content file Khajiit-BaseReplace.ESP
+[23:35:35.995 I] Loading content file Khajiit-NPCPlayable.ESP
+[23:35:35.995 I] Loading content file New Argonian Bodies - Clean.esp
+[23:35:35.995 I] Loading content file New Khajiit Bodies - Clean.esp
+[23:35:35.996 I] Loading content file friendly-autosave.omwscripts
+[23:35:35.996 I] Loading content file pause-control.omwscripts
+[23:35:35.996 I] Loading content file OblivionLockpicking.omwscripts
+[23:35:35.996 I] Loading content file Dynamic Actors.omwscripts
+[23:35:35.996 I] Loading content file Animated Pickup + StS.omwscripts
+[23:35:35.996 I] Loading content file Hawk3ye.esp
+[23:35:35.996 I] Loading content file GRIP.omwscripts
+[23:35:35.996 I] Loading content file T4rg3t5.esp
+[23:35:35.996 I] Loading content file DeadMerTellNoTales.omwscripts
+[23:35:35.996 I] Loading content file OMSI-Spectral Shift.ESP
+[23:35:35.998 I] Loading content file OblivionRemasterLikeLeveling.omwaddon
+[23:35:35.998 I] Loading content file OblivionRemasterLikeLeveling.omwscripts
+[23:35:35.998 I] Loading content file skill-evolution.omwaddon
+[23:35:35.998 I] Loading content file skill-evolution.omwscripts
+[23:35:35.998 I] Loading content file AFFresh.esm
+[23:35:36.001 I] Loading content file AFFA_Wilhelm.ESP
+[23:35:36.002 I] Loading content file S3maphore.esp
+[23:35:36.002 I] Loading content file Cantons_on_the_Global_Map_v1.1.esp
+[23:35:36.002 I] Loading content file SSQN.omwscripts
+[23:35:36.002 I] Loading content file ZerkishHotkeysImproved.omwscripts
+[23:35:36.002 I] Loading content file questmenu.omwscripts
+[23:35:36.002 I] Loading content file Impact Effects.omwscripts
+[23:35:36.002 I] Loading content file DynamicCamera.omwscripts
+[23:35:36.002 I] Loading content file Magic Diversity 1.0.ESP
+[23:35:36.003 I] Loading content file bms.omwscripts
+[23:35:36.003 I] Loading content file Develish Skooma Overhaul.ESP
+[23:35:36.003 I] Loading content file Develish Skooma Overhaul.omwscripts
+[23:35:36.003 I] Loading content file Devilish Magic Mushrooms.ESP
+[23:35:36.003 I] Loading content file Devilish Magic Mushrooms.omwscripts
+[23:35:36.003 I] Loading content file Devilish Alcohol Overhaul.ESP
+[23:35:36.004 I] Loading content file Devilish Alcohol Overhaul.omwscripts
+[23:35:36.004 I] Loading content file Devilish Shrink Spell.ESP
+[23:35:36.004 I] Loading content file Devilish Shrink Spell.omwscripts
+[23:35:36.004 I] Loading content file CHIM2090.esp
+[23:35:36.004 I] Loading content file Merged Objects.esp
+[23:35:36.004 I] Loading content file S3LightFixes.omwaddon
+[23:35:36.007 V] Lua scripts configuration (129 scripts):
+[23:35:36.007 V] #0 MENU PLAYER : scripts/omw/mwui/init.lua
+[23:35:36.007 V] #1 MENU : scripts/omw/settings/menu.lua
+[23:35:36.007 V] #2 PLAYER : scripts/omw/settings/player.lua
+[23:35:36.007 V] #3 GLOBAL : scripts/omw/settings/global.lua
+[23:35:36.007 V] #4 GLOBAL : scripts/omw/activationhandlers.lua
+[23:35:36.007 V] #5 GLOBAL : scripts/omw/usehandlers.lua
+[23:35:36.007 V] #6 GLOBAL : scripts/omw/worldeventhandlers.lua
+[23:35:36.007 V] #7 GLOBAL : scripts/omw/crimes.lua
+[23:35:36.007 V] #8 PLAYER CREATURE NPC : scripts/omw/mechanics/animationcontroller.lua
+[23:35:36.007 V] #9 PLAYER : scripts/omw/skillhandlers.lua
+[23:35:36.007 V] #10 PLAYER : scripts/omw/mechanics/playercontroller.lua
+[23:35:36.007 V] #11 MENU : scripts/omw/camera/settings.lua
+[23:35:36.007 V] #12 MENU : scripts/omw/input/settings.lua
+[23:35:36.007 V] #13 PLAYER : scripts/omw/input/playercontrols.lua
+[23:35:36.007 V] #14 PLAYER : scripts/omw/camera/camera.lua
+[23:35:36.007 V] #15 PLAYER : scripts/omw/input/actionbindings.lua
+[23:35:36.007 V] #16 PLAYER : scripts/omw/input/smoothmovement.lua
+[23:35:36.007 V] #17 PLAYER : scripts/omw/input/gamepadcontrols.lua
+[23:35:36.007 V] #18 NPC CREATURE : scripts/omw/ai.lua
+[23:35:36.007 V] #19 GLOBAL : scripts/omw/mechanics/globalcontroller.lua
+[23:35:36.007 V] #20 PLAYER CREATURE NPC : scripts/omw/mechanics/actorcontroller.lua
+[23:35:36.007 V] #21 PLAYER NPC CREATURE : scripts/omw/combat/interface.lua
+[23:35:36.007 V] #22 PLAYER : scripts/omw/ui.lua
+[23:35:36.007 V] #23 MENU : scripts/omw/console/menu.lua
+[23:35:36.007 V] #24 PLAYER : scripts/omw/console/player.lua
+[23:35:36.007 V] #25 GLOBAL : scripts/omw/console/global.lua
+[23:35:36.007 V] #26 CUSTOM : scripts/omw/console/local.lua
+[23:35:36.007 V] #27 NPC CREATURE : scripts/omw/music/actor.lua
+[23:35:36.007 V] #28 GLOBAL : scripts/omw/cellhandlers.lua
+[23:35:36.007 V] #29 GLOBAL : scripts/omw/combat/global.lua
+[23:35:36.007 V] #30 MENU : scripts/omw/combat/menu.lua
+[23:35:36.007 V] #31 PLAYER NPC CREATURE : scripts/omw/combat/local.lua
+[23:35:36.007 V] #32 PLAYER : scripts/omw/music/music.lua
+[23:35:36.007 V] #33 MENU : scripts/omw/music/settings.lua
+[23:35:36.007 V] #34 PLAYER : scripts/omw/playerskillhandlers.lua
+[23:35:36.007 V] #35 LOAD : scripts/omw/esmfallbacks.lua
+[23:35:36.007 V] #36 PLAYER NPC CREATURE CONTAINER BOOK ACTIVATOR POTION ARMOR WEAPON CLOTHING DOOR INGREDIENT LIGHT MISC_ITEM APPARATUS LOCKPICK PROBE REPAIR : scripts/s3/lf.lua
+[23:35:36.007 V] #37 PLAYER NPC CREATURE CONTAINER BOOK ACTIVATOR POTION ARMOR WEAPON CLOTHING DOOR INGREDIENT LIGHT MISC_ITEM APPARATUS LOCKPICK PROBE REPAIR : scripts/s3/protectedtable.lua
+[23:35:36.007 V] #38 MENU : scripts/s3/renderers.lua
+[23:35:36.007 V] #39 PLAYER NPC CREATURE CONTAINER BOOK ACTIVATOR POTION ARMOR WEAPON CLOTHING DOOR INGREDIENT LIGHT MISC_ITEM APPARATUS LOCKPICK PROBE REPAIR : scripts/s3/randomgen.lua
+[23:35:36.007 V] #40 PLAYER : scripts/s3/camhelper.lua
+[23:35:36.007 V] #41 PLAYER : scripts/s3/imageatlas.lua
+[23:35:36.007 V] #42 PLAYER : scripts/statswindow/api.lua
+[23:35:36.007 V] #43 PLAYER : scripts/statswindow/player.lua
+[23:35:36.007 V] #44 GLOBAL : scripts/statswindow/global.lua
+[23:35:36.007 V] #45 MENU : scripts/statswindow/settings/player.lua
+[23:35:36.007 V] #46 PLAYER : scripts/statswindow/td_rep.lua
+[23:35:36.007 V] #47 PLAYER : scripts/statswindow/td_factions.lua
+[23:35:36.007 V] #48 MENU : scripts/staticswitcher/menu.lua
+[23:35:36.007 V] #49 GLOBAL : scripts/staticswitcher/global.lua
+[23:35:36.007 V] #50 GLOBAL : scripts/s3/modtags/global.lua
+[23:35:36.007 V] #51 PLAYER NPC CREATURE ARMOR WEAPON CLOTHING BOOK ACTIVATOR CONTAINER DOOR INGREDIENT LIGHT MISC_ITEM POTION APPARATUS LOCKPICK PROBE REPAIR : scripts/s3/modtags/local.lua
+[23:35:36.007 V] #52 PLAYER : scripts/s3/pr0f1l3r.lua
+[23:35:36.007 V] #53 GLOBAL : scripts/provincial-beginning/global.lua
+[23:35:36.007 V] #54 PLAYER : scripts/provincial-beginning/player.lua
+[23:35:36.007 V] #55 GLOBAL : scripts/distant-fixes/global.lua
+[23:35:36.007 V] #56 PLAYER : scripts/distant-fixes/player.lua
+[23:35:36.007 V] #57 PLAYER : scripts/friendly-autosave/player.lua
+[23:35:36.007 V] #58 MENU : scripts/friendly-autosave/menu.lua
+[23:35:36.007 V] #59 GLOBAL : scripts/friendly-autosave/global.lua
+[23:35:36.007 V] #60 GLOBAL : scripts/pause-control/global.lua
+[23:35:36.007 V] #61 PLAYER : scripts/pause-control/player.lua
+[23:35:36.007 V] #62 CUSTOM : scripts/pause-control/actor.lua
+[23:35:36.007 V] #63 PLAYER : scripts/oblivionlockpicking/player.lua
+[23:35:36.007 V] #64 GLOBAL : scripts/oblivionlockpicking/global.lua
+[23:35:36.007 V] #65 MENU : scripts/oblivionlockpicking/settings/player.lua
+[23:35:36.007 V] #66 GLOBAL : scripts/oblivionlockpicking/settings/global.lua
+[23:35:36.007 V] #67 GLOBAL : scripts/dynamicactors/global.lua
+[23:35:36.007 V] #68 MENU : scripts/dynamicactors/menusettings.lua
+[23:35:36.007 V] #69 PLAYER : scripts/dynamicactors/player.lua
+[23:35:36.007 V] #70 CUSTOM : scripts/dynamicactors/npcdialog.lua
+[23:35:36.007 V] #71 CUSTOM : scripts/dynamicactors/npcdialogai.lua
+[23:35:36.007 V] #72 GLOBAL : scripts/animatedpickup/global.lua
+[23:35:36.007 V] #73 PLAYER : scripts/animatedpickup/player.lua
+[23:35:36.007 V] #74 PLAYER : scripts/s3/hawk3ye/hawk3yeplayer.lua
+[23:35:36.007 V] #75 MENU : scripts/s3/hawk3ye/hawk3yemenu.lua
+[23:35:36.007 V] #76 MENU : scripts/ohs_toggle/menu.lua
+[23:35:36.007 V] #77 GLOBAL : scripts/ohs_toggle/global.lua
+[23:35:36.007 V] #78 PLAYER : scripts/ohs_toggle/player.lua
+[23:35:36.007 V] #79 MENU : scripts/s3/target/settings/page.lua
+[23:35:36.007 V] #80 GLOBAL : scripts/s3/target/settings/options.lua
+[23:35:36.007 V] #81 NPC CREATURE : scripts/s3/target/onhit.lua
+[23:35:36.007 V] #82 PLAYER : scripts/s3/target/lockonmanager.lua
+[23:35:36.007 V] #83 NPC CREATURE : scripts/deadmertellnotales/actor.lua
+[23:35:36.007 V] #84 GLOBAL : scripts/deadmertellnotales/global.lua
+[23:35:36.007 V] #85 MENU : scripts/deadmertellnotales/settingsmenu.lua
+[23:35:36.007 V] #86 GLOBAL : scripts/deadmertellnotales/settingsglobal.lua
+[23:35:36.007 V] #87 MENU : scripts/s3/vsg/menu.lua
+[23:35:36.007 V] #88 GLOBAL : scripts/s3/vsg/global.lua
+[23:35:36.007 V] #89 MENU : scripts/oblivionremasterlikeleveling/settings.lua
+[23:35:36.007 V] #90 PLAYER : scripts/oblivionremasterlikeleveling/player.lua
+[23:35:36.007 V] #91 MENU : scripts/skill-evolution/ui/renderers.lua
+[23:35:36.007 V] #92 GLOBAL : scripts/skill-evolution/global.lua
+[23:35:36.008 V] #93 PLAYER : scripts/skill-evolution/player.lua
+[23:35:36.008 V] #94 NPC CREATURE : scripts/skill-evolution/actor.lua
+[23:35:36.008 V] #95 PLAYER : scripts/s3/music/core.lua
+[23:35:36.008 V] #96 GLOBAL : scripts/s3/music/staticcollection.lua
+[23:35:36.008 V] #97 MENU : scripts/ssqn/menusettings.lua
+[23:35:36.008 V] #98 PLAYER : scripts/ssqn/player.lua
+[23:35:36.008 V] #99 PLAYER : scripts/ssqn/interop.lua
+[23:35:36.008 V] #100 MENU : scripts/zerkishhotkeysimproved/zhi_settings.lua
+[23:35:36.008 V] #101 PLAYER : scripts/zerkishhotkeysimproved/zhi_player.lua
+[23:35:36.008 V] #102 MENU : scripts/openmw_questmenu/menusettings.lua
+[23:35:36.008 V] #103 PLAYER : scripts/openmw_questmenu/questhandler.lua
+[23:35:36.008 V] #104 PLAYER : scripts/openmw_questmenu/ui.lua
+[23:35:36.008 V] #105 MENU : scripts/impacteffects/settings.lua
+[23:35:36.008 V] #106 PLAYER : scripts/impacteffects/player.lua
+[23:35:36.008 V] #107 CUSTOM : scripts/impacteffects/npc.lua
+[23:35:36.008 V] #108 GLOBAL : scripts/impacteffects/global.lua
+[23:35:36.008 V] #109 PLAYER : scripts/maxyari/dynamic camera/dynamiccamera.lua
+[23:35:36.008 V] #110 MENU : scripts/bms/ui/renderers.lua
+[23:35:36.008 V] #111 GLOBAL : scripts/bms/global.lua
+[23:35:36.008 V] #112 PLAYER : scripts/bms/player.lua
+[23:35:36.008 V] #113 CUSTOM : scripts/bms/npc.lua
+[23:35:36.008 V] #114 PLAYER : scripts/devilish_skooma_player.lua
+[23:35:36.008 V] #115 GLOBAL : scripts/devilish_skooma_global.lua
+[23:35:36.008 V] #116 PLAYER : scripts/detd_magicshroom_player.lua
+[23:35:36.008 V] #117 PLAYER : scripts/detd_drug_effect_player.lua
+[23:35:36.008 V] #118 GLOBAL : scripts/shrink_pc_script_global.lua
+[23:35:36.008 V] #119 PLAYER : scripts/shrink_pc_script_player.lua
+[23:35:36.008 V] #120 MENU : scripts/s3/chim2090/settingspage.lua
+[23:35:36.008 V] #121 GLOBAL : scripts/s3/chim2090/globalsettings.lua
+[23:35:36.008 V] #122 CUSTOM PLAYER : scripts/s3/chim2090/core.lua
+[23:35:36.008 V] #123 CUSTOM PLAYER : scripts/s3/chim2090/dynamicmanager.lua
+[23:35:36.008 V] #124 CUSTOM PLAYER : scripts/s3/chim2090/mechanics/poise.lua
+[23:35:36.008 V] #125 CUSTOM PLAYER : scripts/s3/chim2090/mechanics/parry.lua
+[23:35:36.008 V] #126 CUSTOM PLAYER : scripts/s3/chim2090/roll/core.lua
+[23:35:36.008 V] #127 CUSTOM PLAYER : scripts/s3/chim2090/block.lua
+[23:35:36.008 V] #128 CUSTOM PLAYER : scripts/s3/chim2090/onhitmanager.lua
+[23:35:36.066 V] Enchantment "test magic axe": dropping unexpected skill argument of "FortifyMaximumMagicka" effect
+[23:35:37.034 I] Using 2 async physics threads
+[23:35:37.034 I] Using /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/../savedData/sw0rdsinger/navmesh.db to store navigation mesh cache
+[23:35:37.035 V] Disabling Multiview (disabled by config)
+[23:35:37.035 I] Using rendering with shaders by default, requested by:
+[23:35:37.035 I]  - radial fog
+[23:35:37.035 I]  - exponential fog
+[23:35:37.035 I]  - sky blending
+[23:35:37.035 I]  - soft particles
+[23:35:37.035 I]  - shadows
+[23:35:37.035 I]  - lighting method
+[23:35:37.035 I]  - reverse-Z depth buffer
+[23:35:37.035 V] Using idle priority for thread=140212577474240
+[23:35:37.035 I] Reserving texture units for shadow maps: 27..31
+[23:35:37.036 I] Reserving texture unit for opaque depth texture: 26
+[23:35:37.039 I] Initialized compute shader pipeline for water ripples
+[23:35:37.040 I] Reserving texture unit for sky RTT: 25
+[23:35:37.041 V] Language file "l10n/Interface/gmst.yaml" is enabled
+[23:35:37.042 V] Language file "l10n/Interface/en.yaml" is enabled
+[23:35:37.355 V] Language file "l10n/OMWEngine/gmst.yaml" is enabled
+[23:35:37.356 V] Language file "l10n/OMWEngine/en.yaml" is enabled
+[23:35:37.397 V] Language file "l10n/OMWShaders/en.yaml" is enabled
+[23:35:37.408 V] Language file "l10n/OMWCamera/en.yaml" is enabled
+[23:35:37.410 V] Language file "l10n/OMWControls/en.yaml" is enabled
+[23:35:37.410 V] Language file "l10n/interface/gmst.yaml" is enabled
+[23:35:37.410 V] Language file "l10n/interface/en.yaml" is enabled
+[23:35:37.411 V] Language file "l10n/Calendar/gmst.yaml" is enabled
+[23:35:37.411 V] Language file "l10n/Calendar/en.yaml" is enabled
+[23:35:37.412 V] Language file "l10n/OMWCombat/en.yaml" is enabled
+[23:35:37.413 V] Language file "l10n/S3Music/en.yaml" is enabled
+[23:35:37.416 V] Language file "l10n/StatsWindow/en.yaml" is enabled
+[23:35:37.418 V] Language file "l10n/StaticSwitcher/en.yaml" is enabled
+[23:35:37.420 V] Language file "l10n/OblivionLockpicking/en.yaml" is enabled
+[23:35:37.422 V] Language file "l10n/DynamicActors/en.yaml" is enabled
+[23:35:37.423 V] Language file "l10n/Hawk3ye/en.yaml" is enabled
+[23:35:37.424 V] Language file "l10n/ohs_toggle/en.yaml" is enabled
+[23:35:37.425 V] Language file "l10n/S3Targets/en.yaml" is enabled
+[23:35:37.425 V] Language file "l10n/DeadMerTellNoTales/en.yaml" is enabled
+[23:35:37.425 V] Language file "l10n/VisualSoulGems/en.yaml" is enabled
+[23:35:37.426 V] Language file "l10n/OblivionRemasterLikeLeveling/en.yaml" is enabled
+[23:35:37.426 I] Menu[scripts/omw/settings/menu.lua]:	Group key levelUpSettings doesn't start with Settings
+[23:35:37.426 I] Menu[scripts/omw/settings/menu.lua]:	Group key skillSettings doesn't start with Settings
+[23:35:37.429 V] Language file "l10n/SkillEvolution/en.yaml" is enabled
+[23:35:37.430 I] Menu[scripts/ssqn/menusettings.lua]:	Using default sound file for snd_ui_obj_new_01
+[23:35:37.430 I] Menu[scripts/ssqn/menusettings.lua]:	Using default sound file for snd_ui_levelup
+[23:35:37.430 I] Menu[scripts/ssqn/menusettings.lua]:	Using default sound file for snd_ui_skill_increase
+[23:35:37.430 I] Menu[scripts/ssqn/menusettings.lua]:	Using default sound file for snd_ui_quest_new
+[23:35:37.431 V] Language file "l10n/SSQN/en.yaml" is enabled
+[23:35:37.437 V] Language file "l10n/ZerkishHotkeysImproved/en.yaml" is enabled
+[23:35:37.439 W] No language files for the preferred languages found in "l10n/ZHI_l10n"
+[23:35:37.443 V] Language file "l10n/OpenMWQuestMenu/en.yaml" is enabled
+[23:35:37.444 V] Language file "l10n/ImpactEffects/en.yaml" is enabled
+[23:35:37.446 V] Language file "l10n/BMS/en.yaml" is enabled
+[23:35:37.449 V] Language file "l10n/CHIM2090/en.yaml" is enabled
+[23:35:37.449 I] Menu[scripts/s3/chim2090/settingspage.lua]:	[CHIM 2090]: loaded version 0.4.2. Thank you for playing CHIM-2090! <3
+[23:35:37.451 I] Playing "music/special/morrowind title.mp3"
+[23:37:31.699 I] Playing "music/special/morrowind title.mp3"
+[23:38:39.794 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:39.794 I] 
+[23:38:40.028 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2214 s
+[23:38:40.028 I] 
+[23:38:40.370 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3051 s
+[23:38:40.370 I] 
+[23:38:40.607 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2085 s
+[23:38:40.607 I] 
+[23:38:40.611 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:38:40.611 I] 
+[23:38:40.801 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1873 s
+[23:38:40.801 I] 
+[23:38:41.132 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2965 s
+[23:38:41.132 I] 
+[23:38:41.360 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.1987 s
+[23:38:41.360 I] 
+[23:38:41.364 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:38:41.364 I] 
+[23:38:41.553 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1857 s
+[23:38:41.553 I] 
+[23:38:41.885 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2939 s
+[23:38:41.885 I] 
+[23:38:42.115 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2014 s
+[23:38:42.115 I] 
+[23:38:42.119 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:42.119 I] 
+[23:38:42.306 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1838 s
+[23:38:42.306 I] 
+[23:38:42.637 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2967 s
+[23:38:42.637 I] 
+[23:38:42.866 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2028 s
+[23:38:42.866 I] 
+[23:38:42.870 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:42.870 I] 
+[23:38:43.054 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1810 s
+[23:38:43.054 I] 
+[23:38:43.386 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2932 s
+[23:38:43.386 I] 
+[23:38:43.630 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2140 s
+[23:38:43.630 I] 
+[23:38:43.635 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:38:43.635 I] 
+[23:38:43.837 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1992 s
+[23:38:43.837 I] 
+[23:38:44.175 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3002 s
+[23:38:44.175 I] 
+[23:38:44.403 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2029 s
+[23:38:44.403 I] 
+[23:38:44.408 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:38:44.408 I] 
+[23:38:44.594 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1832 s
+[23:38:44.594 I] 
+[23:38:44.928 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2967 s
+[23:38:44.928 I] 
+[23:38:45.164 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2069 s
+[23:38:45.164 I] 
+[23:38:45.168 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:45.168 I] 
+[23:38:45.359 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1885 s
+[23:38:45.359 I] 
+[23:38:45.692 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2969 s
+[23:38:45.692 I] 
+[23:38:45.924 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2039 s
+[23:38:45.924 I] 
+[23:38:45.928 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:45.928 I] 
+[23:38:46.122 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1907 s
+[23:38:46.122 I] 
+[23:38:46.452 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2928 s
+[23:38:46.452 I] 
+[23:38:46.687 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2056 s
+[23:38:46.687 I] 
+[23:38:46.692 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:46.692 I] 
+[23:38:46.886 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1918 s
+[23:38:46.886 I] 
+[23:38:47.217 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2930 s
+[23:38:47.217 I] 
+[23:38:47.454 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2070 s
+[23:38:47.454 I] 
+[23:38:47.459 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:38:47.459 I] 
+[23:38:47.656 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1949 s
+[23:38:47.656 I] 
+[23:38:47.994 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3025 s
+[23:38:47.994 I] 
+[23:38:48.230 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2066 s
+[23:38:48.230 I] 
+[23:38:48.234 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:48.234 I] 
+[23:38:48.425 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1888 s
+[23:38:48.425 I] 
+[23:38:48.761 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2997 s
+[23:38:48.761 I] 
+[23:38:48.996 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2053 s
+[23:38:48.996 I] 
+[23:38:49.001 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:38:49.001 I] 
+[23:38:49.190 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1863 s
+[23:38:49.190 I] 
+[23:38:49.523 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2977 s
+[23:38:49.523 I] 
+[23:38:49.756 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2041 s
+[23:38:49.756 I] 
+[23:38:49.760 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:49.760 I] 
+[23:38:49.965 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2024 s
+[23:38:49.965 I] 
+[23:38:50.294 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2945 s
+[23:38:50.294 I] 
+[23:38:50.527 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2041 s
+[23:38:50.527 I] 
+[23:38:50.532 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:50.532 I] 
+[23:38:50.744 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2092 s
+[23:38:50.744 I] 
+[23:38:51.078 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2963 s
+[23:38:51.078 I] 
+[23:38:51.318 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2118 s
+[23:38:51.318 I] 
+[23:38:51.323 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:51.323 I] 
+[23:38:51.511 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1860 s
+[23:38:51.511 I] 
+[23:38:51.841 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2931 s
+[23:38:51.841 I] 
+[23:38:52.075 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2056 s
+[23:38:52.075 I] 
+[23:38:52.079 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:52.079 I] 
+[23:38:52.279 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1980 s
+[23:38:52.279 I] 
+[23:38:52.608 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2939 s
+[23:38:52.608 I] 
+[23:38:52.844 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2077 s
+[23:38:52.844 I] 
+[23:38:52.849 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:52.849 I] 
+[23:38:53.039 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1877 s
+[23:38:53.039 I] 
+[23:38:53.371 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2963 s
+[23:38:53.371 I] 
+[23:38:53.606 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2068 s
+[23:38:53.606 I] 
+[23:38:53.610 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:53.610 I] 
+[23:38:53.796 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1832 s
+[23:38:53.796 I] 
+[23:38:54.125 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2936 s
+[23:38:54.125 I] 
+[23:38:54.360 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2044 s
+[23:38:54.360 I] 
+[23:38:54.365 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:54.365 I] 
+[23:38:54.552 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1840 s
+[23:38:54.552 I] 
+[23:38:54.884 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2959 s
+[23:38:54.884 I] 
+[23:38:55.122 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2078 s
+[23:38:55.122 I] 
+[23:38:55.126 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:55.126 I] 
+[23:38:55.311 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1827 s
+[23:38:55.311 I] 
+[23:38:55.647 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2992 s
+[23:38:55.647 I] 
+[23:38:55.880 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2042 s
+[23:38:55.880 I] 
+[23:38:55.884 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:55.884 I] 
+[23:38:56.073 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1856 s
+[23:38:56.073 I] 
+[23:38:56.403 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2921 s
+[23:38:56.403 I] 
+[23:38:56.638 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2052 s
+[23:38:56.638 I] 
+[23:38:56.641 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:56.641 I] 
+[23:38:56.827 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1826 s
+[23:38:56.827 I] 
+[23:38:57.160 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2961 s
+[23:38:57.160 I] 
+[23:38:57.418 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2287 s
+[23:38:57.418 I] 
+[23:38:57.422 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:57.422 I] 
+[23:38:57.612 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1876 s
+[23:38:57.612 I] 
+[23:38:57.941 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2936 s
+[23:38:57.941 I] 
+[23:38:58.183 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2130 s
+[23:38:58.183 I] 
+[23:38:58.188 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:38:58.188 I] 
+[23:38:58.385 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1943 s
+[23:38:58.385 I] 
+[23:38:58.720 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2992 s
+[23:38:58.720 I] 
+[23:38:58.958 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2094 s
+[23:38:58.958 I] 
+[23:38:58.963 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:58.963 I] 
+[23:38:59.157 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1915 s
+[23:38:59.157 I] 
+[23:38:59.498 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3045 s
+[23:38:59.498 I] 
+[23:38:59.730 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2027 s
+[23:38:59.730 I] 
+[23:38:59.734 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:38:59.734 I] 
+[23:38:59.930 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1936 s
+[23:38:59.930 I] 
+[23:39:00.265 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2967 s
+[23:39:00.265 I] 
+[23:39:00.497 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2016 s
+[23:39:00.497 I] 
+[23:39:00.501 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:00.501 I] 
+[23:39:00.700 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1963 s
+[23:39:00.700 I] 
+[23:39:01.031 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2946 s
+[23:39:01.031 I] 
+[23:39:01.265 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2050 s
+[23:39:01.265 I] 
+[23:39:01.270 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:01.270 I] 
+[23:39:01.461 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1887 s
+[23:39:01.461 I] 
+[23:39:01.796 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2992 s
+[23:39:01.796 I] 
+[23:39:02.023 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.1998 s
+[23:39:02.023 I] 
+[23:39:02.029 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:02.029 I] 
+[23:39:02.220 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1885 s
+[23:39:02.220 I] 
+[23:39:02.547 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2913 s
+[23:39:02.547 I] 
+[23:39:02.786 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2091 s
+[23:39:02.786 I] 
+[23:39:02.790 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:02.790 I] 
+[23:39:02.991 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1977 s
+[23:39:02.991 I] 
+[23:39:03.319 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2927 s
+[23:39:03.319 I] 
+[23:39:03.555 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2083 s
+[23:39:03.555 I] 
+[23:39:03.560 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:03.560 I] 
+[23:39:03.757 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1946 s
+[23:39:03.757 I] 
+[23:39:04.088 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2930 s
+[23:39:04.088 I] 
+[23:39:04.328 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2102 s
+[23:39:04.328 I] 
+[23:39:04.332 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:04.332 I] 
+[23:39:04.521 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1857 s
+[23:39:04.521 I] 
+[23:39:04.847 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2927 s
+[23:39:04.847 I] 
+[23:39:05.106 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2322 s
+[23:39:05.106 I] 
+[23:39:05.112 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:05.112 I] 
+[23:39:05.304 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1881 s
+[23:39:05.304 I] 
+[23:39:05.637 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2973 s
+[23:39:05.637 I] 
+[23:39:05.869 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2046 s
+[23:39:05.869 I] 
+[23:39:05.874 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0007 s
+[23:39:05.874 I] 
+[23:39:06.075 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1973 s
+[23:39:06.075 I] 
+[23:39:06.447 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3359 s
+[23:39:06.447 I] 
+[23:39:06.690 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2146 s
+[23:39:06.690 I] 
+[23:39:06.694 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:06.694 I] 
+[23:39:06.909 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2111 s
+[23:39:06.909 I] 
+[23:39:07.238 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2945 s
+[23:39:07.238 I] 
+[23:39:07.472 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2021 s
+[23:39:07.472 I] 
+[23:39:07.476 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:07.476 I] 
+[23:39:07.681 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2027 s
+[23:39:07.681 I] 
+[23:39:08.014 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2958 s
+[23:39:08.014 I] 
+[23:39:08.250 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2070 s
+[23:39:08.250 I] 
+[23:39:08.255 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:08.255 I] 
+[23:39:08.474 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2042 s
+[23:39:08.474 I] 
+[23:39:08.802 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2914 s
+[23:39:08.802 I] 
+[23:39:09.036 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2073 s
+[23:39:09.036 I] 
+[23:39:09.040 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:09.040 I] 
+[23:39:09.230 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1871 s
+[23:39:09.230 I] 
+[23:39:09.560 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2925 s
+[23:39:09.560 I] 
+[23:39:09.792 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2049 s
+[23:39:09.792 I] 
+[23:39:09.796 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:09.796 I] 
+[23:39:09.980 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1814 s
+[23:39:09.980 I] 
+[23:39:10.312 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2945 s
+[23:39:10.312 I] 
+[23:39:10.549 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2082 s
+[23:39:10.549 I] 
+[23:39:10.553 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:10.553 I] 
+[23:39:10.749 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1931 s
+[23:39:10.749 I] 
+[23:39:11.080 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2952 s
+[23:39:11.080 I] 
+[23:39:11.313 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2034 s
+[23:39:11.313 I] 
+[23:39:11.317 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:11.317 I] 
+[23:39:11.501 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1806 s
+[23:39:11.501 I] 
+[23:39:11.826 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2902 s
+[23:39:11.826 I] 
+[23:39:12.053 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.1989 s
+[23:39:12.053 I] 
+[23:39:12.058 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0007 s
+[23:39:12.058 I] 
+[23:39:12.251 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1905 s
+[23:39:12.251 I] 
+[23:39:12.579 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2939 s
+[23:39:12.579 I] 
+[23:39:12.809 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.1987 s
+[23:39:12.809 I] 
+[23:39:12.813 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:12.813 I] 
+[23:39:12.994 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1790 s
+[23:39:12.994 I] 
+[23:39:13.328 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2966 s
+[23:39:13.328 I] 
+[23:39:13.554 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.1973 s
+[23:39:13.554 I] 
+[23:39:13.558 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:13.558 I] 
+[23:39:13.744 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1830 s
+[23:39:13.744 I] 
+[23:39:14.071 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2912 s
+[23:39:14.071 I] 
+[23:39:14.301 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2007 s
+[23:39:14.301 I] 
+[23:39:14.306 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:14.306 I] 
+[23:39:14.494 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1851 s
+[23:39:14.494 I] 
+[23:39:14.820 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2904 s
+[23:39:14.820 I] 
+[23:39:15.049 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2004 s
+[23:39:15.049 I] 
+[23:39:15.053 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:15.053 I] 
+[23:39:15.249 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1930 s
+[23:39:15.249 I] 
+[23:39:15.577 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2940 s
+[23:39:15.577 I] 
+[23:39:15.805 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.1982 s
+[23:39:15.805 I] 
+[23:39:15.810 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:15.810 I] 
+[23:39:15.994 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1821 s
+[23:39:15.994 I] 
+[23:39:16.326 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2944 s
+[23:39:16.326 I] 
+[23:39:16.552 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.1978 s
+[23:39:16.552 I] 
+[23:39:16.557 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:16.557 I] 
+[23:39:16.747 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1882 s
+[23:39:16.747 I] 
+[23:39:17.077 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2945 s
+[23:39:17.077 I] 
+[23:39:17.309 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2033 s
+[23:39:17.309 I] 
+[23:39:17.313 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:17.313 I] 
+[23:39:17.500 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1835 s
+[23:39:17.500 I] 
+[23:39:17.828 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2926 s
+[23:39:17.828 I] 
+[23:39:18.063 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2056 s
+[23:39:18.063 I] 
+[23:39:18.067 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:18.067 I] 
+[23:39:18.256 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1858 s
+[23:39:18.256 I] 
+[23:39:18.584 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2937 s
+[23:39:18.584 I] 
+[23:39:18.819 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2059 s
+[23:39:18.819 I] 
+[23:39:18.823 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:18.823 I] 
+[23:39:19.011 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1853 s
+[23:39:19.011 I] 
+[23:39:19.338 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2926 s
+[23:39:19.338 I] 
+[23:39:19.572 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2063 s
+[23:39:19.572 I] 
+[23:39:19.576 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:19.576 I] 
+[23:39:19.775 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1963 s
+[23:39:19.775 I] 
+[23:39:20.109 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2981 s
+[23:39:20.109 I] 
+[23:39:20.367 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2214 s
+[23:39:20.367 I] 
+[23:39:20.371 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:20.371 I] 
+[23:39:20.578 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2046 s
+[23:39:20.578 I] 
+[23:39:20.907 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2921 s
+[23:39:20.907 I] 
+[23:39:21.142 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2078 s
+[23:39:21.142 I] 
+[23:39:21.147 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:21.147 I] 
+[23:39:21.351 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2011 s
+[23:39:21.351 I] 
+[23:39:21.683 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2941 s
+[23:39:21.683 I] 
+[23:39:21.914 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2034 s
+[23:39:21.914 I] 
+[23:39:21.919 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:21.919 I] 
+[23:39:22.110 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1881 s
+[23:39:22.110 I] 
+[23:39:22.439 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2898 s
+[23:39:22.439 I] 
+[23:39:22.677 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2106 s
+[23:39:22.677 I] 
+[23:39:22.682 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:22.682 I] 
+[23:39:22.885 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2003 s
+[23:39:22.885 I] 
+[23:39:23.216 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2932 s
+[23:39:23.216 I] 
+[23:39:23.457 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2114 s
+[23:39:23.457 I] 
+[23:39:23.461 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:23.461 I] 
+[23:39:23.654 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1904 s
+[23:39:23.654 I] 
+[23:39:23.988 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2984 s
+[23:39:23.988 I] 
+[23:39:24.223 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2069 s
+[23:39:24.223 I] 
+[23:39:24.227 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:24.227 I] 
+[23:39:24.432 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2026 s
+[23:39:24.432 I] 
+[23:39:24.766 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2963 s
+[23:39:24.766 I] 
+[23:39:25.001 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2062 s
+[23:39:25.001 I] 
+[23:39:25.006 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:25.006 I] 
+[23:39:25.195 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1865 s
+[23:39:25.195 I] 
+[23:39:25.524 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2930 s
+[23:39:25.524 I] 
+[23:39:25.756 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2040 s
+[23:39:25.756 I] 
+[23:39:25.761 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:25.761 I] 
+[23:39:25.948 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1838 s
+[23:39:25.948 I] 
+[23:39:26.274 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2918 s
+[23:39:26.274 I] 
+[23:39:26.508 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2068 s
+[23:39:26.508 I] 
+[23:39:26.512 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:26.512 I] 
+[23:39:26.698 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1826 s
+[23:39:26.698 I] 
+[23:39:27.025 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2910 s
+[23:39:27.025 I] 
+[23:39:27.265 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2101 s
+[23:39:27.265 I] 
+[23:39:27.270 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:27.270 I] 
+[23:39:27.460 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1875 s
+[23:39:27.460 I] 
+[23:39:27.795 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2985 s
+[23:39:27.795 I] 
+[23:39:28.030 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2064 s
+[23:39:28.030 I] 
+[23:39:28.035 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:28.035 I] 
+[23:39:28.227 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1888 s
+[23:39:28.227 I] 
+[23:39:28.556 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2929 s
+[23:39:28.556 I] 
+[23:39:28.792 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2069 s
+[23:39:28.792 I] 
+[23:39:28.796 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:28.796 I] 
+[23:39:28.987 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1874 s
+[23:39:28.987 I] 
+[23:39:29.316 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2935 s
+[23:39:29.316 I] 
+[23:39:29.553 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2076 s
+[23:39:29.553 I] 
+[23:39:29.558 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:29.558 I] 
+[23:39:29.748 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1870 s
+[23:39:29.748 I] 
+[23:39:30.080 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2953 s
+[23:39:30.080 I] 
+[23:39:30.349 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2373 s
+[23:39:30.349 I] 
+[23:39:30.354 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:30.354 I] 
+[23:39:30.545 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1883 s
+[23:39:30.545 I] 
+[23:39:30.876 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2950 s
+[23:39:30.876 I] 
+[23:39:31.116 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2078 s
+[23:39:31.116 I] 
+[23:39:31.120 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:31.120 I] 
+[23:39:31.310 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1869 s
+[23:39:31.310 I] 
+[23:39:31.641 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2945 s
+[23:39:31.641 I] 
+[23:39:31.878 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2078 s
+[23:39:31.878 I] 
+[23:39:31.882 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:31.882 I] 
+[23:39:32.079 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1933 s
+[23:39:32.079 I] 
+[23:39:32.435 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3194 s
+[23:39:32.435 I] 
+[23:39:32.675 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2098 s
+[23:39:32.675 I] 
+[23:39:32.679 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:32.679 I] 
+[23:39:32.895 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2128 s
+[23:39:32.895 I] 
+[23:39:33.224 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2923 s
+[23:39:33.224 I] 
+[23:39:33.463 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2081 s
+[23:39:33.463 I] 
+[23:39:33.468 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:33.468 I] 
+[23:39:33.655 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1841 s
+[23:39:33.655 I] 
+[23:39:33.997 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3044 s
+[23:39:33.997 I] 
+[23:39:34.242 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2139 s
+[23:39:34.242 I] 
+[23:39:34.247 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:34.247 I] 
+[23:39:34.470 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2195 s
+[23:39:34.470 I] 
+[23:39:34.807 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3009 s
+[23:39:34.807 I] 
+[23:39:35.044 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2083 s
+[23:39:35.044 I] 
+[23:39:35.049 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0007 s
+[23:39:35.049 I] 
+[23:39:35.239 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1871 s
+[23:39:35.239 I] 
+[23:39:35.571 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2944 s
+[23:39:35.571 I] 
+[23:39:35.806 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2050 s
+[23:39:35.806 I] 
+[23:39:35.810 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:35.810 I] 
+[23:39:36.004 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1913 s
+[23:39:36.004 I] 
+[23:39:36.337 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2950 s
+[23:39:36.337 I] 
+[23:39:36.573 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2066 s
+[23:39:36.573 I] 
+[23:39:36.577 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:36.577 I] 
+[23:39:36.769 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1885 s
+[23:39:36.769 I] 
+[23:39:37.098 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2913 s
+[23:39:37.098 I] 
+[23:39:37.334 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2064 s
+[23:39:37.334 I] 
+[23:39:37.339 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:37.339 I] 
+[23:39:37.529 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1869 s
+[23:39:37.529 I] 
+[23:39:37.862 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2947 s
+[23:39:37.862 I] 
+[23:39:38.095 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2043 s
+[23:39:38.095 I] 
+[23:39:38.100 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:38.100 I] 
+[23:39:38.306 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2034 s
+[23:39:38.306 I] 
+[23:39:38.634 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2913 s
+[23:39:38.634 I] 
+[23:39:38.872 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2089 s
+[23:39:38.872 I] 
+[23:39:38.876 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:38.876 I] 
+[23:39:39.061 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1820 s
+[23:39:39.061 I] 
+[23:39:39.394 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2932 s
+[23:39:39.394 I] 
+[23:39:39.628 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2057 s
+[23:39:39.628 I] 
+[23:39:39.632 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:39.632 I] 
+[23:39:39.818 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1828 s
+[23:39:39.818 I] 
+[23:39:40.145 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2930 s
+[23:39:40.145 I] 
+[23:39:40.382 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2061 s
+[23:39:40.382 I] 
+[23:39:40.386 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:40.386 I] 
+[23:39:40.599 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2093 s
+[23:39:40.599 I] 
+[23:39:40.925 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2900 s
+[23:39:40.925 I] 
+[23:39:41.160 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2065 s
+[23:39:41.160 I] 
+[23:39:41.165 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:41.165 I] 
+[23:39:41.360 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1917 s
+[23:39:41.360 I] 
+[23:39:41.691 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2966 s
+[23:39:41.691 I] 
+[23:39:41.925 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2063 s
+[23:39:41.925 I] 
+[23:39:41.929 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:41.929 I] 
+[23:39:42.118 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1852 s
+[23:39:42.118 I] 
+[23:39:42.443 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2870 s
+[23:39:42.443 I] 
+[23:39:42.682 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2084 s
+[23:39:42.682 I] 
+[23:39:42.686 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:42.686 I] 
+[23:39:42.902 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2121 s
+[23:39:42.902 I] 
+[23:39:43.236 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2999 s
+[23:39:43.236 I] 
+[23:39:43.472 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2043 s
+[23:39:43.472 I] 
+[23:39:43.476 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:43.476 I] 
+[23:39:43.668 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1881 s
+[23:39:43.668 I] 
+[23:39:43.999 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2952 s
+[23:39:43.999 I] 
+[23:39:44.238 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2110 s
+[23:39:44.238 I] 
+[23:39:44.243 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0008 s
+[23:39:44.243 I] 
+[23:39:44.433 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1867 s
+[23:39:44.433 I] 
+[23:39:44.761 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2930 s
+[23:39:44.761 I] 
+[23:39:44.992 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2051 s
+[23:39:44.992 I] 
+[23:39:44.996 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:44.996 I] 
+[23:39:45.210 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2107 s
+[23:39:45.210 I] 
+[23:39:45.543 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2930 s
+[23:39:45.543 I] 
+[23:39:45.778 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2063 s
+[23:39:45.778 I] 
+[23:39:45.783 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:45.783 I] 
+[23:39:45.979 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1934 s
+[23:39:45.979 I] 
+[23:39:46.318 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3017 s
+[23:39:46.318 I] 
+[23:39:46.553 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2049 s
+[23:39:46.553 I] 
+[23:39:46.558 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:46.558 I] 
+[23:39:46.749 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1883 s
+[23:39:46.749 I] 
+[23:39:47.080 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2933 s
+[23:39:47.080 I] 
+[23:39:47.317 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2075 s
+[23:39:47.317 I] 
+[23:39:47.321 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:47.321 I] 
+[23:39:47.515 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1907 s
+[23:39:47.515 I] 
+[23:39:47.845 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2951 s
+[23:39:47.845 I] 
+[23:39:48.081 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2078 s
+[23:39:48.081 I] 
+[23:39:48.085 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:48.085 I] 
+[23:39:48.275 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1867 s
+[23:39:48.275 I] 
+[23:39:48.610 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2972 s
+[23:39:48.610 I] 
+[23:39:48.848 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2068 s
+[23:39:48.848 I] 
+[23:39:48.852 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:48.852 I] 
+[23:39:49.042 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1870 s
+[23:39:49.042 I] 
+[23:39:49.381 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3015 s
+[23:39:49.381 I] 
+[23:39:49.614 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2066 s
+[23:39:49.614 I] 
+[23:39:49.618 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:49.618 I] 
+[23:39:49.813 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1909 s
+[23:39:49.813 I] 
+[23:39:50.142 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2926 s
+[23:39:50.142 I] 
+[23:39:50.383 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2088 s
+[23:39:50.383 I] 
+[23:39:50.387 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:50.387 I] 
+[23:39:50.579 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1886 s
+[23:39:50.579 I] 
+[23:39:50.917 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2987 s
+[23:39:50.917 I] 
+[23:39:51.153 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2078 s
+[23:39:51.153 I] 
+[23:39:51.157 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:51.157 I] 
+[23:39:51.351 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1900 s
+[23:39:51.351 I] 
+[23:39:51.690 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3011 s
+[23:39:51.690 I] 
+[23:39:51.921 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2025 s
+[23:39:51.921 I] 
+[23:39:51.925 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:51.925 I] 
+[23:39:52.120 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1903 s
+[23:39:52.120 I] 
+[23:39:52.452 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.2924 s
+[23:39:52.452 I] 
+[23:39:52.690 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2104 s
+[23:39:52.690 I] 
+[23:39:52.694 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:52.694 I] 
+[23:39:52.888 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1903 s
+[23:39:52.888 I] 
+[23:39:53.240 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3147 s
+[23:39:53.240 I] 
+[23:39:53.480 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2087 s
+[23:39:53.480 I] 
+[23:39:53.485 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0006 s
+[23:39:53.485 I] 
+[23:39:53.679 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1912 s
+[23:39:53.679 I] 
+[23:39:54.017 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3007 s
+[23:39:54.017 I] 
+[23:39:54.254 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2060 s
+[23:39:54.254 I] 
+[23:39:54.258 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:54.258 I] 
+[23:39:54.450 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1881 s
+[23:39:54.450 I] 
+[23:39:54.795 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3059 s
+[23:39:54.795 I] 
+[23:39:55.031 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2076 s
+[23:39:55.031 I] 
+[23:39:55.035 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:55.035 I] 
+[23:39:55.229 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.1904 s
+[23:39:55.229 I] 
+[23:39:55.590 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3247 s
+[23:39:55.590 I] 
+[23:39:55.830 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2105 s
+[23:39:55.830 I] 
+[23:39:55.834 I] Menu[scripts/omw/console/menu.lua]:	1. small ephemeral tables (2M)           0.0005 s
+[23:39:55.834 I] 
+[23:39:56.040 I] Menu[scripts/omw/console/menu.lua]:	2. fragmentation (fill/kill/refill 500K) 0.2027 s
+[23:39:56.040 I] 
+[23:39:56.383 I] Menu[scripts/omw/console/menu.lua]:	3. string churn (1M)                     0.3041 s
+[23:39:56.383 I] 
+[23:39:56.622 I] Menu[scripts/omw/console/menu.lua]:	4. simulated game frames (1000 x 200 events) 0.2089 s
+[23:39:56.622 I] 
+[23:39:56.622 I] Playing "music/special/morrowind title.mp3"
+[23:40:00.591 I] Saving shader settings file: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/shaders.yaml
+[23:40:00.622 I] Saving Lua storage "/home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/player_storage.bin" (605383 bytes)
+[23:40:00.759 I] Saved input bindings: /home/s3kshun8/.config/openmw/Morrowind/../Modding/../sw0rdsinger/settings/input_v3.xml
+[23:40:00.840 I] Quitting peacefully.
