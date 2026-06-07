@@ -206,12 +206,13 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 ```
 
-Builds that opt into experimental sweep-time userdata finalizer discovery with
+Builds with experimental sweep-time userdata finalizer discovery enabled with
 `-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` also expose `sweep_udata_*` counters.
-In that mode, normal GC cycles discover userdata finalizers incrementally during
-the sweep phase instead of walking the userdata candidate list during atomic.
-These counters are contract-bound to this fork and are intended for validating
-that opt-in mode.
+This repository's default Unix and MSVC build scripts enable that define; remove
+or comment it in the build script to disable the mode. In that mode, normal GC
+cycles discover userdata finalizers incrementally during the sweep phase instead
+of walking the userdata candidate list during atomic. These counters are
+contract-bound to this fork and are intended for validating that mode.
 
 Counter groups include allocator calls and bytes (`alloc_*`, `free_*`,
 `realloc_*`), object allocation (`new_gcobj_calls`), incremental step and cycle
@@ -235,9 +236,11 @@ Related local tools:
   compare deltas across builds/configurations, not as a standalone performance
   claim.
 
-To compare normal GC-stats behavior with experimental sweep-time userdata
+To compare GC-stats behavior with and without experimental sweep-time userdata
 finalizer discovery, rebuild and run the same focused benchmark filter under
-both configurations:
+both configurations. Since the repository default enables sweep-time discovery,
+remove or comment `-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` in `src/Makefile` for
+the disabled comparison build.
 
 ```sh
 make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS'
@@ -441,13 +444,14 @@ This is a performance contract chosen by this fork to avoid repeatedly scanning
 long-lived userdata that cannot currently be finalized. It should not be treated
 as general LuaJIT behavior.
 
-Experimental sweep-phase userdata finalizer discovery can be enabled with
-`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. It is disabled by default and
-contract-bound to this fork. In this mode, normal GC cycles skip the atomic
-userdata candidate walk and instead process the candidate segment incrementally
-before string/root sweeping.
+Experimental sweep-phase userdata finalizer discovery is enabled in this
+repository's default Unix and MSVC build scripts with
+`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. Remove or comment that define in the
+build script to disable it. The mode is contract-bound to this fork. In this
+mode, normal GC cycles skip the atomic userdata candidate walk and instead
+process the candidate segment incrementally before string/root sweeping.
 
-This opt-in mode is only for static, leaf/native userdata finalizers. Late
+This mode is only for static, leaf/native userdata finalizers. Late
 mutation of userdata metatables or `__gc` after a candidate has been scanned is
 still unsupported. Dead finalizable userdata preserve only the userdata, its
 metatable, and the immediate `__gc` callable until finalization; arbitrary Lua

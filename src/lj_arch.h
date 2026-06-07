@@ -761,7 +761,7 @@ extern void *LJ_WIN_LOADLIBA(const char *path);
 #define LJ_52			0
 #endif
 
-/* Experimental opt-in scaffold for sweep-phase userdata finalizer discovery. */
+/* Experimental scaffold for sweep-phase userdata finalizer discovery. */
 #ifdef LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
 #define LJ_HAS_SWEEP_UDATA_FINALIZERS	1
 #else
