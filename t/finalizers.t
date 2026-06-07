@@ -11,7 +11,7 @@ $ENV{LUA_PATH} = "$Bin/../lua/?.lua;;";
 
 my $luajit = abs_path("$Bin/../src/luajit");
 
-plan tests => 3;
+plan tests => 4;
 
 my $cwd = cwd;
 my $dir = tempdir "testlj_finalizers_XXXXXXX", CLEANUP => 1;
@@ -101,6 +101,32 @@ end
 for _ = 1, 4 do collectgarbage("collect") end
 assert(events[1] == "parent")
 assert(child_done)
+
+print("ok")
+LUA
+
+run_lua 'late userdata __gc addition still finalizes', <<'LUA';
+jit.off()
+
+local mt
+local finalized = 0
+
+do
+  local u = newproxy(true)
+  mt = getmetatable(u)
+  u = nil
+end
+
+mt.__gc = function()
+  finalized = finalized + 1
+end
+
+for _ = 1, 8 do
+  collectgarbage("collect")
+  if finalized > 0 then break end
+end
+
+assert(finalized == 1, finalized)
 
 print("ok")
 LUA

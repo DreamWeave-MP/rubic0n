@@ -99,6 +99,36 @@ local after_reset = jit.gcstats()
 check_shape(after_reset)
 assert(after_reset.fullgc_calls == 0)
 
+do
+  local n = 2000
+  local resurrected = {}
+
+  do
+    for i = 1, n do
+      local u = newproxy(true)
+      getmetatable(u).__gc = function(self)
+        resurrected[#resurrected + 1] = self
+      end
+      u = nil
+    end
+  end
+
+  for _ = 1, 8 do
+    collectgarbage("collect")
+    if #resurrected == n then break end
+  end
+
+  assert(#resurrected == n, #resurrected)
+  jit.gcstats(true)
+
+  for _ = 1, 3 do collectgarbage("collect") end
+
+  local c = jit.gcstats()
+  check_shape(c)
+  assert(c.finalizer_scan_steps < n / 4, c.finalizer_scan_steps)
+  assert(#resurrected == n, #resurrected)
+end
+
 print("ok")
 LUA
 close $fh;
