@@ -28,6 +28,11 @@ enum {
 #define LJ_GC_COLORS	(LJ_GC_WHITES | LJ_GC_BLACK)
 #define LJ_GC_WEAK	(LJ_GC_WEAKKEY | LJ_GC_WEAKVAL)
 
+#define LJ_GCSTEPSIZE	1024u
+/* Keep the incremental step size a scheduler pacing quantum, not a memory cap. */
+#define LJ_GC_MAXSTEPSIZE	((GCSize)64u << 20)
+#define LJ_GC_MAXTHRESHOLD	(LJ_MAX_MEM - 1)
+
 /* Macros to test and set GCobj colors. */
 #define iswhite(x)	((x)->gch.marked & LJ_GC_WHITES)
 #define isblack(x)	((x)->gch.marked & LJ_GC_BLACK)

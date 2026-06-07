@@ -638,6 +638,7 @@ typedef struct GCState {
   GCRef mmudata;	/* List of userdata (to be finalized). */
   GCSize debt;		/* Debt (how much GC is behind schedule). */
   GCSize estimate;	/* Estimate of memory actually in use. */
+  GCSize stepsize;	/* Incremental GC step size in bytes. */
   MSize stepmul;	/* Incremental GC step granularity. */
   MSize pause;		/* Pause between successive GC cycles. */
 #if LJ_64

@@ -29,7 +29,6 @@
 #include "lj_vm.h"
 #include "lj_vmevent.h"
 
-#define GCSTEPSIZE	1024u
 #define GCSWEEPMAX	40
 #define GCSWEEPCOST	10
 #define GCFINALIZECOST	100
@@ -743,7 +742,11 @@ int LJ_FASTCALL lj_gc_step(lua_State *L)
   int32_t ostate = g->vmstate;
   lj_gc_stats_inc(g, step_calls);
   setvmstate(g, GC);
-  lim = (GCSTEPSIZE/100) * g->gc.stepmul;
+  lim = g->gc.stepsize/100;
+  if (g->gc.stepmul != 0 && lim > LJ_MAX_MEM/g->gc.stepmul)
+    lim = LJ_MAX_MEM;
+  else
+    lim *= g->gc.stepmul;
   if (lim == 0)
     lim = LJ_MAX_MEM;
   if (g->gc.total > g->gc.threshold)
@@ -756,12 +759,13 @@ int LJ_FASTCALL lj_gc_step(lua_State *L)
       return 1;  /* Finished a GC cycle. */
     }
   } while (sizeof(lim) == 8 ? ((int64_t)lim > 0) : ((int32_t)lim > 0));
-  if (g->gc.debt < GCSTEPSIZE) {
-    g->gc.threshold = g->gc.total + GCSTEPSIZE;
+  if (g->gc.debt < g->gc.stepsize) {
+    g->gc.threshold = g->gc.total <= LJ_GC_MAXTHRESHOLD - g->gc.stepsize ?
+      g->gc.total + g->gc.stepsize : LJ_GC_MAXTHRESHOLD;
     g->vmstate = ostate;
     return -1;
   } else {
-    g->gc.debt -= GCSTEPSIZE;
+    g->gc.debt -= g->gc.stepsize;
     g->gc.threshold = g->gc.total;
     g->vmstate = ostate;
     return 0;
