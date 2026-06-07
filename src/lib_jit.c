@@ -220,7 +220,7 @@ static int jit_gcstats(lua_State *L)
   GCStats snap = g->gc.stats;
   GCStats *s = &snap;
   int reset = L->base < L->top && tvistruecond(L->base);
-  GCtab *t = lj_tab_new_ah(L, 0, 24);
+  GCtab *t = lj_tab_new_ah(L, 0, 26);
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
 
@@ -239,6 +239,8 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "atomic_calls", s->atomic_calls);
   gcstats_set(L, t, "sweep_string_steps", s->sweep_string_steps);
   gcstats_set(L, t, "sweep_root_steps", s->sweep_root_steps);
+  gcstats_set(L, t, "finalizer_scan_steps", s->finalizer_scan_steps);
+  gcstats_set(L, t, "finalizer_queued", s->finalizer_queued);
   gcstats_set(L, t, "finalizer_calls", s->finalizer_calls);
   gcstats_set(L, t, "weak_tables", s->weak_tables);
   gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);

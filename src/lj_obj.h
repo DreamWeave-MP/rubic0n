@@ -607,6 +607,8 @@ typedef struct GCStats {
   uint64_t atomic_calls;
   uint64_t sweep_string_steps;
   uint64_t sweep_root_steps;
+  uint64_t finalizer_scan_steps;
+  uint64_t finalizer_queued;
   uint64_t finalizer_calls;
   uint64_t weak_tables;
   uint64_t weak_slots_cleared;

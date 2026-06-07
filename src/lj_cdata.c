@@ -62,17 +62,9 @@ GCcdata *lj_cdata_newx(CTState *cts, CTypeID id, CTSize sz, CTInfo info)
 void LJ_FASTCALL lj_cdata_free(global_State *g, GCcdata *cd)
 {
   if (LJ_UNLIKELY(cd->marked & LJ_GC_CDATA_FIN)) {
-    GCobj *root;
     makewhite(g, obj2gco(cd));
     markfinalized(obj2gco(cd));
-    if ((root = gcref(g->gc.mmudata)) != NULL) {
-      setgcrefr(cd->nextgc, root->gch.nextgc);
-      setgcref(root->gch.nextgc, obj2gco(cd));
-      setgcref(g->gc.mmudata, obj2gco(cd));
-    } else {
-      setgcref(cd->nextgc, obj2gco(cd));
-      setgcref(g->gc.mmudata, obj2gco(cd));
-    }
+    lj_gc_queuefinalizer(g, obj2gco(cd));
   } else if (LJ_LIKELY(!cdataisv(cd))) {
     CType *ct = ctype_raw(ctype_ctsG(g), cd->ctypeid);
     CTSize sz = ctype_hassize(ct->info) ? ct->size : CTSIZE_PTR;

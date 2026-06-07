@@ -137,6 +137,25 @@ static void gc_mark_mmudata(global_State *g)
   }
 }
 
+/* Queue an already unlinked userdata/cdata object for finalization.
+** g->gc.mmudata points to the tail of this circular queue.
+*/
+void lj_gc_queuefinalizer(global_State *g, GCobj *o)
+{
+  GCobj *root = gcref(g->gc.mmudata);
+  lj_assertG(o->gch.gct == ~LJ_TUDATA || o->gch.gct == ~LJ_TCDATA,
+	     "bad finalizer queue object");
+  lj_gc_stats_inc(g, finalizer_queued);
+  if (root) {  /* Link after tail and make the new object the tail. */
+    setgcrefr(o->gch.nextgc, root->gch.nextgc);
+    setgcref(root->gch.nextgc, o);
+    setgcref(g->gc.mmudata, o);
+  } else {  /* Create circular list. */
+    setgcref(o->gch.nextgc, o);
+    setgcref(g->gc.mmudata, o);
+  }
+}
+
 /* Separate userdata objects to be finalized to mmudata list. */
 size_t lj_gc_separateudata(global_State *g, int all)
 {
@@ -144,6 +163,7 @@ size_t lj_gc_separateudata(global_State *g, int all)
   GCRef *p = &mainthread(g)->nextgc;
   GCobj *o;
   while ((o = gcref(*p)) != NULL) {
+    lj_gc_stats_inc(g, finalizer_scan_steps);
     if (!(iswhite(o) || all) || isfinalized(gco2ud(o))) {
       p = &o->gch.nextgc;  /* Nothing to do. */
     } else if (!lj_meta_fastg(g, tabref(gco2ud(o)->metatable), MM_gc)) {
@@ -153,15 +173,7 @@ size_t lj_gc_separateudata(global_State *g, int all)
       m += sizeudata(gco2ud(o));
       markfinalized(o);
       *p = o->gch.nextgc;
-      if (gcref(g->gc.mmudata)) {  /* Link to end of mmudata list. */
-	GCobj *root = gcref(g->gc.mmudata);
-	setgcrefr(o->gch.nextgc, root->gch.nextgc);
-	setgcref(root->gch.nextgc, o);
-	setgcref(g->gc.mmudata, o);
-      } else {  /* Create circular list. */
-	setgcref(o->gch.nextgc, o);
-	setgcref(g->gc.mmudata, o);
-      }
+      lj_gc_queuefinalizer(g, o);
     }
   }
   return m;

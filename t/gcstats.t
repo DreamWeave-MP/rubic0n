@@ -40,6 +40,8 @@ local fields = {
   "atomic_calls",
   "sweep_string_steps",
   "sweep_root_steps",
+  "finalizer_scan_steps",
+  "finalizer_queued",
   "finalizer_calls",
   "weak_tables",
   "weak_slots_cleared",
@@ -65,6 +67,15 @@ do
   for i = 1, 100 do weak[i] = {} end
 end
 
+do
+  local mt = { __gc = function() end }
+  for i = 1, 20 do newproxy(false) end
+  for i = 1, 5 do
+    local u = newproxy(true)
+    getmetatable(u).__gc = mt.__gc
+  end
+end
+
 collectgarbage("collect")
 local a = jit.gcstats()
 check_shape(a)
@@ -72,6 +83,9 @@ assert(a.fullgc_calls >= 1)
 assert(a.alloc_calls > 0)
 assert(a.alloc_bytes > 0)
 assert(a.new_gcobj_calls > 0)
+assert(a.finalizer_scan_steps > 0)
+assert(a.finalizer_queued >= 5)
+assert(a.finalizer_calls >= 5)
 
 local b = jit.gcstats()
 check_shape(b)
