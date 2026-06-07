@@ -14,6 +14,7 @@ Table of Contents
         * [table.nkeys](#tablenkeys)
         * [table.clone](#tableclone)
         * [jit.prngstate](#jitprngstate)
+        * [jit.gcstats](#jitgcstats)
         * [thread.exdata](#threadexdata)
         * [thread.exdata2](#threadexdata2)
     * [New C API](#new-c-api)
@@ -22,6 +23,7 @@ Table of Contents
         * [lua_setexdata2](#lua_setexdata2)
         * [lua_getexdata2](#lua_getexdata2)
         * [lua_resetthread](#lua_resetthread)
+        * [LUA_GCSETSTEPSIZE](#lua_gcsetstepsize)
     * [New macros](#new-macros)
         * [`OPENRESTY_LUAJIT`](#openresty_luajit)
         * [`HAVE_LUA_RESETTHREAD`](#have_lua_resetthread)
@@ -174,6 +176,59 @@ jit.prngstate{432, 23, 50} -- {432, 23, 50, 0, 0, 0, 0, 0}
 
 [Back to TOC](#table-of-contents)
 
+### jit.gcstats
+
+**syntax:** *stats = jit.gcstats(reset?)*
+
+Available only when this branch is built with `-DLUAJIT_ENABLE_GCSTATS`.
+Without that compile flag, `jit.gcstats` is not registered. The statistics are
+observability counters for the existing incremental collector; this is not a
+generational GC mode and does not make collection automatically faster.
+
+The function returns a table snapshot with numeric counter fields. If `reset` is
+truthy, the snapshot is returned first and the stored counters are then reset to
+zero. Counters are stored internally as `uint64_t`, but are returned as Lua
+numbers, so very large values may lose integer precision on builds where
+`lua_Number` is a double.
+
+Current fields:
+
+```text
+alloc_calls            free_calls             realloc_calls
+alloc_bytes            free_bytes             realloc_bytes
+new_gcobj_calls        step_calls             cycle_count
+fullgc_calls           propagate_calls        propagate_bytes
+atomic_calls           sweep_string_steps     sweep_root_steps
+finalizer_scan_steps   finalizer_queued       finalizer_calls
+weak_tables            weak_slots_cleared
+barrier_forward        barrier_back           barrier_upvalue
+barrier_trace          jit_forced_exits
+```
+
+Counter groups include allocator calls and bytes (`alloc_*`, `free_*`,
+`realloc_*`), object allocation (`new_gcobj_calls`), incremental step and cycle
+progress (`step_calls`, `cycle_count`, `fullgc_calls`), marking and sweeping
+work (`propagate_*`, `atomic_calls`, `sweep_*`), finalizer activity
+(`finalizer_scan_steps`, `finalizer_queued`, `finalizer_calls`), weak table
+processing, write barriers, and JIT-forced exits. These counters are intended
+for comparing runs and investigating GC behavior; they should not be treated as
+exact semantic event counts for every allocation or object lifetime edge case.
+
+Stats are disabled by default. Stats-enabled builds add counter writes on GC and
+allocation paths.
+
+Related local tools:
+
+* `tools/gc-validation-matrix.sh` runs a conservative local matrix for
+  GC-sensitive changes, including baseline, GC-stats, no-FFI, and assertion/API
+  check legs.
+* `bench/gcstats.lua` runs diagnostic allocation scenarios using
+  `jit.gcstats()`. It requires a stats-enabled build and should be used to
+  compare deltas across builds/configurations, not as a standalone performance
+  claim.
+
+[Back to TOC](#table-of-contents)
+
 ### thread.exdata
 
 **syntax:** *exdata = th_exdata(data?)*
@@ -278,6 +333,23 @@ reset properly.
 
 The current implementation does not shrink the already allocated Lua stack
 though. It only clears it.
+
+[Back to TOC](#table-of-contents)
+
+### LUA_GCSETSTEPSIZE
+
+```C
+lua_gc(L, LUA_GCSETSTEPSIZE, kb);
+```
+
+Sets the incremental GC step-size quantum in KiB and returns the previous value
+in KiB. The corresponding Lua API is `collectgarbage("setstepsize", kb)`.
+
+The default is 1 KiB, matching the old fixed quantum. Non-positive inputs are
+clamped to 1 KiB. Very large inputs are clamped to the implementation maximum
+(currently 64 MiB). The step size is a pacing quantum used with the existing
+`setstepmul` multiplier and `step` work requests; it is not a memory limit and
+does not change the collector into a generational collector.
 
 [Back to TOC](#table-of-contents)
 

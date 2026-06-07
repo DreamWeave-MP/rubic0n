@@ -169,6 +169,23 @@ Note that you can only define <b>a single global wrapper function</b>,
 so be careful when using this mechanism from multiple C++ modules.
 Also note that this mechanism is not without overhead.
 </p>
+
+<h2 id="lua_gcsetstepsize"><tt>lua_gc(L, LUA_GCSETSTEPSIZE, kb)</tt>
+&mdash; Set GC step size</h2>
+<p>
+<tt>LUA_GCSETSTEPSIZE</tt> is a <tt>lua_gc()</tt> option that sets the
+incremental GC step-size quantum in KiB and returns the previous value in KiB.
+It is the C API equivalent of
+<tt>collectgarbage("setstepsize", kb)</tt>.
+</p>
+<p>
+The default is 1&nbsp;KiB, matching the old fixed incremental quantum.
+Non-positive inputs are clamped to 1&nbsp;KiB. Very large inputs are clamped to
+the implementation maximum, currently 64&nbsp;MiB. The value works together with
+the existing <tt>LUA_GCSETSTEPMUL</tt> and <tt>LUA_GCSTEP</tt> controls. It is
+a pacing quantum, not a memory limit, and does not change the collector into a
+generational collector.
+</p>
 <br class="flush">
 </div>
 <div id="foot">

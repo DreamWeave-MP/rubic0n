@@ -284,6 +284,23 @@ Important: Neither this nor any other PRNG based on the simplistic
 <tt>math.random()</tt> API is suitable for cryptographic use.
 </p>
 
+<h3 id="collectgarbage_setstepsize"><tt>collectgarbage("setstepsize", kb)</tt>
+sets the incremental GC step size</h3>
+<p>
+This option sets the collector step-size quantum in KiB and returns the
+previous value in KiB. The default is 1&nbsp;KiB, matching the old fixed
+incremental quantum. Non-positive inputs are clamped to 1&nbsp;KiB. Very
+large inputs are clamped to the implementation maximum, currently
+64&nbsp;MiB.
+</p>
+<p>
+The step size is a pacing quantum for the existing incremental collector. It is
+combined with <tt>collectgarbage("setstepmul", n)</tt> and explicit
+<tt>collectgarbage("step", n)</tt> requests when determining how much GC work
+to perform. It is not a memory limit, does not enable a generational collector,
+and does not make collection automatically faster.
+</p>
+
 <h3 id="io"><tt>io.*</tt> functions handle 64&nbsp;bit file offsets</h3>
 <p>
 The file I/O functions in the standard <tt>io.*</tt> library handle
