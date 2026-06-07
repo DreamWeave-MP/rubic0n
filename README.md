@@ -206,11 +206,12 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 ```
 
-Builds that opt into the experimental
-`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` scaffold also expose reserved
-`sweep_udata_*` counters for future userdata finalizer discovery work. These
-counters are contract-bound to this fork and do not imply that sweep-time
-discovery is implemented or faster yet.
+Builds that opt into experimental sweep-time userdata finalizer discovery with
+`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` also expose `sweep_udata_*` counters.
+In that mode, normal GC cycles discover userdata finalizers incrementally during
+the sweep phase instead of walking the userdata candidate list during atomic.
+These counters are contract-bound to this fork and are intended for validating
+that opt-in mode.
 
 Counter groups include allocator calls and bytes (`alloc_*`, `free_*`,
 `realloc_*`), object allocation (`new_gcobj_calls`), incremental step and cycle
@@ -425,11 +426,23 @@ This is a performance contract chosen by this fork to avoid repeatedly scanning
 long-lived userdata that cannot currently be finalized. It should not be treated
 as general LuaJIT behavior.
 
-An experimental scaffold for future sweep-phase userdata finalizer discovery can
-be enabled with `-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. It is disabled by
-default, contract-bound to this fork, and currently only wires collector state
-and optional `jit.gcstats()` counters; it does not change finalizer discovery
-semantics.
+Experimental sweep-phase userdata finalizer discovery can be enabled with
+`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. It is disabled by default and
+contract-bound to this fork. In this mode, normal GC cycles skip the atomic
+userdata candidate walk and instead process the candidate segment incrementally
+before string/root sweeping.
+
+This opt-in mode is only for static, leaf/native userdata finalizers. Late
+mutation of userdata metatables or `__gc` after a candidate has been scanned is
+still unsupported. Dead finalizable userdata preserve only the userdata, its
+metatable, and the immediate `__gc` callable until finalization; arbitrary Lua
+closure dependency graphs are outside the contract. Shutdown may still use the
+traditional close-time separation path.
+
+This changes an observable weak-key edge case from stock LuaJIT. Weak-key
+associations whose keys are dying finalizable userdata may be cleared before the
+userdata finalizers run in this mode. Code using this mode must not rely on weak
+keys retaining dying finalizable userdata through finalizer execution.
 
 [Back to TOC](#table-of-contents)
 

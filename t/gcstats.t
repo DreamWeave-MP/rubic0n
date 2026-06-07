@@ -75,13 +75,21 @@ local function check_shape(t)
 end
 
 check_shape(jit.gcstats(true))
+local extreme = jit.gcstats().sweep_udata_steps ~= nil
 
 do
   local weak = setmetatable({}, { __mode = "v" })
   for i = 1, 100 do weak[i] = {} end
 end
 
-do
+if extreme then
+  collectgarbage("stop")
+  for i = 1, 5 do
+    local u = newproxy(true)
+    getmetatable(u).__gc = tostring
+  end
+  collectgarbage("restart")
+else
   local mt = { __gc = function() end }
   for i = 1, 20 do newproxy(false) end
   collectgarbage("stop")
@@ -99,7 +107,12 @@ assert(a.fullgc_calls >= 1)
 assert(a.alloc_calls > 0)
 assert(a.alloc_bytes > 0)
 assert(a.new_gcobj_calls > 0)
-assert(a.finalizer_scan_steps > 0)
+if extreme then
+  assert(a.finalizer_scan_steps == 0, a.finalizer_scan_steps)
+  assert(a.sweep_udata_steps > 0, a.sweep_udata_steps)
+else
+  assert(a.finalizer_scan_steps > 0)
+end
 assert(a.finalizer_queued >= 5)
 assert(a.finalizer_calls >= 5)
 
@@ -126,7 +139,13 @@ do
   collectgarbage("collect")
   local first = jit.gcstats(true)
   check_shape(first)
-  assert(first.finalizer_scan_steps >= n, first.finalizer_scan_steps)
+  if extreme then
+    assert(first.finalizer_scan_steps == 0, first.finalizer_scan_steps)
+    assert(first.sweep_udata_steps >= n, first.sweep_udata_steps)
+    assert(first.sweep_udata_parked >= n, first.sweep_udata_parked)
+  else
+    assert(first.finalizer_scan_steps >= n, first.finalizer_scan_steps)
+  end
 
   for _ = 1, 3 do collectgarbage("collect") end
 
@@ -136,7 +155,7 @@ do
   assert(refs[n] ~= nil)
 end
 
-do
+if not extreme then
   local n = 2000
   local resurrected = {}
 
@@ -166,6 +185,25 @@ do
   check_shape(c)
   assert(c.finalizer_scan_steps < n / 4, c.finalizer_scan_steps)
   assert(#resurrected == n, #resurrected)
+else
+  local n = 2000
+
+  do
+    collectgarbage("stop")
+    for i = 1, n do
+      local u = newproxy(true)
+      getmetatable(u).__gc = tostring
+    end
+    collectgarbage("restart")
+  end
+
+  for _ = 1, 8 do collectgarbage("collect") end
+
+  local c = jit.gcstats()
+  check_shape(c)
+  assert(c.finalizer_scan_steps == 0, c.finalizer_scan_steps)
+  assert(c.sweep_udata_queued >= n, c.sweep_udata_queued)
+  assert(c.finalizer_calls >= n, c.finalizer_calls)
 end
 
 print("ok")

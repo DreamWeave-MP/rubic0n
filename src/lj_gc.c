@@ -30,6 +30,7 @@
 #include "lj_vmevent.h"
 
 #define GCSWEEPMAX	40
+#define GCSWEEPUDATAMAX	GCSWEEPMAX
 #define GCSWEEPCOST	10
 #define GCFINALIZECOST	100
 
@@ -123,6 +124,7 @@ static void gc_mark_uv(global_State *g)
   }
 }
 
+#if !LJ_HAS_SWEEP_UDATA_FINALIZERS
 /* Mark userdata in mmudata list. */
 static void gc_mark_mmudata(global_State *g)
 {
@@ -136,6 +138,7 @@ static void gc_mark_mmudata(global_State *g)
     } while (u != root);
   }
 }
+#endif
 
 /* Queue an already unlinked userdata/cdata object for finalization.
 ** g->gc.mmudata points to the tail of this circular queue.
@@ -476,6 +479,73 @@ static void gc_sweepstr(global_State *g, GCRef *chain)
   setgcrefp(*chain, (gcrefu(q) | (u & 1)));
 }
 
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+/* Preserve an immediate object needed by a sweep-discovered finalizer. */
+static void gc_preserve_now(global_State *g, GCobj *o)
+{
+  if (o) {
+    makewhite(g, o);
+    lj_gc_stats_inc(g, sweep_udata_preserved);
+  }
+}
+
+/*
+** Partial sweep of the userdata candidate segment after atomic marking.
+**
+** This opt-in mode deliberately does not implement stock Lua/LuaJIT atomic
+** finalizer discovery. It is for static, leaf/native userdata finalizers: late
+** mutation of metatables or __gc is unsupported after the candidate is scanned,
+** and Lua closure dependency graphs are not recursively preserved here. For a
+** dead finalizable userdata, only the userdata, its metatable, and the immediate
+** __gc callable are made current-white so root/table sweeping cannot free them
+** before GCSfinalize resolves and calls the finalizer.
+*/
+static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
+				    GCSize *queued)
+{
+  int ow = otherwhite(g);
+  GCobj *o;
+  *queued = 0;
+  while ((o = gcref(*p)) != NULL && lim-- > 0) {
+    GCudata *ud = gco2ud(o);
+    GCtab *mt = tabref(ud->metatable);
+    cTValue *mo = lj_meta_fastg(g, mt, MM_gc);
+    int alive = ((o->gch.marked ^ LJ_GC_WHITES) & ow);
+    lj_gc_stats_inc(g, sweep_udata_steps);
+    if (alive) {  /* Black or current white: keep or park the live userdata. */
+      lj_assertG(!isdead(g, o) || (o->gch.marked & LJ_GC_FIXED),
+		 "sweep of undead userdata");
+      makewhite(g, o);
+      if (mo) {
+	p = &o->gch.nextgc;
+      } else {
+	setgcrefr(*p, o->gch.nextgc);
+	setgcrefr(o->gch.nextgc, g->gc.root);
+	setgcref(g->gc.root, o);
+	lj_gc_stats_inc(g, sweep_udata_parked);
+      }
+    } else {  /* Otherwise the userdata is dead. */
+      lj_assertG(isdead(g, o) || ow == LJ_GC_SFIXED,
+		 "sweep of unlive userdata");
+      setgcrefr(*p, o->gch.nextgc);
+      if (mo) {
+	*queued += sizeudata(ud);
+	markfinalized(o);
+	gc_preserve_now(g, o);
+	gc_preserve_now(g, obj2gco(mt));
+	if (tvisgcv(mo)) gc_preserve_now(g, gcV(mo));
+	lj_gc_queuefinalizer(g, o);
+	lj_gc_stats_inc(g, sweep_udata_queued);
+      } else {
+	lj_udata_free(g, ud);
+	lj_gc_stats_inc(g, sweep_udata_freed);
+      }
+    }
+  }
+  return p;
+}
+#endif
+
 /* Check whether we can clear a key or a value slot from a table. */
 static int gc_mayclear(cTValue *o, int val)
 {
@@ -666,9 +736,13 @@ static void atomic(global_State *g, lua_State *L)
   setgcrefnull(g->gc.grayagain);
   gc_propagate_gray(g);  /* Propagate it. */
 
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  udsize = 0;
+#else
   udsize = lj_gc_separateudata(g, 0);  /* Separate userdata to be finalized. */
   gc_mark_mmudata(g);  /* Mark them. */
   udsize += gc_propagate_gray(g);  /* And propagate the marks. */
+#endif
 
   /* All marking done, clear weak tables. */
   gc_clearweak(g, gcref(g->gc.weak));
@@ -680,7 +754,7 @@ static void atomic(global_State *g, lua_State *L)
   g->strempty.marked = g->gc.currentwhite;
   setmref(g->gc.sweep, &g->gc.root);
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
-  setmref(g->gc.sweepudata, &g->gc.mmudata);
+  setmref(g->gc.sweepudata, &mainthread(g)->nextgc);
 #endif
   g->gc.estimate = g->gc.total - (GCSize)udsize;  /* Initial estimate. */
 }
@@ -704,9 +778,20 @@ static size_t gc_onestep(lua_State *L)
     atomic(g, L);
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
     g->gc.state = GCSsweepudata;
-    setmref(g->gc.sweepudata, &g->gc.mmudata);
+    setmref(g->gc.sweepudata, &mainthread(g)->nextgc);
     return 0;
   case GCSsweepudata:
+    {
+      GCSize old = g->gc.total, queued;
+      setmref(g->gc.sweepudata,
+	      gc_sweepudata(g, mref(g->gc.sweepudata, GCRef),
+			    GCSWEEPUDATAMAX, &queued));
+      lj_assertG(old >= g->gc.total, "sweep increased memory");
+      g->gc.estimate -= old - g->gc.total;
+      g->gc.estimate -= queued;
+      if (gcref(*mref(g->gc.sweepudata, GCRef)) != NULL)
+	return GCSWEEPUDATAMAX*GCSWEEPCOST;
+    }
 #endif
     g->gc.state = GCSsweepstring;  /* Start of sweep phase. */
     g->gc.sweepstr = 0;
