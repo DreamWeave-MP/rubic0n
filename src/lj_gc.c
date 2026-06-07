@@ -196,6 +196,7 @@ static int gc_traverse_tab(global_State *g, GCtab *t)
 	t->marked = (uint8_t)((t->marked & ~LJ_GC_WEAK) | weak);
 	setgcrefr(t->gclist, g->gc.weak);
 	setgcref(g->gc.weak, obj2gco(t));
+	lj_gc_stats_inc(g, weak_tables);
       }
     }
   }
@@ -325,6 +326,7 @@ static size_t propagatemark(global_State *g)
 {
   GCobj *o = gcref(g->gc.gray);
   int gct = o->gch.gct;
+  size_t m;
   lj_assertG(isgray(o), "propagation of non-gray object");
   gray2black(o);
   setgcrefr(g->gc.gray, o->gch.gclist);  /* Remove from gray list. */
@@ -332,35 +334,38 @@ static size_t propagatemark(global_State *g)
     GCtab *t = gco2tab(o);
     if (gc_traverse_tab(g, t) > 0)
       black2gray(o);  /* Keep weak tables gray. */
-    return sizeof(GCtab) + sizeof(TValue) * t->asize +
-			   (t->hmask ? sizeof(Node) * (t->hmask + 1) : 0);
+    m = sizeof(GCtab) + sizeof(TValue) * t->asize +
+	(t->hmask ? sizeof(Node) * (t->hmask + 1) : 0);
   } else if (LJ_LIKELY(gct == ~LJ_TFUNC)) {
     GCfunc *fn = gco2func(o);
     gc_traverse_func(g, fn);
-    return isluafunc(fn) ? sizeLfunc((MSize)fn->l.nupvalues) :
-			   sizeCfunc((MSize)fn->c.nupvalues);
+    m = isluafunc(fn) ? sizeLfunc((MSize)fn->l.nupvalues) :
+	sizeCfunc((MSize)fn->c.nupvalues);
   } else if (LJ_LIKELY(gct == ~LJ_TPROTO)) {
     GCproto *pt = gco2pt(o);
     gc_traverse_proto(g, pt);
-    return pt->sizept;
+    m = pt->sizept;
   } else if (LJ_LIKELY(gct == ~LJ_TTHREAD)) {
     lua_State *th = gco2th(o);
     setgcrefr(th->gclist, g->gc.grayagain);
     setgcref(g->gc.grayagain, o);
     black2gray(o);  /* Threads are never black. */
     gc_traverse_thread(g, th);
-    return sizeof(lua_State) + sizeof(TValue) * th->stacksize;
+    m = sizeof(lua_State) + sizeof(TValue) * th->stacksize;
   } else {
 #if LJ_HASJIT
     GCtrace *T = gco2trace(o);
     gc_traverse_trace(g, T);
-    return ((sizeof(GCtrace)+7)&~7) + (T->nins-T->nk)*sizeof(IRIns) +
-	   T->nsnap*sizeof(SnapShot) + T->nsnapmap*sizeof(SnapEntry);
+    m = ((sizeof(GCtrace)+7)&~7) + (T->nins-T->nk)*sizeof(IRIns) +
+      T->nsnap*sizeof(SnapShot) + T->nsnapmap*sizeof(SnapEntry);
 #else
     lj_assertG(0, "bad GC type %d", gct);
-    return 0;
+    m = 0;
 #endif
   }
+  lj_gc_stats_inc(g, propagate_calls);
+  lj_gc_stats_add(g, propagate_bytes, m);
+  return m;
 }
 
 /* Propagate all gray objects. */
@@ -481,8 +486,10 @@ static void gc_clearweak(global_State *g, GCobj *o)
       for (i = 0; i < asize; i++) {
 	/* Clear array slot when value is about to be collected. */
 	TValue *tv = arrayslot(t, i);
-	if (gc_mayclear(tv, 1))
+	if (gc_mayclear(tv, 1)) {
 	  setnilV(tv);
+	  lj_gc_stats_inc(g, weak_slots_cleared);
+	}
       }
     }
     if (t->hmask > 0) {
@@ -492,8 +499,10 @@ static void gc_clearweak(global_State *g, GCobj *o)
 	Node *n = &node[i];
 	/* Clear hash slot when key or value is about to be collected. */
 	if (!tvisnil(&n->val) && (gc_mayclear(&n->key, 0) ||
-				  gc_mayclear(&n->val, 1)))
+				  gc_mayclear(&n->val, 1))) {
 	  setnilV(&n->val);
+	  lj_gc_stats_inc(g, weak_slots_cleared);
+	}
       }
     }
     o = gcref(t->gclist);
@@ -510,6 +519,7 @@ static void gc_call_finalizer(global_State *g, lua_State *L,
   int errcode;
   lua_State *VL = vmthread(g);
   TValue *top;
+  lj_gc_stats_inc(g, finalizer_calls);
   lj_trace_abort(g);
   hook_entergc(g);  /* Disable hooks and new traces during __gc. */
   if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
@@ -621,6 +631,7 @@ void lj_gc_freeall(global_State *g)
 static void atomic(global_State *g, lua_State *L)
 {
   size_t udsize;
+  lj_gc_stats_inc(g, atomic_calls);
 
   gc_mark_uv(g);  /* Need to remark open upvalues (the thread may be dead). */
   gc_propagate_gray(g);  /* Propagate any left-overs. */
@@ -675,6 +686,7 @@ static size_t gc_onestep(lua_State *L)
     return 0;
   case GCSsweepstring: {
     GCSize old = g->gc.total;
+    lj_gc_stats_inc(g, sweep_string_steps);
     gc_sweepstr(g, &g->str.tab[g->gc.sweepstr++]);  /* Sweep one chain. */
     if (g->gc.sweepstr > g->str.mask)
       g->gc.state = GCSsweep;  /* All string hash chains sweeped. */
@@ -684,6 +696,7 @@ static size_t gc_onestep(lua_State *L)
     }
   case GCSsweep: {
     GCSize old = g->gc.total;
+    lj_gc_stats_inc(g, sweep_root_steps);
     setmref(g->gc.sweep, gc_sweep(g, mref(g->gc.sweep, GCRef), GCSWEEPMAX));
     lj_assertG(old >= g->gc.total, "sweep increased memory");
     g->gc.estimate -= old - g->gc.total;
@@ -695,6 +708,7 @@ static size_t gc_onestep(lua_State *L)
       } else {  /* Otherwise skip this phase to help the JIT. */
 	g->gc.state = GCSpause;  /* End of GC cycle. */
 	g->gc.debt = 0;
+	lj_gc_stats_inc(g, cycle_count);
       }
     }
     return GCSWEEPMAX*GCSWEEPCOST;
@@ -713,6 +727,7 @@ static size_t gc_onestep(lua_State *L)
     }
     g->gc.state = GCSpause;  /* End of GC cycle. */
     g->gc.debt = 0;
+    lj_gc_stats_inc(g, cycle_count);
     return 0;
   default:
     lj_assertG(0, "bad GC state");
@@ -726,6 +741,7 @@ int LJ_FASTCALL lj_gc_step(lua_State *L)
   global_State *g = G(L);
   GCSize lim;
   int32_t ostate = g->vmstate;
+  lj_gc_stats_inc(g, step_calls);
   setvmstate(g, GC);
   lim = (GCSTEPSIZE/100) * g->gc.stepmul;
   if (lim == 0)
@@ -764,12 +780,16 @@ void LJ_FASTCALL lj_gc_step_fixtop(lua_State *L)
 int LJ_FASTCALL lj_gc_step_jit(global_State *g, MSize steps)
 {
   lua_State *L = gco2th(gcref(g->cur_L));
+  int force;
   L->base = tvref(G(L)->jit_base);
   L->top = curr_topL(L);
   while (steps-- > 0 && lj_gc_step(L) == 0)
     ;
   /* Return 1 to force a trace exit. */
-  return (G(L)->gc.state == GCSatomic || G(L)->gc.state == GCSfinalize);
+  force = (G(L)->gc.state == GCSatomic || G(L)->gc.state == GCSfinalize);
+  if (force)
+    lj_gc_stats_inc(g, jit_forced_exits);
+  return force;
 }
 #endif
 
@@ -778,6 +798,7 @@ void lj_gc_fullgc(lua_State *L)
 {
   global_State *g = G(L);
   int32_t ostate = g->vmstate;
+  lj_gc_stats_inc(g, fullgc_calls);
   setvmstate(g, GC);
   if (g->gc.state <= GCSatomic) {  /* Caught somewhere in the middle. */
     setmref(g->gc.sweep, &g->gc.root);  /* Sweep everything (preserving it). */
@@ -808,6 +829,7 @@ void lj_gc_barrierf(global_State *g, GCobj *o, GCobj *v)
   lj_assertG(g->gc.state != GCSfinalize && g->gc.state != GCSpause,
 	     "bad GC state");
   lj_assertG(o->gch.gct != ~LJ_TTAB, "barrier object is not a table");
+  lj_gc_stats_inc(g, barrier_forward);
   /* Preserve invariant during propagation. Otherwise it doesn't matter. */
   if (g->gc.state == GCSpropagate || g->gc.state == GCSatomic)
     gc_mark(g, v);  /* Move frontier forward. */
@@ -820,6 +842,7 @@ void LJ_FASTCALL lj_gc_barrieruv(global_State *g, TValue *tv)
 {
 #define TV2MARKED(x) \
   (*((uint8_t *)(x) - offsetof(GCupval, tv) + offsetof(GCupval, marked)))
+  lj_gc_stats_inc(g, barrier_upvalue);
   if (g->gc.state == GCSpropagate || g->gc.state == GCSatomic)
     gc_mark(g, gcV(tv));
   else
@@ -854,8 +877,17 @@ void lj_gc_closeuv(global_State *g, GCupval *uv)
 /* Mark a trace if it's saved during the propagation phase. */
 void lj_gc_barriertrace(global_State *g, uint32_t traceno)
 {
+  lj_gc_stats_inc(g, barrier_trace);
   if (g->gc.state == GCSpropagate || g->gc.state == GCSatomic)
     gc_marktrace(g, traceno);
+}
+#endif
+
+#ifdef LUAJIT_ENABLE_GCSTATS
+void lj_gc_stats_reset(global_State *g)
+{
+  GCStats stats = { 0 };
+  g->gc.stats = stats;
 }
 #endif
 
@@ -872,6 +904,16 @@ void *lj_mem_realloc(lua_State *L, void *p, GCSize osz, GCSize nsz)
   lj_assertG((nsz == 0) == (p == NULL), "allocf API violation");
   lj_assertG(checkptrGC(p),
 	     "allocated memory address %p outside required range", p);
+  if (osz == 0) {
+    lj_gc_stats_inc(g, alloc_calls);
+    lj_gc_stats_add(g, alloc_bytes, nsz);
+  } else if (nsz == 0) {
+    lj_gc_stats_inc(g, free_calls);
+    lj_gc_stats_add(g, free_bytes, osz);
+  } else {
+    lj_gc_stats_inc(g, realloc_calls);
+    lj_gc_stats_add(g, realloc_bytes, nsz);
+  }
   g->gc.total = (g->gc.total - osz) + nsz;
   return p;
 }
@@ -885,6 +927,9 @@ void * LJ_FASTCALL lj_mem_newgco(lua_State *L, GCSize size)
     lj_err_mem(L);
   lj_assertG(checkptrGC(o),
 	     "allocated memory address %p outside required range", o);
+  lj_gc_stats_inc(g, alloc_calls);
+  lj_gc_stats_add(g, alloc_bytes, size);
+  lj_gc_stats_inc(g, new_gcobj_calls);
   g->gc.total += size;
   setgcrefr(o->gch.nextgc, g->gc.root);
   setgcref(g->gc.root, o);
@@ -904,4 +949,3 @@ void *lj_mem_grow(lua_State *L, void *p, MSize *szp, MSize lim, MSize esz)
   *szp = sz;
   return p;
 }
-

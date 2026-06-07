@@ -590,6 +590,34 @@ typedef enum {
 #define mmname_str(g, mm)	(strref((g)->gcroot[GCROOT_MMNAME+(mm)]))
 
 /* Garbage collector state. */
+#ifdef LUAJIT_ENABLE_GCSTATS
+typedef struct GCStats {
+  uint64_t alloc_calls;
+  uint64_t free_calls;
+  uint64_t realloc_calls;
+  uint64_t alloc_bytes;
+  uint64_t free_bytes;
+  uint64_t realloc_bytes;
+  uint64_t new_gcobj_calls;
+  uint64_t step_calls;
+  uint64_t cycle_count;
+  uint64_t fullgc_calls;
+  uint64_t propagate_calls;
+  uint64_t propagate_bytes;
+  uint64_t atomic_calls;
+  uint64_t sweep_string_steps;
+  uint64_t sweep_root_steps;
+  uint64_t finalizer_calls;
+  uint64_t weak_tables;
+  uint64_t weak_slots_cleared;
+  uint64_t barrier_forward;
+  uint64_t barrier_back;
+  uint64_t barrier_upvalue;
+  uint64_t barrier_trace;
+  uint64_t jit_forced_exits;
+} GCStats;
+#endif
+
 typedef struct GCState {
   GCSize total;		/* Memory currently allocated. */
   GCSize threshold;	/* Memory threshold. */
@@ -614,6 +642,9 @@ typedef struct GCState {
   MSize pause;		/* Pause between successive GC cycles. */
 #if LJ_64
   MRef lightudseg;	/* Upper bits of lightuserdata segments. */
+#endif
+#ifdef LUAJIT_ENABLE_GCSTATS
+  GCStats stats;		/* Monotonic GC observability counters. */
 #endif
 } GCState;
 

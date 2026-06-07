@@ -208,6 +208,52 @@ LJLIB_CF(jit_prngstate)
   return 1;
 }
 
+#ifdef LUAJIT_ENABLE_GCSTATS
+static void gcstats_set(lua_State *L, GCtab *t, const char *name, uint64_t n)
+{
+  setnumV(lj_tab_setstr(L, t, lj_str_newz(L, name)), (lua_Number)n);
+}
+
+static int jit_gcstats(lua_State *L)
+{
+  global_State *g = G(L);
+  GCStats snap = g->gc.stats;
+  GCStats *s = &snap;
+  int reset = L->base < L->top && tvistruecond(L->base);
+  GCtab *t = lj_tab_new_ah(L, 0, 24);
+
+  settabV(L, L->top++, t);  /* Root table before interning field names. */
+
+  gcstats_set(L, t, "alloc_calls", s->alloc_calls);
+  gcstats_set(L, t, "free_calls", s->free_calls);
+  gcstats_set(L, t, "realloc_calls", s->realloc_calls);
+  gcstats_set(L, t, "alloc_bytes", s->alloc_bytes);
+  gcstats_set(L, t, "free_bytes", s->free_bytes);
+  gcstats_set(L, t, "realloc_bytes", s->realloc_bytes);
+  gcstats_set(L, t, "new_gcobj_calls", s->new_gcobj_calls);
+  gcstats_set(L, t, "step_calls", s->step_calls);
+  gcstats_set(L, t, "cycle_count", s->cycle_count);
+  gcstats_set(L, t, "fullgc_calls", s->fullgc_calls);
+  gcstats_set(L, t, "propagate_calls", s->propagate_calls);
+  gcstats_set(L, t, "propagate_bytes", s->propagate_bytes);
+  gcstats_set(L, t, "atomic_calls", s->atomic_calls);
+  gcstats_set(L, t, "sweep_string_steps", s->sweep_string_steps);
+  gcstats_set(L, t, "sweep_root_steps", s->sweep_root_steps);
+  gcstats_set(L, t, "finalizer_calls", s->finalizer_calls);
+  gcstats_set(L, t, "weak_tables", s->weak_tables);
+  gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);
+  gcstats_set(L, t, "barrier_forward", s->barrier_forward);
+  gcstats_set(L, t, "barrier_back", s->barrier_back);
+  gcstats_set(L, t, "barrier_upvalue", s->barrier_upvalue);
+  gcstats_set(L, t, "barrier_trace", s->barrier_trace);
+  gcstats_set(L, t, "jit_forced_exits", s->jit_forced_exits);
+
+  if (reset)
+    lj_gc_stats_reset(g);
+  return 1;
+}
+#endif
+
 LJLIB_PUSH(top-5) LJLIB_SET(os)
 LJLIB_PUSH(top-4) LJLIB_SET(arch)
 LJLIB_PUSH(top-3) LJLIB_SET(version_num)
@@ -813,6 +859,10 @@ LUALIB_API int luaopen_jit(lua_State *L)
   lua_pushinteger(L, LUAJIT_VERSION_NUM);  /* Deprecated. */
   lua_pushliteral(L, LUAJIT_VERSION);
   LJ_LIB_REG(L, LUA_JITLIBNAME, jit);
+#ifdef LUAJIT_ENABLE_GCSTATS
+  lua_pushcfunction(L, jit_gcstats);
+  lua_setfield(L, -2, "gcstats");
+#endif
 #if LJ_HASPROFILE
   lj_lib_prereg(L, LUA_JITLIBNAME ".profile", luaopen_jit_profile,
 		tabref(L->env));
@@ -826,4 +876,3 @@ LUALIB_API int luaopen_jit(lua_State *L)
   L->top -= 2;
   return 1;
 }
-
