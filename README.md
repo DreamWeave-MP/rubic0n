@@ -235,6 +235,21 @@ Related local tools:
   compare deltas across builds/configurations, not as a standalone performance
   claim.
 
+To compare normal GC-stats behavior with experimental sweep-time userdata
+finalizer discovery, rebuild and run the same focused benchmark filter under
+both configurations:
+
+```sh
+make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS'
+./src/luajit bench/gcstats.lua --iterations 10000 --filter sweep-udata-
+
+make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS'
+./src/luajit bench/gcstats.lua --iterations 10000 --filter sweep-udata-
+```
+
+Extreme-only `sweep_udata_*` fields are shown as `n/a` by the benchmark when
+they are absent from a normal stats build.
+
 [Back to TOC](#table-of-contents)
 
 ### thread.exdata

@@ -80,11 +80,19 @@ local counters = {
   "step_calls",
   "cycle_count",
   "fullgc_calls",
+  "finalizer_scan_steps",
+  "sweep_udata_steps",
+  "sweep_udata_queued",
+  "sweep_udata_freed",
+  "sweep_udata_parked",
+  "sweep_udata_preserved",
   "finalizer_queued",
   "finalizer_calls",
   "weak_tables",
   "weak_slots_cleared",
 }
+
+local has_extreme_counters = jit.gcstats().sweep_udata_steps ~= nil
 
 local function full_gc()
   collectgarbage("collect")
@@ -92,17 +100,25 @@ local function full_gc()
 end
 
 local function delta(before, after, name)
-  return (after[name] or 0) - (before[name] or 0)
+  if before[name] == nil or after[name] == nil then
+    return nil
+  end
+  return after[name] - before[name]
 end
 
 local function print_deltas(before, after)
   for _, name in ipairs(counters) do
-    io.write(string.format("  %-20s %s\n", name, tostring(delta(before, after, name))))
+    local d = delta(before, after, name)
+    io.write(string.format("  %-20s %s\n", name, d == nil and "n/a" or tostring(d)))
   end
 end
 
 local function run_gc_work()
   collectgarbage("step", 0)
+end
+
+local function userdata_iterations(n)
+  return math.max(1, math.min(n, 50000))
 end
 
 local scenarios = {}
@@ -157,6 +173,9 @@ add_scenario("weak-table", function(n)
 end)
 
 add_scenario("userdata-finalizer", function(n)
+  if has_extreme_counters then
+    return nil, "legacy Lua closure userdata finalizers are outside the Extreme/native-finalizer contract"
+  end
   if type(newproxy) ~= "function" then
     return nil, "newproxy unavailable"
   end
@@ -168,6 +187,72 @@ add_scenario("userdata-finalizer", function(n)
   end
   full_gc()
   return finalized
+end)
+
+add_scenario("sweep-udata-live-native-finalizer", function(n)
+  if type(newproxy) ~= "function" then
+    return nil, "newproxy unavailable"
+  end
+  local count = userdata_iterations(n)
+  local refs = {}
+  for j = 1, count do
+    local u = newproxy(true)
+    getmetatable(u).__gc = tostring
+    refs[j] = u
+    if j % 128 == 0 then run_gc_work() end
+  end
+  full_gc()
+  return refs
+end)
+
+add_scenario("sweep-udata-dead-native-finalizer", function(n)
+  if type(newproxy) ~= "function" then
+    return nil, "newproxy unavailable"
+  end
+  local count = userdata_iterations(n)
+  for j = 1, count do
+    local u = newproxy(true)
+    getmetatable(u).__gc = tostring
+    if j % 128 == 0 then run_gc_work() end
+  end
+  full_gc()
+  return count
+end)
+
+add_scenario("sweep-udata-mixed-finalizer", function(n)
+  if type(newproxy) ~= "function" then
+    return nil, "newproxy unavailable"
+  end
+  local count = userdata_iterations(n)
+  local refs = {}
+  for j = 1, count do
+    local u = newproxy(true)
+    if j % 2 == 0 then
+      getmetatable(u).__gc = tostring
+    end
+    if j % 3 == 0 then
+      refs[#refs + 1] = u
+    end
+    if j % 128 == 0 then run_gc_work() end
+  end
+  full_gc()
+  return refs
+end)
+
+add_scenario("sweep-udata-weak-key-extreme-clears-before-finalizer", function(n)
+  if type(newproxy) ~= "function" then
+    return nil, "newproxy unavailable"
+  end
+  local count = math.max(1, math.min(userdata_iterations(n), 10000))
+  local weak = setmetatable({}, { __mode = "k" })
+  for j = 1, count do
+    local u = newproxy(true)
+    getmetatable(u).__gc = tostring
+    weak[u] = j
+    if j % 128 == 0 then run_gc_work() end
+  end
+  full_gc()
+  return weak
 end)
 
 add_scenario("cdata-finalizer", function(n)

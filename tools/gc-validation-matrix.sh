@@ -8,6 +8,7 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 ROOT=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 TESTS="t/gcstats.t t/gc-stepsize.t t/finalizers.t"
+EXTREME_TESTS="t/gcstats.t t/gc-stepsize.t t/sweep-udata-finalizers.t"
 RESTORE=${GC_MATRIX_RESTORE:-1}
 NEED_RESTORE=0
 
@@ -54,9 +55,10 @@ try_make_clean_build() {
 
 run_focused_tests() {
   desc=$1
+  tests=${2:-$TESTS}
 
   info "$desc"
-  (cd "$ROOT" && prove $TESTS)
+  (cd "$ROOT" && prove $tests)
 }
 
 restore_normal_build() {
@@ -82,6 +84,13 @@ run_focused_tests "Focused GC tests on baseline build"
 # GC statistics instrumentation build and tests.
 run_make_clean_build "GC stats build" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS")"
 run_focused_tests "Focused GC tests on GC stats build"
+
+# Experimental sweep-time userdata finalizer discovery with stats. This leg is
+# required so the Extreme-only counters and semantic tests stay covered without
+# changing the default build flags. t/finalizers.t covers legacy Lua closure
+# userdata-finalizer behavior outside the Extreme/native-finalizer contract.
+run_make_clean_build "Extreme GC stats build" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS")"
+run_focused_tests "Focused GC tests on Extreme GC stats build" "$EXTREME_TESTS"
 
 # Interpreter-only build. This Makefile documents LUAJIT_DISABLE_JIT, but it is
 # currently unsupported in this OpenResty/DW tree, so only this leg is optional.
