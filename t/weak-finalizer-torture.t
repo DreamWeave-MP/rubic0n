@@ -54,11 +54,13 @@ local weak = setmetatable({}, { __mode = "v" })
 local finalized = 0
 
 do
+  collectgarbage("stop")
   local u = newproxy(true)
   getmetatable(u).__gc = function(self)
     finalized = finalized + 1
     assert(weak.slot == nil)
   end
+  collectgarbage("restart")
   weak.slot = u
   u = nil
 end
@@ -138,12 +140,14 @@ local resurrected
 local finalized = 0
 
 do
+  collectgarbage("stop")
   local u = newproxy(true)
   getmetatable(u).__gc = function(self)
     finalized = finalized + 1
     assert(weak[1] == nil)
     resurrected = self
   end
+  collectgarbage("restart")
   weak[1] = u
   u = nil
 end
@@ -181,17 +185,21 @@ local function push(s)
 end
 
 local function make(name)
+  collectgarbage("stop")
   local u = newproxy(true)
   getmetatable(u).__gc = function()
     push(name)
+    collectgarbage("stop")
     local child = newproxy(true)
     getmetatable(child).__gc = function()
       child_finalized = child_finalized + 1
     end
+    collectgarbage("restart")
     local junk = {}
     for i = 1, 20 do junk[i] = { i, name } end
     child = nil
   end
+  collectgarbage("restart")
   return u
 end
 
@@ -218,11 +226,13 @@ jit.off()
 local ran = false
 
 do
+  collectgarbage("stop")
   local u = newproxy(true)
   getmetatable(u).__gc = function()
     ran = true
     error("expected finalizer error")
   end
+  collectgarbage("restart")
   u = nil
 end
 
@@ -248,6 +258,7 @@ for i = 1, 120 do
   local junk = {}
   for j = 1, 8 do junk[j] = { i, j } end
   if i % 2 == 0 then
+    collectgarbage("stop")
     local u = newproxy(true)
     made = made + 1
     getmetatable(u).__gc = function()
@@ -255,6 +266,7 @@ for i = 1, 120 do
       local t = {}
       for j = 1, 6 do t[j] = tostring(j) end
     end
+    collectgarbage("restart")
     weak[made] = u
     u = nil
   end
@@ -319,11 +331,13 @@ local finalized = 0
 local function churn(n)
   for i = 1, n do
     local key = { i }
+    collectgarbage("stop")
     local u = newproxy(true)
     made = made + 1
     getmetatable(u).__gc = function()
       finalized = finalized + 1
     end
+    collectgarbage("restart")
     weak[key] = u
     if i % 7 == 0 then collectgarbage("step", 1) end
   end

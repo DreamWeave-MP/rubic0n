@@ -156,7 +156,13 @@ void lj_gc_queuefinalizer(global_State *g, GCobj *o)
   }
 }
 
-/* Separate userdata objects to be finalized to mmudata list. */
+/*
+** Separate userdata objects to be finalized to mmudata list. Userdata without
+** a __gc metamethod are parked back on the normal root list and swept there.
+** This runs only during atomic or lua_close, not while the root sweep cursor is
+** active, so moving objects to g->gc.root cannot invalidate an in-progress
+** root-list sweep.
+*/
 size_t lj_gc_separateudata(global_State *g, int all)
 {
   size_t m = 0;
@@ -164,15 +170,16 @@ size_t lj_gc_separateudata(global_State *g, int all)
   GCobj *o;
   while ((o = gcref(*p)) != NULL) {
     lj_gc_stats_inc(g, finalizer_scan_steps);
-    if (!(iswhite(o) || all) || isfinalized(gco2ud(o))) {
+    if (!lj_meta_fastg(g, tabref(gco2ud(o)->metatable), MM_gc)) {
+      setgcrefr(*p, o->gch.nextgc);
+      setgcrefr(o->gch.nextgc, g->gc.root);
+      setgcref(g->gc.root, o);
+    } else if (!(iswhite(o) || all) || isfinalized(gco2ud(o))) {
       p = &o->gch.nextgc;  /* Nothing to do. */
-    } else if (!lj_meta_fastg(g, tabref(gco2ud(o)->metatable), MM_gc)) {
-      markfinalized(o);  /* Done, as there's no __gc metamethod. */
-      p = &o->gch.nextgc;
     } else {  /* Otherwise move userdata to be finalized to mmudata list. */
       m += sizeudata(gco2ud(o));
       markfinalized(o);
-      *p = o->gch.nextgc;
+      setgcrefr(*p, o->gch.nextgc);
       lj_gc_queuefinalizer(g, o);
     }
   }

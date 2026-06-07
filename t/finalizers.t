@@ -11,7 +11,7 @@ $ENV{LUA_PATH} = "$Bin/../lua/?.lua;;";
 
 my $luajit = abs_path("$Bin/../src/luajit");
 
-plan tests => 4;
+plan tests => 5;
 
 my $cwd = cwd;
 my $dir = tempdir "testlj_finalizers_XXXXXXX", CLEANUP => 1;
@@ -40,8 +40,10 @@ local function push(s)
 end
 
 local function make(name, fin)
+  collectgarbage("stop")
   local u = newproxy(true)
   getmetatable(u).__gc = fin or function() push(name) end
+  collectgarbage("restart")
   return u
 end
 
@@ -82,8 +84,10 @@ local events = {}
 local child_done = false
 
 local function make(name, fin)
+  collectgarbage("stop")
   local u = newproxy(true)
   getmetatable(u).__gc = fin or function() events[#events + 1] = name end
+  collectgarbage("restart")
   return u
 end
 
@@ -105,20 +109,22 @@ assert(child_done)
 print("ok")
 LUA
 
-run_lua 'late userdata __gc addition still finalizes', <<'LUA';
+run_lua '__gc added before first candidate scan still finalizes', <<'LUA';
 jit.off()
 
 local mt
 local finalized = 0
 
 do
+  collectgarbage("stop")
   local u = newproxy(true)
   mt = getmetatable(u)
   u = nil
-end
-
-mt.__gc = function()
-  finalized = finalized + 1
+  -- Supported: install __gc before the userdata reaches its first candidate scan.
+  mt.__gc = function()
+    finalized = finalized + 1
+  end
+  collectgarbage("restart")
 end
 
 for _ = 1, 8 do
@@ -127,6 +133,27 @@ for _ = 1, 8 do
 end
 
 assert(finalized == 1, finalized)
+
+print("ok")
+LUA
+
+run_lua 'live no-finalizer userdata parked from scan keeps weak values', <<'LUA';
+jit.off()
+
+local weak = setmetatable({}, { __mode = "v" })
+local refs = {}
+
+for i = 1, 200 do
+  local u = newproxy(true)
+  refs[i] = u
+  weak[i] = u
+end
+
+for _ = 1, 3 do collectgarbage("collect") end
+
+for i = 1, #refs do
+  assert(weak[i] == refs[i], i)
+end
 
 print("ok")
 LUA

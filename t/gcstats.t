@@ -70,10 +70,12 @@ end
 do
   local mt = { __gc = function() end }
   for i = 1, 20 do newproxy(false) end
+  collectgarbage("stop")
   for i = 1, 5 do
     local u = newproxy(true)
     getmetatable(u).__gc = mt.__gc
   end
+  collectgarbage("restart")
 end
 
 collectgarbage("collect")
@@ -101,9 +103,31 @@ assert(after_reset.fullgc_calls == 0)
 
 do
   local n = 2000
+  local refs = {}
+
+  for i = 1, n do
+    refs[i] = newproxy(true)
+  end
+
+  collectgarbage("collect")
+  local first = jit.gcstats(true)
+  check_shape(first)
+  assert(first.finalizer_scan_steps >= n, first.finalizer_scan_steps)
+
+  for _ = 1, 3 do collectgarbage("collect") end
+
+  local second = jit.gcstats(true)
+  check_shape(second)
+  assert(second.finalizer_scan_steps < n / 10, second.finalizer_scan_steps)
+  assert(refs[n] ~= nil)
+end
+
+do
+  local n = 2000
   local resurrected = {}
 
   do
+    collectgarbage("stop")
     for i = 1, n do
       local u = newproxy(true)
       getmetatable(u).__gc = function(self)
@@ -111,6 +135,7 @@ do
       end
       u = nil
     end
+    collectgarbage("restart")
   end
 
   for _ = 1, 8 do

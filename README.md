@@ -30,6 +30,7 @@ Table of Contents
     * [Optimizations](#optimizations)
         * [Updated JIT default parameters](#updated-jit-default-parameters)
         * [String hashing](#string-hashing)
+        * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
         * [Updated `-bl` option](#updated--bl-option)
@@ -397,6 +398,26 @@ optimized crc32 implementation (see `lj_str_new()`).
 
 This optimization still provides constant-time hashing complexity (`O(n)`), but
 makes hash collision attacks harder for strings up to 127 bytes of size.
+
+[Back to TOC](#table-of-contents)
+
+### Static userdata finalizer scan contract
+
+This fork treats userdata finalizability as static once a userdata object has
+survived a GC finalizer-candidate scan. If the userdata metatable does not have
+`__gc` at that scan, the object is removed from the userdata finalizer-candidate
+chain and is kept only on the normal GC object list. It remains a normal
+collectable userdata object and is swept normally, but later adding `__gc` to
+that userdata metatable is unsupported and may not run a finalizer.
+
+Adding `__gc` before the userdata reaches its first finalizer-candidate scan is
+still supported. Mutating userdata metatables or adding `__gc` after that point,
+including through `debug`, FFI, sandbox bypass access, or similar privileged
+mechanisms, is undefined for this build.
+
+This is a performance contract chosen by this fork to avoid repeatedly scanning
+long-lived userdata that cannot currently be finalized. It should not be treated
+as general LuaJIT behavior.
 
 [Back to TOC](#table-of-contents)
 
