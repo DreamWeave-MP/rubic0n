@@ -605,6 +605,13 @@ typedef struct GCStats {
   uint64_t propagate_calls;
   uint64_t propagate_bytes;
   uint64_t atomic_calls;
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  uint64_t sweep_udata_steps;
+  uint64_t sweep_udata_queued;
+  uint64_t sweep_udata_freed;
+  uint64_t sweep_udata_parked;
+  uint64_t sweep_udata_preserved;
+#endif
   uint64_t sweep_string_steps;
   uint64_t sweep_root_steps;
   uint64_t finalizer_scan_steps;
@@ -634,6 +641,9 @@ typedef struct GCState {
   MSize sweepstr;	/* Sweep position in string table. */
   GCRef root;		/* List of all collectable objects. */
   MRef sweep;		/* Sweep position in root list. */
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  MRef sweepudata;	/* Sweep position in userdata candidate list. */
+#endif
   GCRef gray;		/* List of gray objects. */
   GCRef grayagain;	/* List of objects for atomic traversal. */
   GCRef weak;		/* List of weak tables (to be cleared). */

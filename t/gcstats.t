@@ -52,11 +52,25 @@ local fields = {
   "jit_forced_exits",
 }
 
+local sweep_udata_fields = {
+  "sweep_udata_steps",
+  "sweep_udata_queued",
+  "sweep_udata_freed",
+  "sweep_udata_parked",
+  "sweep_udata_preserved",
+}
+
 local function check_shape(t)
   assert(type(t) == "table")
   for _, name in ipairs(fields) do
     assert(type(t[name]) == "number", name)
     assert(t[name] >= 0, name)
+  end
+  if t.sweep_udata_steps ~= nil then
+    for _, name in ipairs(sweep_udata_fields) do
+      assert(type(t[name]) == "number", name)
+      assert(t[name] >= 0, name)
+    end
   end
 end
 

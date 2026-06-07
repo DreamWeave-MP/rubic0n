@@ -206,6 +206,12 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 ```
 
+Builds that opt into the experimental
+`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` scaffold also expose reserved
+`sweep_udata_*` counters for future userdata finalizer discovery work. These
+counters are contract-bound to this fork and do not imply that sweep-time
+discovery is implemented or faster yet.
+
 Counter groups include allocator calls and bytes (`alloc_*`, `free_*`,
 `realloc_*`), object allocation (`new_gcobj_calls`), incremental step and cycle
 progress (`step_calls`, `cycle_count`, `fullgc_calls`), marking and sweeping
@@ -418,6 +424,12 @@ mechanisms, is undefined for this build.
 This is a performance contract chosen by this fork to avoid repeatedly scanning
 long-lived userdata that cannot currently be finalized. It should not be treated
 as general LuaJIT behavior.
+
+An experimental scaffold for future sweep-phase userdata finalizer discovery can
+be enabled with `-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. It is disabled by
+default, contract-bound to this fork, and currently only wires collector state
+and optional `jit.gcstats()` counters; it does not change finalizer discovery
+semantics.
 
 [Back to TOC](#table-of-contents)
 

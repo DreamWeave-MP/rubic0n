@@ -679,6 +679,9 @@ static void atomic(global_State *g, lua_State *L)
   g->gc.currentwhite = (uint8_t)otherwhite(g);  /* Flip current white. */
   g->strempty.marked = g->gc.currentwhite;
   setmref(g->gc.sweep, &g->gc.root);
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  setmref(g->gc.sweepudata, &g->gc.mmudata);
+#endif
   g->gc.estimate = g->gc.total - (GCSize)udsize;  /* Initial estimate. */
 }
 
@@ -699,6 +702,12 @@ static size_t gc_onestep(lua_State *L)
     if (tvref(g->jit_base))  /* Don't run atomic phase on trace. */
       return LJ_MAX_MEM;
     atomic(g, L);
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+    g->gc.state = GCSsweepudata;
+    setmref(g->gc.sweepudata, &g->gc.mmudata);
+    return 0;
+  case GCSsweepudata:
+#endif
     g->gc.state = GCSsweepstring;  /* Start of sweep phase. */
     g->gc.sweepstr = 0;
     return 0;
@@ -830,8 +839,15 @@ void lj_gc_fullgc(lua_State *L)
     setgcrefnull(g->gc.weak);
     g->gc.state = GCSsweepstring;  /* Fast forward to the sweep phase. */
     g->gc.sweepstr = 0;
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+    setmref(g->gc.sweepudata, &g->gc.mmudata);
+#endif
   }
-  while (g->gc.state == GCSsweepstring || g->gc.state == GCSsweep)
+  while (
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+      g->gc.state == GCSsweepudata ||
+#endif
+      g->gc.state == GCSsweepstring || g->gc.state == GCSsweep)
     gc_onestep(L);  /* Finish sweep. */
   lj_assertG(g->gc.state == GCSfinalize || g->gc.state == GCSpause,
 	     "bad GC state");

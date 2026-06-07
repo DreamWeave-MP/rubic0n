@@ -220,7 +220,13 @@ static int jit_gcstats(lua_State *L)
   GCStats snap = g->gc.stats;
   GCStats *s = &snap;
   int reset = L->base < L->top && tvistruecond(L->base);
-  GCtab *t = lj_tab_new_ah(L, 0, 26);
+  GCtab *t = lj_tab_new_ah(L, 0,
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+                           31
+#else
+                           26
+#endif
+                          );
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
 
@@ -237,6 +243,13 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "propagate_calls", s->propagate_calls);
   gcstats_set(L, t, "propagate_bytes", s->propagate_bytes);
   gcstats_set(L, t, "atomic_calls", s->atomic_calls);
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  gcstats_set(L, t, "sweep_udata_steps", s->sweep_udata_steps);
+  gcstats_set(L, t, "sweep_udata_queued", s->sweep_udata_queued);
+  gcstats_set(L, t, "sweep_udata_freed", s->sweep_udata_freed);
+  gcstats_set(L, t, "sweep_udata_parked", s->sweep_udata_parked);
+  gcstats_set(L, t, "sweep_udata_preserved", s->sweep_udata_preserved);
+#endif
   gcstats_set(L, t, "sweep_string_steps", s->sweep_string_steps);
   gcstats_set(L, t, "sweep_root_steps", s->sweep_root_steps);
   gcstats_set(L, t, "finalizer_scan_steps", s->finalizer_scan_steps);
