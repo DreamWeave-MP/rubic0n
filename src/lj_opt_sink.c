@@ -130,7 +130,7 @@ static int sink_mark_ins(jit_State *J, int lightsink)
 	  irt_ismarked(ira->t)) {
 	irt_setmark(IR(ir->op1)->t);  /* Mark ineligible ref. */
 	irt_setmark(irv->t);  /* Mark stored value. */
-      } else if (lightsink || !valalloc || ir->o == IR_XSTORE) {
+      } else if (lightsink || !valalloc || ira == irv || ir->o == IR_XSTORE) {
 	irt_setmark(irv->t);
       } else {
 	ira->prev |= SINK_ASSUMED;
