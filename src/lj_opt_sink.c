@@ -18,6 +18,11 @@
 /* Some local macros to save typing. Undef'd at the end. */
 #define IR(ref)		(&J->cur.ir[(ref)])
 
+#define SINK_REF_MASK	0x1fff
+#define SINK_ASSUMED	0x2000
+#define SINK_NEEDSIDX	0x4000
+#define SINK_HASIDX	0x8000
+
 /* Check whether the store ref points to an eligible allocation. */
 static IRIns *sink_checkalloc(jit_State *J, IRIns *irs)
 {
@@ -54,6 +59,8 @@ static int sink_checkphi(jit_State *J, IRIns *ira, IRRef ref)
     IRIns *ir = IR(ref);
     if (irt_isphi(ir->t) || (ir->o == IR_CONV && ir->op2 == IRCONV_NUM_INT &&
 			     irt_isphi(IR(ir->op1)->t))) {
+      if ((ira->prev & SINK_REF_MASK) == SINK_REF_MASK)
+	return 0;  /* Index overflow: conservatively don't sink. */
       ira->prev++;
       return 1;  /* Sinkable PHI. */
     }
@@ -69,6 +76,14 @@ static int sink_checkphi(jit_State *J, IRIns *ira, IRRef ref)
   return 1;  /* Constant (non-PHI). */
 }
 
+/* Clear temporary prev bits before sink analysis. */
+static void sink_prepare(jit_State *J)
+{
+  IRIns *ir;
+  for (ir = IR(J->cur.nins-1); ir->o != IR_BASE; ir--)
+    ir->prev = 0;
+}
+
 /* Mark non-sinkable allocations using single-pass backward propagation.
 **
 ** Roots for the marking process are:
@@ -79,13 +94,20 @@ static int sink_checkphi(jit_State *J, IRIns *ira, IRRef ref)
 ** - Stores with non-constant keys.
 ** - All stored values.
 */
-static void sink_mark_ins(jit_State *J)
+static int sink_mark_ins(jit_State *J, int lightsink)
 {
+  int remark = 0;
+  int heavysinks = 0;
   IRIns *ir, *irlast = IR(J->cur.nins-1);
   for (ir = irlast ; ; ir--) {
     switch (ir->o) {
     case IR_BASE:
-      return;  /* Finished. */
+      if (!remark)
+	return heavysinks;  /* Finished. */
+      ir = irlast + 1;
+      remark = 0;
+      heavysinks = 0;
+      break;
     case IR_ALOAD: case IR_HLOAD: case IR_XLOAD: case IR_TBAR: case IR_ALEN:
       irt_setmark(IR(ir->op1)->t);  /* Mark ref for remaining loads. */
       break;
@@ -95,9 +117,18 @@ static void sink_mark_ins(jit_State *J)
       break;
     case IR_ASTORE: case IR_HSTORE: case IR_FSTORE: case IR_XSTORE: {
       IRIns *ira = sink_checkalloc(J, ir);
-      if (!ira || (irt_isphi(ira->t) && !sink_checkphi(J, ira, ir->op2)))
+      IRIns *irv = IR(ir->op2);
+      if (!ira || (irt_isphi(ira->t) && !sink_checkphi(J, ira, ir->op2)) ||
+	  irt_ismarked(ira->t)) {
 	irt_setmark(IR(ir->op1)->t);  /* Mark ineligible ref. */
-      irt_setmark(IR(ir->op2)->t);  /* Mark stored value. */
+	irt_setmark(irv->t);  /* Mark stored value. */
+      } else if (lightsink ||
+		 (irv->o != IR_TNEW && irv->o != IR_TDUP && irv->o != IR_CNEW)) {
+	irt_setmark(irv->t);
+      } else {
+	ira->prev |= SINK_ASSUMED;
+	irv->prev |= SINK_NEEDSIDX;
+      }
       break;
       }
 #if LJ_HASFFI
@@ -120,7 +151,8 @@ static void sink_mark_ins(jit_State *J)
       break;
     case IR_PHI: {
       IRIns *irl = IR(ir->op1), *irr = IR(ir->op2);
-      irl->prev = irr->prev = 0;  /* Clear PHI value counts. */
+      irl->prev &= SINK_ASSUMED|SINK_NEEDSIDX;
+      irr->prev &= SINK_ASSUMED|SINK_NEEDSIDX;  /* Clear PHI value counts. */
       if (irl->o == irr->o &&
 	  (irl->o == IR_TNEW || irl->o == IR_TDUP ||
 	   (LJ_HASFFI && (irl->o == IR_CNEW || irl->o == IR_CNEWI))))
@@ -129,6 +161,24 @@ static void sink_mark_ins(jit_State *J)
       irt_setmark(irr->t);
       break;
       }
+#if LJ_HASFFI
+    case IR_CNEW:
+#endif
+    case IR_TNEW: case IR_TDUP:
+      if ((ir->prev & SINK_ASSUMED) && irt_ismarked(ir->t)) {
+	ir->prev &= ~SINK_ASSUMED;
+	remark = 1;
+      }
+      if (!irt_ismarked(ir->t) && (ir->prev & SINK_NEEDSIDX)) {
+	ir->prev |= SINK_HASIDX;
+	heavysinks++;
+      } else {
+	ir->prev &= ~SINK_HASIDX;
+      }
+      ir->prev &= ~SINK_NEEDSIDX;
+      if (!irt_isphi(ir->t))
+	ir->prev &= ~SINK_ASSUMED;
+      /* fallthrough */
     default:
       if (irt_ismarked(ir->t) || irt_isguard(ir->t)) {  /* Propagate mark. */
 	if (ir->op1 >= REF_FIRST) irt_setmark(IR(ir->op1)->t);
@@ -152,26 +202,35 @@ static void sink_mark_snap(jit_State *J, SnapShot *snap)
 }
 
 /* Iteratively remark PHI refs with differing marks or PHI value counts. */
-static void sink_remark_phi(jit_State *J)
+static int sink_remark_phi(jit_State *J)
 {
   IRIns *ir;
   int remark;
+  int require_remark = 0;
   do {
     remark = 0;
     for (ir = IR(J->cur.nins-1); ir->o == IR_PHI; ir--) {
       IRIns *irl = IR(ir->op1), *irr = IR(ir->op2);
-      if (!((irl->t.irt ^ irr->t.irt) & IRT_MARK) && irl->prev == irr->prev)
+      if (!((irl->t.irt ^ irr->t.irt) & IRT_MARK) &&
+	  (irl->prev & SINK_REF_MASK) == (irr->prev & SINK_REF_MASK))
 	continue;
       remark |= (~(irl->t.irt & irr->t.irt) & IRT_MARK);
+      if ((irl->prev & SINK_ASSUMED) || (irr->prev & SINK_ASSUMED)) {
+	irl->prev &= ~SINK_ASSUMED;
+	irr->prev &= ~SINK_ASSUMED;
+	require_remark |= (~(irl->t.irt & irr->t.irt) & IRT_MARK);
+      }
       irt_setmark(IR(ir->op1)->t);
       irt_setmark(IR(ir->op2)->t);
     }
   } while (remark);
+  return require_remark;
 }
 
 /* Sweep instructions and tag sunken allocations and stores. */
 static void sink_sweep_ins(jit_State *J)
 {
+  int index = 0;
   IRIns *ir, *irbase = IR(REF_BASE);
   for (ir = IR(J->cur.nins-1) ; ir >= irbase; ir--) {
     switch (ir->o) {
@@ -199,7 +258,10 @@ static void sink_sweep_ins(jit_State *J)
     case IR_TNEW: case IR_TDUP:
       if (!irt_ismarked(ir->t)) {
 	ir->t.irt &= ~IRT_GUARD;
-	ir->prev = REGSP(RID_SINK, 0);
+	if (ir->prev & SINK_HASIDX)
+	  ir->prev = REGSP(RID_SINK, ++index);
+	else
+	  ir->prev = REGSP(RID_SINK, 0);
 	J->cur.sinktags = 1;  /* Signal present SINK tags to assembler. */
       } else {
 	irt_clearmark(ir->t);
@@ -244,15 +306,23 @@ void lj_opt_sink(jit_State *J)
   if ((J->flags & need) == need &&
       (J->chain[IR_TNEW] || J->chain[IR_TDUP] ||
        (LJ_HASFFI && (J->chain[IR_CNEW] || J->chain[IR_CNEWI])))) {
+    int heavysinks;
+    int dolightsink = 0;
+    sink_prepare(J);
     if (!J->loopref)
       sink_mark_snap(J, &J->cur.snap[J->cur.nsnap-1]);
-    sink_mark_ins(J);
-    if (J->loopref)
-      sink_remark_phi(J);
+    do {
+      heavysinks = sink_mark_ins(J, dolightsink);
+      dolightsink |= heavysinks >= 0xff;
+    } while ((J->loopref && sink_remark_phi(J)) || heavysinks >= 0xff);
     sink_sweep_ins(J);
   }
 }
 
+#undef SINK_HASIDX
+#undef SINK_NEEDSIDX
+#undef SINK_ASSUMED
+#undef SINK_REF_MASK
 #undef IR
 
 #endif
