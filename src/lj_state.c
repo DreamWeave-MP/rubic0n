@@ -299,9 +299,13 @@ LUA_API lua_State *lua_newstate(lua_Alloc allocf, void *allocd)
   g->gc.state = GCSpause;
   setgcref(g->gc.root, obj2gco(L));
   setmref(g->gc.sweep, &g->gc.root);
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  setmref(g->gc.sweepudata, &g->gc.mmudata);
+#endif
   g->gc.total = sizeof(GG_State);
   g->gc.pause = LUAI_GCPAUSE;
   g->gc.stepmul = LUAI_GCMUL;
+  g->gc.stepsize = LJ_GCSTEPSIZE;
   lj_dispatch_init((GG_State *)L);
   L->status = LUA_ERRERR+1;  /* Avoid touching the stack upon memory error. */
   if (lj_vm_cpcall(L, NULL, NULL, cpluaopen) != 0) {
@@ -393,4 +397,3 @@ void LJ_FASTCALL lj_state_free(global_State *g, lua_State *L)
   lj_mem_freevec(g, tvref(L->stack), L->stacksize, TValue);
   lj_mem_freet(g, L);
 }
-

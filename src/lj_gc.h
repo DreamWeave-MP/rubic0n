@@ -10,7 +10,11 @@
 
 /* Garbage collector states. Order matters. */
 enum {
-  GCSpause, GCSpropagate, GCSatomic, GCSsweepstring, GCSsweep, GCSfinalize
+  GCSpause, GCSpropagate, GCSatomic,
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  GCSsweepudata,
+#endif
+  GCSsweepstring, GCSsweep, GCSfinalize
 };
 
 /* Bitmasks for marked field of GCobj. */
@@ -27,6 +31,11 @@ enum {
 #define LJ_GC_WHITES	(LJ_GC_WHITE0 | LJ_GC_WHITE1)
 #define LJ_GC_COLORS	(LJ_GC_WHITES | LJ_GC_BLACK)
 #define LJ_GC_WEAK	(LJ_GC_WEAKKEY | LJ_GC_WEAKVAL)
+
+#define LJ_GCSTEPSIZE	1024u
+/* Keep the incremental step size a scheduler pacing quantum, not a memory cap. */
+#define LJ_GC_MAXSTEPSIZE	((GCSize)64u << 20)
+#define LJ_GC_MAXTHRESHOLD	(LJ_MAX_MEM - 1)
 
 /* Macros to test and set GCobj colors. */
 #define iswhite(x)	((x)->gch.marked & LJ_GC_WHITES)
@@ -47,6 +56,7 @@ enum {
 
 /* Collector. */
 LJ_FUNC size_t lj_gc_separateudata(global_State *g, int all);
+LJ_FUNC void lj_gc_queuefinalizer(global_State *g, GCobj *o);
 LJ_FUNC void lj_gc_finalize_udata(lua_State *L);
 #if LJ_HASFFI
 LJ_FUNC void lj_gc_finalize_cdata(lua_State *L);
@@ -60,6 +70,19 @@ LJ_FUNCA void LJ_FASTCALL lj_gc_step_fixtop(lua_State *L);
 LJ_FUNC int LJ_FASTCALL lj_gc_step_jit(global_State *g, MSize steps);
 #endif
 LJ_FUNC void lj_gc_fullgc(lua_State *L);
+
+#ifdef LUAJIT_ENABLE_GCSTATS
+LJ_FUNC void lj_gc_stats_reset(global_State *g);
+#define lj_gc_stats_inc(g, field) \
+  ((g)->gc.stats.field++)
+#define lj_gc_stats_add(g, field, n) \
+  ((g)->gc.stats.field += (uint64_t)(n))
+#else
+#define lj_gc_stats_inc(g, field) \
+  ((void)0)
+#define lj_gc_stats_add(g, field, n) \
+  ((void)0)
+#endif
 
 /* GC check: drive collector forward if the GC threshold has been reached. */
 #define lj_gc_check(L) \
@@ -85,6 +108,7 @@ static LJ_AINLINE void lj_gc_barrierback(global_State *g, GCtab *t)
 	     "bad object states for backward barrier");
   lj_assertG(g->gc.state != GCSfinalize && g->gc.state != GCSpause,
 	     "bad GC state");
+  lj_gc_stats_inc(g, barrier_back);
   black2gray(o);
   setgcrefr(t->gclist, g->gc.grayagain);
   setgcref(g->gc.grayagain, o);
@@ -118,6 +142,8 @@ LJ_FUNC void *lj_mem_grow(lua_State *L, void *p,
 
 static LJ_AINLINE void lj_mem_free(global_State *g, void *p, size_t osize)
 {
+  lj_gc_stats_inc(g, free_calls);
+  lj_gc_stats_add(g, free_bytes, osize);
   g->gc.total -= (GCSize)osize;
   g->allocf(g->allocd, p, osize, 0);
 }

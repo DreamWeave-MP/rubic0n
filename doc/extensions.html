@@ -284,6 +284,55 @@ Important: Neither this nor any other PRNG based on the simplistic
 <tt>math.random()</tt> API is suitable for cryptographic use.
 </p>
 
+<h3 id="collectgarbage_setstepsize"><tt>collectgarbage("setstepsize", kb)</tt>
+sets the incremental GC step size</h3>
+<p>
+This option sets the collector step-size quantum in KiB and returns the
+previous value in KiB. The default is 1&nbsp;KiB, matching the old fixed
+incremental quantum. Non-positive inputs are clamped to 1&nbsp;KiB. Very
+large inputs are clamped to the implementation maximum, currently
+64&nbsp;MiB.
+</p>
+<pre class="code">
+local old = collectgarbage("setstepsize", 0)          -- stores 1 KiB
+local prev = collectgarbage("setstepsize", 1024*1024) -- stores the maximum
+</pre>
+<p>
+Both calls return the previous step-size value in KiB. The first demonstrates
+the non-positive clamp; the second demonstrates the clamp for values above the
+implementation maximum.
+</p>
+<p>
+The step size is a pacing quantum for the existing incremental collector. It is
+combined with <tt>collectgarbage("setstepmul", n)</tt> and explicit
+<tt>collectgarbage("step", n)</tt> requests when determining how much GC work
+to perform. It is not a memory limit, does not enable a generational collector,
+and does not make collection automatically faster.
+</p>
+
+<h3 id="static_udata_finalizers">Static userdata finalizer scan contract</h3>
+<p>
+This OpenMW-oriented fork enables sweep-time userdata finalizer discovery by
+default in its Unix and MSVC build scripts with
+<tt>-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS</tt>. The mode is intended for
+static/native/leaf userdata finalizers and is a restricted semantic contract of
+this fork, not stock general LuaJIT finalizer behavior.
+</p>
+<p>
+Userdata finalizability is treated as static once a userdata object has survived
+a GC finalizer-candidate scan. Adding or changing <tt>__gc</tt> late through
+<tt>debug</tt>, FFI, sandbox bypass access, or similar privileged mechanisms is
+unsupported. Dead finalizable userdata preserve only the userdata, its metatable
+and the immediate <tt>__gc</tt> callable until finalization; arbitrary Lua
+closure dependency graphs are outside the contract.
+</p>
+<p>
+Weak-key table entries whose keys are dying finalizable userdata may be cleared
+before <tt>__gc</tt> runs. This is intentional under the static/native/leaf
+finalizer contract. Code using this mode must not rely on weak keys retaining
+dying finalizable userdata through finalizer execution.
+</p>
+
 <h3 id="io"><tt>io.*</tt> functions handle 64&nbsp;bit file offsets</h3>
 <p>
 The file I/O functions in the standard <tt>io.*</tt> library handle

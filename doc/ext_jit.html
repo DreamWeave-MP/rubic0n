@@ -152,6 +152,71 @@ Contains the target architecture name:
 "x86", "x64", "arm", "arm64", "arm64be", "ppc", "mips", "mipsel", "mips64", "mips64el", "mips64r6", "mips64r6el".
 </p>
 
+<h3 id="jit_gcstats"><tt>stats = jit.gcstats([reset])</tt></h3>
+<p>
+This function is available only in builds compiled with
+<tt>-DLUAJIT_ENABLE_GCSTATS</tt>. Without this compile flag,
+<tt>jit.gcstats</tt> is not registered. The counters instrument the existing
+incremental collector; this is not a generational GC mode and does not make
+collection automatically faster. GC stats are disabled by default, and
+stats-enabled builds add counter writes on allocation and GC paths.
+</p>
+<p>
+The function returns a table snapshot of monotonic counters. If
+<tt>reset</tt> is truthy, the snapshot contains the pre-reset values and the
+stored counters are then reset to zero; a following <tt>jit.gcstats()</tt> call
+starts from the new zeroed baseline. The counters are stored internally as
+<tt>uint64_t</tt>, but returned as Lua numbers. Very large values may lose
+integer precision on builds where <tt>lua_Number</tt> is a double.
+</p>
+<p>
+The returned table contains these fields:
+</p>
+<pre class="code">
+alloc_calls            free_calls             realloc_calls
+alloc_bytes            free_bytes             realloc_bytes
+new_gcobj_calls        step_calls             cycle_count
+fullgc_calls           propagate_calls        propagate_bytes
+atomic_calls           sweep_string_steps     sweep_root_steps
+finalizer_scan_steps   finalizer_queued       finalizer_calls
+weak_tables            weak_slots_cleared
+barrier_forward        barrier_back           barrier_upvalue
+barrier_trace          jit_forced_exits
+</pre>
+<p>
+When both <tt>-DLUAJIT_ENABLE_GCSTATS</tt> and
+<tt>-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS</tt> are enabled, the returned table
+also contains sweep-time userdata finalizer discovery counters:
+</p>
+<pre class="code">
+sweep_udata_steps      sweep_udata_queued     sweep_udata_freed
+sweep_udata_parked     sweep_udata_preserved
+</pre>
+<p>
+This OpenMW-oriented fork enables sweep-time userdata finalizer discovery by
+default in its Unix and MSVC build scripts for static/native/leaf userdata
+finalizer workloads. This is a restricted semantic contract of this fork, not
+stock general LuaJIT finalizer behavior. Arbitrary Lua closure dependency graphs
+are outside the contract, and adding or changing <tt>__gc</tt> late through
+<tt>debug</tt>, FFI, sandbox bypass access, or similar privileged mechanisms is
+unsupported. Weak-key table entries whose keys are dying finalizable userdata may
+be cleared before <tt>__gc</tt> runs. This is intentional under the
+static/native/leaf finalizer contract.
+</p>
+<p>
+The fields group allocator activity, object creation, incremental step/cycle
+progress, propagation and sweeping work, finalizer scanning/queueing/calls,
+weak table cleanup, write barriers and JIT-forced exits. They are intended for
+comparing runs and investigating GC behavior, not as exact semantic event
+counts for every allocation or object lifetime edge case.
+</p>
+<p>
+The repository also contains <tt>bench/gcstats.lua</tt>, a diagnostic benchmark
+for allocation scenarios using <tt>jit.gcstats()</tt>, and
+<tt>tools/gc-validation-matrix.sh</tt>, a conservative local validation matrix
+for GC-sensitive changes.
+</p>
+
 <h2 id="jit_opt"><tt>jit.opt.*</tt> &mdash; JIT compiler optimization control</h2>
 <p>
 This submodule provides the backend for the <tt>-O</tt> command line

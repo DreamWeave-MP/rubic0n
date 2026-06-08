@@ -65,6 +65,8 @@ if exist minilua.exe.manifest^
 @set DASC=vm_x86.dasc
 @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_DISABLE_GC64
 :DA
+@rem Enabled by default; remove/comment to use stock atomic userdata finalizer discovery.
+@set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
 @if "%1" neq "lua52compat" goto :NOLUA52COMPAT
 @shift
 @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_LUA52COMPAT
