@@ -200,8 +200,8 @@ stock general LuaJIT finalizer behavior. Arbitrary Lua closure dependency graphs
 are outside the contract, and adding or changing <tt>__gc</tt> late through
 <tt>debug</tt>, FFI, sandbox bypass access, or similar privileged mechanisms is
 unsupported. Weak-key table entries whose keys are dying finalizable userdata may
-be cleared before <tt>__gc</tt> runs unless/until a later weak-table-delay patch
-changes that behavior.
+be cleared before <tt>__gc</tt> runs. This is intentional under the
+static/native/leaf finalizer contract.
 </p>
 <p>
 The fields group allocator activity, object creation, incremental step/cycle

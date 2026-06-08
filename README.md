@@ -475,9 +475,9 @@ still use the traditional close-time separation path.
 
 This changes an observable weak-key edge case from stock LuaJIT. Weak-key
 associations whose keys are dying finalizable userdata may be cleared before the
-userdata finalizers run in this mode unless/until a later weak-table-delay patch
-changes that behavior. Code using this mode must not rely on weak keys retaining
-dying finalizable userdata through finalizer execution.
+userdata finalizers run in this mode. This is intentional under the
+static/native/leaf finalizer contract. Code using this mode must not rely on
+weak keys retaining dying finalizable userdata through finalizer execution.
 
 [Back to TOC](#table-of-contents)
 

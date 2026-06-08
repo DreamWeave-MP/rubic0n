@@ -328,9 +328,9 @@ closure dependency graphs are outside the contract.
 </p>
 <p>
 Weak-key table entries whose keys are dying finalizable userdata may be cleared
-before <tt>__gc</tt> runs unless/until a later weak-table-delay patch changes
-that behavior. Code using this mode must not rely on weak keys retaining dying
-finalizable userdata through finalizer execution.
+before <tt>__gc</tt> runs. This is intentional under the static/native/leaf
+finalizer contract. Code using this mode must not rely on weak keys retaining
+dying finalizable userdata through finalizer execution.
 </p>
 
 <h3 id="io"><tt>io.*</tt> functions handle 64&nbsp;bit file offsets</h3>
