@@ -239,6 +239,7 @@ static void LJ_FASTCALL recff_getmetatable(jit_State *J, RecordFFData *rd)
     RecordIndex ix;
     ix.tab = tr;
     copyTV(J->L, &ix.tabv, &rd->argv[0]);
+    ix.mtspec = 0;
     if (lj_record_mm_lookup(J, &ix, MM_metatable))
       J->base[0] = ix.mobj;
     else
@@ -255,6 +256,7 @@ static void LJ_FASTCALL recff_setmetatable(jit_State *J, RecordFFData *rd)
     RecordIndex ix;
     ix.tab = tr;
     copyTV(J->L, &ix.tabv, &rd->argv[0]);
+    ix.mtspec = 0;
     lj_record_mm_lookup(J, &ix, MM_metatable); /* Guard for no __metatable. */
     fref = emitir(IRT(IR_FREF, IRT_PGC), tr, IRFL_TAB_META);
     mtref = tref_isnil(mt) ? lj_ir_knull(J, IRT_TAB) : mt;
@@ -272,6 +274,7 @@ static void LJ_FASTCALL recff_rawget(jit_State *J, RecordFFData *rd)
   ix.tab = J->base[0]; ix.key = J->base[1];
   if (tref_istab(ix.tab) && ix.key) {
     ix.val = 0; ix.idxchain = 0;
+    ix.mtspec = 0;
     settabV(J->L, &ix.tabv, tabV(&rd->argv[0]));
     copyTV(J->L, &ix.keyv, &rd->argv[1]);
     J->base[0] = lj_record_idx(J, &ix);
@@ -284,6 +287,7 @@ static void LJ_FASTCALL recff_rawset(jit_State *J, RecordFFData *rd)
   ix.tab = J->base[0]; ix.key = J->base[1]; ix.val = J->base[2];
   if (tref_istab(ix.tab) && ix.key && ix.val) {
     ix.idxchain = 0;
+    ix.mtspec = 0;
     settabV(J->L, &ix.tabv, tabV(&rd->argv[0]));
     copyTV(J->L, &ix.keyv, &rd->argv[1]);
     copyTV(J->L, &ix.valv, &rd->argv[2]);
@@ -403,6 +407,7 @@ static int recff_metacall(jit_State *J, RecordFFData *rd, MMS mm)
   RecordIndex ix;
   ix.tab = J->base[0];
   copyTV(J->L, &ix.tabv, &rd->argv[0]);
+  ix.mtspec = 1;
   if (lj_record_mm_lookup(J, &ix, mm)) {  /* Has metamethod? */
     int errcode;
     TValue argv0;
@@ -453,6 +458,7 @@ static void LJ_FASTCALL recff_ipairs_aux(jit_State *J, RecordFFData *rd)
     setintV(&ix.keyv, numberVint(&rd->argv[1])+1);
     settabV(J->L, &ix.tabv, tabV(&rd->argv[0]));
     ix.val = 0; ix.idxchain = 0;
+    ix.mtspec = 0;
     ix.key = lj_opt_narrow_toint(J, J->base[1]);
     J->base[0] = ix.key = emitir(IRTI(IR_ADD), ix.key, lj_ir_kint(J, 1));
     J->base[1] = lj_record_idx(J, &ix);
@@ -562,6 +568,7 @@ static void LJ_FASTCALL recff_next(jit_State *J, RecordFFData *rd)
     ix.idxchain = (J->framedepth && frame_islua(J->L->base-1) &&
 		   bc_b(frame_pc(J->L->base-1)[-1])-1 < 2);
     ix.mobj = 0;  /* We don't need the next index. */
+    ix.mtspec = 0;
     rd->nres = lj_record_next(J, &ix);
     J->base[0] = ix.key;
     J->base[1] = ix.val;
@@ -594,6 +601,7 @@ static void LJ_FASTCALL recff_unpack(jit_State *J, RecordFFData *rd)
 	settabV(J->L, &ix.tabv, tabV(&rd->argv[0]));
 	ix.val = 0;
 	ix.idxchain = 0;
+	ix.mtspec = 0;
 	for (i = 0; i < n; i++) {
 	  ix.key = lj_ir_kint(J, start + i);
 	  setintV(&ix.keyv, start + i);
@@ -1473,6 +1481,7 @@ static void LJ_FASTCALL recff_table_insert(jit_State *J, RecordFFData *rd)
       settabV(J->L, &ix.tabv, t);
       setintV(&ix.keyv, lj_tab_len(t) + 1);
       ix.idxchain = 0;
+      ix.mtspec = 0;
       lj_record_idx(J, &ix);  /* Set new value. */
     } else {  /* Complex case: insert in the middle. */
       recff_nyiu(J, rd);
