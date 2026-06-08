@@ -75,14 +75,14 @@ local function check_shape(t)
 end
 
 check_shape(jit.gcstats(true))
-local extreme = jit.gcstats().sweep_udata_steps ~= nil
+local has_sweep_udata = jit.gcstats().sweep_udata_steps ~= nil
 
 do
   local weak = setmetatable({}, { __mode = "v" })
   for i = 1, 100 do weak[i] = {} end
 end
 
-if extreme then
+if has_sweep_udata then
   collectgarbage("stop")
   for i = 1, 5 do
     local u = newproxy(true)
@@ -107,7 +107,7 @@ assert(a.fullgc_calls >= 1)
 assert(a.alloc_calls > 0)
 assert(a.alloc_bytes > 0)
 assert(a.new_gcobj_calls > 0)
-if extreme then
+if has_sweep_udata then
   assert(a.finalizer_scan_steps == 0, a.finalizer_scan_steps)
   assert(a.sweep_udata_steps > 0, a.sweep_udata_steps)
 else
@@ -139,7 +139,7 @@ do
   collectgarbage("collect")
   local first = jit.gcstats(true)
   check_shape(first)
-  if extreme then
+  if has_sweep_udata then
     assert(first.finalizer_scan_steps == 0, first.finalizer_scan_steps)
     assert(first.sweep_udata_steps >= n, first.sweep_udata_steps)
     assert(first.sweep_udata_parked >= n, first.sweep_udata_parked)
@@ -155,7 +155,7 @@ do
   assert(refs[n] ~= nil)
 end
 
-if not extreme then
+if not has_sweep_udata then
   local n = 2000
   local resurrected = {}
 

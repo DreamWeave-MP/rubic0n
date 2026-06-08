@@ -92,7 +92,7 @@ local counters = {
   "weak_slots_cleared",
 }
 
-local has_extreme_counters = jit.gcstats().sweep_udata_steps ~= nil
+local has_sweep_udata_counters = jit.gcstats().sweep_udata_steps ~= nil
 
 local function full_gc()
   collectgarbage("collect")
@@ -173,8 +173,8 @@ add_scenario("weak-table", function(n)
 end)
 
 add_scenario("userdata-finalizer", function(n)
-  if has_extreme_counters then
-    return nil, "legacy Lua closure userdata finalizers are outside the Extreme/native-finalizer contract"
+  if has_sweep_udata_counters then
+    return nil, "legacy Lua closure userdata finalizers are outside the sweep-udata finalizer mode contract"
   end
   if type(newproxy) ~= "function" then
     return nil, "newproxy unavailable"
@@ -239,7 +239,7 @@ add_scenario("sweep-udata-mixed-finalizer", function(n)
   return refs
 end)
 
-add_scenario("sweep-udata-weak-key-extreme-clears-before-finalizer", function(n)
+add_scenario("sweep-udata-weak-key-clears-before-finalizer", function(n)
   if type(newproxy) ~= "function" then
     return nil, "newproxy unavailable"
   end

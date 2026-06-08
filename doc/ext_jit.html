@@ -163,8 +163,9 @@ stats-enabled builds add counter writes on allocation and GC paths.
 </p>
 <p>
 The function returns a table snapshot of monotonic counters. If
-<tt>reset</tt> is truthy, the snapshot is returned first and the stored
-counters are then reset to zero. The counters are stored internally as
+<tt>reset</tt> is truthy, the snapshot contains the pre-reset values and the
+stored counters are then reset to zero; a following <tt>jit.gcstats()</tt> call
+starts from the new zeroed baseline. The counters are stored internally as
 <tt>uint64_t</tt>, but returned as Lua numbers. Very large values may lose
 integer precision on builds where <tt>lua_Number</tt> is a double.
 </p>
@@ -182,6 +183,26 @@ weak_tables            weak_slots_cleared
 barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 </pre>
+<p>
+When both <tt>-DLUAJIT_ENABLE_GCSTATS</tt> and
+<tt>-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS</tt> are enabled, the returned table
+also contains sweep-time userdata finalizer discovery counters:
+</p>
+<pre class="code">
+sweep_udata_steps      sweep_udata_queued     sweep_udata_freed
+sweep_udata_parked     sweep_udata_preserved
+</pre>
+<p>
+This OpenMW-oriented fork enables sweep-time userdata finalizer discovery by
+default in its Unix and MSVC build scripts for static/native/leaf userdata
+finalizer workloads. This is a restricted semantic contract of this fork, not
+stock general LuaJIT finalizer behavior. Arbitrary Lua closure dependency graphs
+are outside the contract, and adding or changing <tt>__gc</tt> late through
+<tt>debug</tt>, FFI, sandbox bypass access, or similar privileged mechanisms is
+unsupported. Weak-key table entries whose keys are dying finalizable userdata may
+be cleared before <tt>__gc</tt> runs unless/until a later weak-table-delay patch
+changes that behavior.
+</p>
 <p>
 The fields group allocator activity, object creation, incremental step/cycle
 progress, propagation and sweeping work, finalizer scanning/queueing/calls,

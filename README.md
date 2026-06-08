@@ -187,8 +187,9 @@ observability counters for the existing incremental collector; this is not a
 generational GC mode and does not make collection automatically faster.
 
 The function returns a table snapshot with numeric counter fields. If `reset` is
-truthy, the snapshot is returned first and the stored counters are then reset to
-zero. Counters are stored internally as `uint64_t`, but are returned as Lua
+truthy, the snapshot contains the pre-reset values and the stored counters are
+then reset to zero; a following `jit.gcstats()` call starts from the new zeroed
+baseline. Counters are stored internally as `uint64_t`, but are returned as Lua
 numbers, so very large values may lose integer precision on builds where
 `lua_Number` is a double.
 
@@ -206,10 +207,10 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 ```
 
-Builds with experimental sweep-time userdata finalizer discovery enabled with
+Builds with sweep-time userdata finalizer discovery enabled with
 `-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` also expose `sweep_udata_*` counters.
-This repository's default Unix and MSVC build scripts enable that define; remove
-or comment it in the build script to disable the mode. In that mode, normal GC
+This OpenMW-oriented fork enables that define by default in its Unix and MSVC
+build scripts by design for native userdata workloads. In that mode, normal GC
 cycles discover userdata finalizers incrementally during the sweep phase instead
 of walking the userdata candidate list during atomic. These counters are
 contract-bound to this fork and are intended for validating that mode.
@@ -236,11 +237,13 @@ Related local tools:
   compare deltas across builds/configurations, not as a standalone performance
   claim.
 
-To compare GC-stats behavior with and without experimental sweep-time userdata
-finalizer discovery, rebuild and run the same focused benchmark filter under
-both configurations. Since the repository default enables sweep-time discovery,
-remove or comment `-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` in `src/Makefile` for
-the disabled comparison build.
+To compare GC-stats behavior with and without sweep-time userdata finalizer
+discovery, rebuild and run the same focused benchmark filter under both
+configurations. Since the repository default build scripts enable sweep-time
+discovery, disable it by removing/commenting the build-script define or by using
+an explicit build path whose flags truly replace those defaults. Simply omitting
+the define from additive `XCFLAGS` is not enough if the build script still adds
+it later.
 
 ```sh
 make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS'
@@ -250,8 +253,10 @@ make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS 
 ./src/luajit bench/gcstats.lua --iterations 10000 --filter sweep-udata-
 ```
 
-Extreme-only `sweep_udata_*` fields are shown as `n/a` by the benchmark when
-they are absent from a normal stats build.
+Sweep-udata stats fields are shown as `n/a` by the benchmark when they are
+absent from a stock stats build, or from a stats build where
+`LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` was explicitly omitted by replacing the
+default build flags.
 
 [Back to TOC](#table-of-contents)
 
@@ -377,6 +382,10 @@ clamped to 1 KiB. Very large inputs are clamped to the implementation maximum
 `setstepmul` multiplier and `step` work requests; it is not a memory limit and
 does not change the collector into a generational collector.
 
+For example, `collectgarbage("setstepsize", 0)` returns the previous KiB value
+and stores `1`, while `collectgarbage("setstepsize", 1024 * 1024)` returns the
+previous KiB value and stores the implementation maximum.
+
 [Back to TOC](#table-of-contents)
 
 ## New macros
@@ -440,28 +449,35 @@ still supported. Mutating userdata metatables or adding `__gc` after that point,
 including through `debug`, FFI, sandbox bypass access, or similar privileged
 mechanisms, is undefined for this build.
 
-This is a performance contract chosen by this fork to avoid repeatedly scanning
-long-lived userdata that cannot currently be finalized. It should not be treated
-as general LuaJIT behavior.
+This is a restricted semantic and performance contract chosen by this fork to
+avoid repeatedly scanning long-lived userdata that cannot currently be
+finalized. It should not be treated as stock or general LuaJIT finalizer
+behavior.
 
-Experimental sweep-phase userdata finalizer discovery is enabled in this
-repository's default Unix and MSVC build scripts with
-`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. Remove or comment that define in the
-build script to disable it. The mode is contract-bound to this fork. In this
-mode, normal GC cycles skip the atomic userdata candidate walk and instead
-process the candidate segment incrementally before string/root sweeping.
+Sweep-phase userdata finalizer discovery is enabled in this OpenMW-oriented
+fork's default Unix and MSVC build scripts with
+`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. This is intentional for
+static/native/leaf userdata finalizers common in OpenMW/native userdata
+workloads. To disable it, remove or comment that define in the build script, or
+use an explicit build path whose flags truly exclude the default Makefile/MSVC
+addition; merely omitting the define from additive `XCFLAGS` does not disable it
+if the default build script still appends it. The mode is contract-bound to this
+fork. In this mode, normal GC cycles skip the atomic userdata candidate walk and
+instead process the candidate segment incrementally before string/root sweeping.
 
-This mode is only for static, leaf/native userdata finalizers. Late
-mutation of userdata metatables or `__gc` after a candidate has been scanned is
-still unsupported. Dead finalizable userdata preserve only the userdata, its
-metatable, and the immediate `__gc` callable until finalization; arbitrary Lua
-closure dependency graphs are outside the contract. Shutdown may still use the
-traditional close-time separation path.
+This mode is only for static, native/leaf userdata finalizers. Late mutation of
+userdata metatables or `__gc` after a candidate has been scanned is still
+unsupported, including changes through `debug`, FFI, sandbox bypass access, or
+similar privileged mechanisms. Dead finalizable userdata preserve only the
+userdata, its metatable, and the immediate `__gc` callable until finalization;
+arbitrary Lua closure dependency graphs are outside the contract. Shutdown may
+still use the traditional close-time separation path.
 
 This changes an observable weak-key edge case from stock LuaJIT. Weak-key
 associations whose keys are dying finalizable userdata may be cleared before the
-userdata finalizers run in this mode. Code using this mode must not rely on weak
-keys retaining dying finalizable userdata through finalizer execution.
+userdata finalizers run in this mode unless/until a later weak-table-delay patch
+changes that behavior. Code using this mode must not rely on weak keys retaining
+dying finalizable userdata through finalizer execution.
 
 [Back to TOC](#table-of-contents)
 

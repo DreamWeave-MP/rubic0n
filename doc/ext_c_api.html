@@ -186,6 +186,15 @@ the existing <tt>LUA_GCSETSTEPMUL</tt> and <tt>LUA_GCSTEP</tt> controls. It is
 a pacing quantum, not a memory limit, and does not change the collector into a
 generational collector.
 </p>
+<pre class="code">
+int old = lua_gc(L, LUA_GCSETSTEPSIZE, 0);          /* stores 1 KiB */
+int prev = lua_gc(L, LUA_GCSETSTEPSIZE, 1024*1024); /* stores the maximum */
+</pre>
+<p>
+Both calls return the previous step-size value in KiB. The first demonstrates
+the non-positive clamp; the second demonstrates the clamp for values above the
+implementation maximum.
+</p>
 <br class="flush">
 </div>
 <div id="foot">

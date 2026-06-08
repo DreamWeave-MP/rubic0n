@@ -8,13 +8,16 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 ROOT=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 TESTS="t/gcstats.t t/gc-stepsize.t t/finalizers.t"
-EXTREME_TESTS="t/gcstats.t t/gc-stepsize.t t/sweep-udata-finalizers.t"
+SWEEP_UDATA_STATS_TESTS="t/gcstats.t t/gc-stepsize.t t/sweep-udata-finalizers.t"
 RESTORE=${GC_MATRIX_RESTORE:-1}
 NEED_RESTORE=0
 
 # Passing XCFLAGS on the make command line replaces src/Makefile's XCFLAGS
-# assignments. Preserve the repo's documented default feature flag when adding
-# matrix-specific flags.
+# assignments. This is intentional for selected matrix legs: the plain repo
+# build scripts default-enable sweep-time userdata finalizer discovery, while
+# explicit XCFLAGS legs may omit it to exercise stock userdata-finalizer behavior.
+# Preserve the repo's documented Lua 5.2 compatibility flag when replacing
+# XCFLAGS for those focused legs.
 DEFAULT_XCFLAGS="-DLUAJIT_ENABLE_LUA52COMPAT"
 
 info() {
@@ -77,20 +80,24 @@ trap 'trap - INT TERM; exit 130' INT TERM
 
 info "Manual matrix legs not run locally: 32-bit builds and MSVC/Windows builds"
 
-# Baseline build and tests. gcstats.t should skip in this configuration.
-run_make_clean_build "Baseline build" ""
-run_focused_tests "Focused GC tests on baseline build"
+# Default repository build and tests. The Unix/MSVC build scripts intentionally
+# enable sweep-time userdata finalizer discovery by default; gcstats.t should
+# still skip because statistics are not enabled in this leg.
+run_make_clean_build "Default repo build" ""
+run_focused_tests "Focused GC tests on default repo build"
 
-# GC statistics instrumentation build and tests.
-run_make_clean_build "GC stats build" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS")"
-run_focused_tests "Focused GC tests on GC stats build"
+# Stock GC statistics instrumentation build. Command-line XCFLAGS
+# replace the Makefile defaults here, intentionally omitting sweep-time userdata
+# finalizer discovery while keeping Lua 5.2 compatibility enabled.
+run_make_clean_build "Stock GC stats build without sweep-udata finalizer mode" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS")"
+run_focused_tests "Focused GC tests on stock GC stats build without sweep-udata finalizer mode"
 
-# Experimental sweep-time userdata finalizer discovery with stats. This leg is
-# required so the Extreme-only counters and semantic tests stay covered without
-# changing the default build flags. t/finalizers.t covers legacy Lua closure
-# userdata-finalizer behavior outside the Extreme/native-finalizer contract.
-run_make_clean_build "Extreme GC stats build" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS")"
-run_focused_tests "Focused GC tests on Extreme GC stats build" "$EXTREME_TESTS"
+# Sweep-udata + stats leg. This keeps the default-enabled mode covered while
+# adding stats so the sweep_udata_* counters and semantic tests run.
+# t/finalizers.t covers legacy Lua closure userdata-finalizer behavior outside
+# the native/leaf-finalizer contract.
+run_make_clean_build "Sweep-udata + stats leg" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS")"
+run_focused_tests "Focused GC tests on sweep-udata + stats leg" "$SWEEP_UDATA_STATS_TESTS"
 
 # Interpreter-only build. This Makefile documents LUAJIT_DISABLE_JIT, but it is
 # currently unsupported in this OpenResty/DW tree, so only this leg is optional.
