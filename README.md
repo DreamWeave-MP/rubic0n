@@ -30,6 +30,7 @@ Table of Contents
     * [Optimizations](#optimizations)
         * [Updated JIT default parameters](#updated-jit-default-parameters)
         * [String hashing](#string-hashing)
+        * [Compile-time `unpack()` optimization](#compile-time-unpack-optimization)
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
@@ -432,6 +433,14 @@ optimized crc32 implementation (see `lj_str_new()`).
 
 This optimization still provides constant-time hashing complexity (`O(n)`), but
 makes hash collision attacks harder for strings up to 127 bytes of size.
+
+[Back to TOC](#table-of-contents)
+
+### Compile-time `unpack()` optimization
+
+This fork includes TurkeyMcMac's JIT optimization for compiling `unpack()` calls
+when the start and end indexes are constants, from
+https://github.com/TurkeyMcMac/LuaJIT/tree/compile-unpack.
 
 [Back to TOC](#table-of-contents)
 
