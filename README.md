@@ -32,6 +32,7 @@ Table of Contents
         * [String hashing](#string-hashing)
         * [Compile-time `unpack()` optimization](#compile-time-unpack-optimization)
         * [Metatable specialization](#metatable-specialization)
+        * [Global environment specialization](#global-environment-specialization)
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
@@ -449,6 +450,16 @@ https://github.com/TurkeyMcMac/LuaJIT/tree/compile-unpack.
 
 This fork includes TurkeyMcMac's JIT metatable specialization work from
 https://github.com/TurkeyMcMac/LuaJIT/tree/mtspec.
+
+[Back to TOC](#table-of-contents)
+
+### Global environment specialization
+
+This fork includes TurkeyMcMac's JIT specialization for global environment table
+accesses from https://github.com/TurkeyMcMac/LuaJIT/tree/globalspec. The recorder
+can guard on the function environment table identity for global reads and stores,
+while preserving normal table access semantics for value changes, environment
+replacement, missing globals, and `__index`/`__newindex` metamethod behavior.
 
 [Back to TOC](#table-of-contents)
 
