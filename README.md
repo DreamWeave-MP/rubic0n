@@ -33,6 +33,7 @@ Table of Contents
         * [Compile-time `unpack()` optimization](#compile-time-unpack-optimization)
         * [Metatable specialization](#metatable-specialization)
         * [Global environment specialization](#global-environment-specialization)
+        * [Improved allocation sinking](#improved-allocation-sinking)
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
@@ -460,6 +461,16 @@ accesses from https://github.com/TurkeyMcMac/LuaJIT/tree/globalspec. The recorde
 can guard on the function environment table identity for global reads and stores,
 while preserving normal table access semantics for value changes, environment
 replacement, missing globals, and `__index`/`__newindex` metamethod behavior.
+
+[Back to TOC](#table-of-contents)
+
+### Improved allocation sinking
+
+This fork includes XmiliaH's improved allocation sinking work from
+https://github.com/XmiliaH/LuaJIT/tree/improved-sinking. The port preserves this
+fork's snapshot restore fixes and uses conservative fallbacks for heavy nested
+sunk allocations when identity-index or raw FFI restore invariants would be at
+risk.
 
 [Back to TOC](#table-of-contents)
 
