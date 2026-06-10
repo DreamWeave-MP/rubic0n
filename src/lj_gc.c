@@ -480,13 +480,51 @@ static void gc_sweepstr(global_State *g, GCRef *chain)
 }
 
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
+#define LJ_GC_UDATA_MMCACHE_SIZE 8
+typedef char lj_gc_udata_mmcache_size_must_be_power_of_two[
+  LJ_GC_UDATA_MMCACHE_SIZE != 0 &&
+  (LJ_GC_UDATA_MMCACHE_SIZE & (LJ_GC_UDATA_MMCACHE_SIZE - 1)) == 0 ? 1 : -1];
+
+typedef struct GCUdataMMCacheEnt {
+  GCtab *mt;
+  cTValue *mo;
+} GCUdataMMCacheEnt;
+
+typedef struct GCUdataMMCache {
+  GCUdataMMCacheEnt ent[LJ_GC_UDATA_MMCACHE_SIZE];
+  uint32_t next;
+} GCUdataMMCache;
+
+static cTValue *gc_sweepudata_mm(global_State *g, GCUdataMMCache *cache,
+					 GCtab *mt)
+{
+  uint32_t i;
+  if (mt == NULL)
+    return NULL;
+  for (i = 0; i < LJ_GC_UDATA_MMCACHE_SIZE; i++) {
+    if (cache->ent[i].mt == mt) {
+      lj_gc_stats_inc(g, sweep_udata_mmcache_hits);
+      return cache->ent[i].mo;
+    }
+  }
+  lj_gc_stats_inc(g, sweep_udata_mmcache_misses);
+  i = cache->next++ & (LJ_GC_UDATA_MMCACHE_SIZE - 1);
+  cache->ent[i].mt = mt;
+  cache->ent[i].mo = lj_meta_fastg(g, mt, MM_gc);
+  return cache->ent[i].mo;
+}
+
 /* Preserve an immediate object needed by a sweep-discovered finalizer. */
 static void gc_preserve_now(global_State *g, GCobj *o)
 {
-  if (o) {
-    makewhite(g, o);
-    lj_gc_stats_inc(g, sweep_udata_preserved);
+  if (o == NULL)
+    return;
+  if ((o->gch.marked & LJ_GC_WHITES) == curwhite(g)) {
+    lj_gc_stats_inc(g, sweep_udata_preserve_skips);
+    return;
   }
+  makewhite(g, o);
+  lj_gc_stats_inc(g, sweep_udata_preserved);
 }
 
 /*
@@ -505,11 +543,12 @@ static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
 {
   int ow = otherwhite(g);
   GCobj *o;
+  GCUdataMMCache cache = { { { NULL, NULL } }, 0 };
   *queued = 0;
   while ((o = gcref(*p)) != NULL && lim-- > 0) {
     GCudata *ud = gco2ud(o);
     GCtab *mt = tabref(ud->metatable);
-    cTValue *mo = lj_meta_fastg(g, mt, MM_gc);
+    cTValue *mo = gc_sweepudata_mm(g, &cache, mt);
     int alive = ((o->gch.marked ^ LJ_GC_WHITES) & ow);
     lj_gc_stats_inc(g, sweep_udata_steps);
     if (alive) {  /* Black or current white: keep or park the live userdata. */

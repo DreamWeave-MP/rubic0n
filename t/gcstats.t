@@ -86,6 +86,9 @@ local sweep_udata_fields = {
   "sweep_udata_freed",
   "sweep_udata_parked",
   "sweep_udata_preserved",
+  "sweep_udata_mmcache_hits",
+  "sweep_udata_mmcache_misses",
+  "sweep_udata_preserve_skips",
 }
 
 local cdata_fields = {

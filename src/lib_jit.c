@@ -223,9 +223,9 @@ static int jit_gcstats(lua_State *L)
   GCtab *t = lj_tab_new_ah(L, 0,
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
 #if LJ_HASFFI
-                           62
+                           65
 #else
-                           59
+                           62
 #endif
 #else
 #if LJ_HASFFI
@@ -306,6 +306,9 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "sweep_udata_freed", s->sweep_udata_freed);
   gcstats_set(L, t, "sweep_udata_parked", s->sweep_udata_parked);
   gcstats_set(L, t, "sweep_udata_preserved", s->sweep_udata_preserved);
+  gcstats_set(L, t, "sweep_udata_mmcache_hits", s->sweep_udata_mmcache_hits);
+  gcstats_set(L, t, "sweep_udata_mmcache_misses", s->sweep_udata_mmcache_misses);
+  gcstats_set(L, t, "sweep_udata_preserve_skips", s->sweep_udata_preserve_skips);
 #endif
   gcstats_set(L, t, "sweep_string_steps", s->sweep_string_steps);
   gcstats_set(L, t, "sweep_root_steps", s->sweep_root_steps);
