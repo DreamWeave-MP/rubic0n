@@ -363,6 +363,9 @@ LUA_API void lua_close(lua_State *L)
 lua_State *lj_state_new(lua_State *L)
 {
   lua_State *L1 = lj_mem_newobj(L, lua_State);
+  lj_gc_stats_inc(G(L), new_thread_calls);
+  /* Counts only the lua_State GC object; stack_init() allocates its stack. */
+  lj_gc_stats_add(G(L), new_thread_bytes, sizeof(lua_State));
   L1->gct = ~LJ_TTHREAD;
   L1->dummy_ffid = FF_C;
   L1->status = LUA_OK;

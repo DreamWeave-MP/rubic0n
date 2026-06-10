@@ -299,9 +299,12 @@ static LJ_NOINLINE GCstr *lj_str_rehash_chain(lua_State *L, StrHash hashc,
 static GCstr *lj_str_alloc(lua_State *L, const char *str, MSize len,
 			   StrHash hash, int hashalg)
 {
-  GCstr *s = lj_mem_newt(L, lj_str_size(len), GCstr);
+  MSize size = lj_str_size(len);
+  GCstr *s = lj_mem_newt(L, size, GCstr);
   global_State *g = G(L);
   uintptr_t u;
+  lj_gc_stats_inc(g, new_str_calls);
+  lj_gc_stats_add(g, new_str_bytes, size);
   newwhite(g, s);
   s->gct = ~LJ_TSTR;
   s->len = len;

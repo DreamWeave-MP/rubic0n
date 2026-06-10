@@ -13,8 +13,12 @@
 
 GCudata *lj_udata_new(lua_State *L, MSize sz, GCtab *env)
 {
-  GCudata *ud = lj_mem_newt(L, sizeof(GCudata) + sz, GCudata);
+  MSize size = sizeof(GCudata) + sz;
+  GCudata *ud = lj_mem_newt(L, size, GCudata);
   global_State *g = G(L);
+  lj_gc_stats_inc(g, new_udata_calls);
+  lj_gc_stats_add(g, new_udata_bytes, size);
+  lj_gc_stats_add(g, new_udata_payload_bytes, sz);
   newwhite(g, ud);  /* Not finalized. */
   ud->gct = ~LJ_TUDATA;
   ud->udtype = UDTYPE_USERDATA;

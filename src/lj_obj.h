@@ -599,6 +599,32 @@ typedef struct GCStats {
   uint64_t free_bytes;
   uint64_t realloc_bytes;
   uint64_t new_gcobj_calls;
+  uint64_t new_str_calls;
+  uint64_t new_str_bytes;
+  uint64_t new_tab_calls;
+  uint64_t new_tab_bytes;
+  uint64_t new_tab_separate_array_calls;
+  uint64_t new_tab_separate_array_bytes;
+  uint64_t new_tab_hash_calls;
+  uint64_t new_tab_hash_bytes;
+  uint64_t new_udata_calls;
+  uint64_t new_udata_bytes;
+  uint64_t new_udata_payload_bytes;
+#if LJ_HASFFI
+  uint64_t new_cdata_calls;
+  uint64_t new_cdata_bytes;
+  uint64_t new_cdata_payload_bytes;
+#endif
+  uint64_t new_func_calls;
+  uint64_t new_func_bytes;
+  uint64_t new_cfunc_calls;
+  uint64_t new_lfunc_calls;
+  uint64_t new_proto_calls;
+  uint64_t new_proto_bytes;
+  uint64_t new_thread_calls;
+  uint64_t new_thread_bytes;
+  uint64_t new_upval_calls;
+  uint64_t new_upval_bytes;
   uint64_t step_calls;
   uint64_t cycle_count;
   uint64_t fullgc_calls;

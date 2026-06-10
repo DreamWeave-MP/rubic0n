@@ -222,9 +222,17 @@ static int jit_gcstats(lua_State *L)
   int reset = L->base < L->top && tvistruecond(L->base);
   GCtab *t = lj_tab_new_ah(L, 0,
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
-                           31
+#if LJ_HASFFI
+                           55
 #else
-                           26
+                           52
+#endif
+#else
+#if LJ_HASFFI
+                           50
+#else
+                           47
+#endif
 #endif
                           );
 
@@ -237,6 +245,32 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "free_bytes", s->free_bytes);
   gcstats_set(L, t, "realloc_bytes", s->realloc_bytes);
   gcstats_set(L, t, "new_gcobj_calls", s->new_gcobj_calls);
+  gcstats_set(L, t, "new_str_calls", s->new_str_calls);
+  gcstats_set(L, t, "new_str_bytes", s->new_str_bytes);
+  gcstats_set(L, t, "new_tab_calls", s->new_tab_calls);
+  gcstats_set(L, t, "new_tab_bytes", s->new_tab_bytes);
+  gcstats_set(L, t, "new_tab_separate_array_calls", s->new_tab_separate_array_calls);
+  gcstats_set(L, t, "new_tab_separate_array_bytes", s->new_tab_separate_array_bytes);
+  gcstats_set(L, t, "new_tab_hash_calls", s->new_tab_hash_calls);
+  gcstats_set(L, t, "new_tab_hash_bytes", s->new_tab_hash_bytes);
+  gcstats_set(L, t, "new_udata_calls", s->new_udata_calls);
+  gcstats_set(L, t, "new_udata_bytes", s->new_udata_bytes);
+  gcstats_set(L, t, "new_udata_payload_bytes", s->new_udata_payload_bytes);
+#if LJ_HASFFI
+  gcstats_set(L, t, "new_cdata_calls", s->new_cdata_calls);
+  gcstats_set(L, t, "new_cdata_bytes", s->new_cdata_bytes);
+  gcstats_set(L, t, "new_cdata_payload_bytes", s->new_cdata_payload_bytes);
+#endif
+  gcstats_set(L, t, "new_func_calls", s->new_func_calls);
+  gcstats_set(L, t, "new_func_bytes", s->new_func_bytes);
+  gcstats_set(L, t, "new_cfunc_calls", s->new_cfunc_calls);
+  gcstats_set(L, t, "new_lfunc_calls", s->new_lfunc_calls);
+  gcstats_set(L, t, "new_proto_calls", s->new_proto_calls);
+  gcstats_set(L, t, "new_proto_bytes", s->new_proto_bytes);
+  gcstats_set(L, t, "new_thread_calls", s->new_thread_calls);
+  gcstats_set(L, t, "new_thread_bytes", s->new_thread_bytes);
+  gcstats_set(L, t, "new_upval_calls", s->new_upval_calls);
+  gcstats_set(L, t, "new_upval_bytes", s->new_upval_bytes);
   gcstats_set(L, t, "step_calls", s->step_calls);
   gcstats_set(L, t, "cycle_count", s->cycle_count);
   gcstats_set(L, t, "fullgc_calls", s->fullgc_calls);
