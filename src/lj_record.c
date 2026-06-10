@@ -1556,6 +1556,13 @@ TRef lj_record_idx(jit_State *J, RecordIndex *ix)
       BCReg func = rec_mm_prep(J, ix->val ? lj_cont_nop : lj_cont_ra);
       TRef *base = J->base + func + LJ_FR2;
       TValue *tv = J->L->base + func + LJ_FR2;
+      if (!ix->val && tref_isudata(ix->tab) &&
+          udataV(&ix->tabv)->udtype == UDTYPE_USERDATA &&
+          !isluafunc(funcV(&ix->mobjv)) && tvisgcv(&ix->keyv)) {
+        TRef kkey = lj_ir_kgc(J, gcV(&ix->keyv), itype2irt(&ix->keyv));
+        emitir(IRTG(IR_EQ, tref_type(kkey)), ix->key, kkey);
+        ix->key = kkey;
+      }
       base[-LJ_FR2] = ix->mobj; base[1] = ix->tab; base[2] = ix->key;
       setfuncV(J->L, tv-LJ_FR2, funcV(&ix->mobjv));
       copyTV(J->L, tv+1, &ix->tabv);
