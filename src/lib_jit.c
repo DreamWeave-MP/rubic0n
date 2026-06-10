@@ -223,16 +223,19 @@ static int jit_gcstats(lua_State *L)
   GCtab *t = lj_tab_new_ah(L, 0,
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
 #if LJ_HASFFI
-                           55
+                           62
 #else
-                           52
+                           59
 #endif
 #else
 #if LJ_HASFFI
-                           50
+                           57
 #else
-                           47
+                           54
 #endif
+#endif
+#if LJ_HAS_UDATA_CACHE
+                           + 11
 #endif
                           );
 
@@ -256,6 +259,26 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "new_udata_calls", s->new_udata_calls);
   gcstats_set(L, t, "new_udata_bytes", s->new_udata_bytes);
   gcstats_set(L, t, "new_udata_payload_bytes", s->new_udata_payload_bytes);
+  gcstats_set(L, t, "new_udata_payload_0_calls", s->new_udata_payload_0_calls);
+  gcstats_set(L, t, "new_udata_payload_1_16_calls", s->new_udata_payload_1_16_calls);
+  gcstats_set(L, t, "new_udata_payload_17_32_calls", s->new_udata_payload_17_32_calls);
+  gcstats_set(L, t, "new_udata_payload_33_64_calls", s->new_udata_payload_33_64_calls);
+  gcstats_set(L, t, "new_udata_payload_65_128_calls", s->new_udata_payload_65_128_calls);
+  gcstats_set(L, t, "new_udata_payload_129_256_calls", s->new_udata_payload_129_256_calls);
+  gcstats_set(L, t, "new_udata_payload_gt_256_calls", s->new_udata_payload_gt_256_calls);
+#if LJ_HAS_UDATA_CACHE
+  gcstats_set(L, t, "udata_cache_hits", s->udata_cache_hits);
+  gcstats_set(L, t, "udata_cache_misses", s->udata_cache_misses);
+  gcstats_set(L, t, "udata_cache_puts", s->udata_cache_puts);
+  gcstats_set(L, t, "udata_cache_drops", s->udata_cache_drops);
+  gcstats_set(L, t, "udata_cache_hit_0_calls", s->udata_cache_hit_0_calls);
+  gcstats_set(L, t, "udata_cache_hit_1_16_calls", s->udata_cache_hit_1_16_calls);
+  gcstats_set(L, t, "udata_cache_hit_17_32_calls", s->udata_cache_hit_17_32_calls);
+  gcstats_set(L, t, "udata_cache_hit_33_64_calls", s->udata_cache_hit_33_64_calls);
+  gcstats_set(L, t, "udata_cache_hit_65_128_calls", s->udata_cache_hit_65_128_calls);
+  gcstats_set(L, t, "udata_cache_hit_129_256_calls", s->udata_cache_hit_129_256_calls);
+  gcstats_set(L, t, "udata_cache_bytes", g->gc.udata_cache_bytes);
+#endif
 #if LJ_HASFFI
   gcstats_set(L, t, "new_cdata_calls", s->new_cdata_calls);
   gcstats_set(L, t, "new_cdata_bytes", s->new_cdata_bytes);

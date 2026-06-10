@@ -10,6 +10,9 @@
 
 LJ_FUNC GCudata *lj_udata_new(lua_State *L, MSize sz, GCtab *env);
 LJ_FUNC void LJ_FASTCALL lj_udata_free(global_State *g, GCudata *ud);
+#if LJ_HAS_UDATA_CACHE
+LJ_FUNC void lj_udata_cache_freeall(global_State *g);
+#endif
 #if LJ_64
 LJ_FUNC void * LJ_FASTCALL lj_lightud_intern(lua_State *L, void *p);
 #endif

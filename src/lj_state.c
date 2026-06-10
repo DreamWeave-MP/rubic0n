@@ -16,6 +16,7 @@
 #include "lj_str.h"
 #include "lj_tab.h"
 #include "lj_func.h"
+#include "lj_udata.h"
 #include "lj_meta.h"
 #include "lj_state.h"
 #include "lj_frame.h"
@@ -226,6 +227,9 @@ static void close_state(lua_State *L)
     MSize segnum = g->gc.lightudnum ? (2 << lj_fls(g->gc.lightudnum)) : 2;
     lj_mem_freevec(g, mref(g->gc.lightudseg, uint32_t), segnum, uint32_t);
   }
+#endif
+#if LJ_HAS_UDATA_CACHE
+  lj_udata_cache_freeall(g);
 #endif
   lj_assertG(g->gc.total == sizeof(GG_State),
 	     "memory leak of %lld bytes",

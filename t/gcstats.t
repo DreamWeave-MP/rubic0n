@@ -43,6 +43,13 @@ local fields = {
   "new_udata_calls",
   "new_udata_bytes",
   "new_udata_payload_bytes",
+  "new_udata_payload_0_calls",
+  "new_udata_payload_1_16_calls",
+  "new_udata_payload_17_32_calls",
+  "new_udata_payload_33_64_calls",
+  "new_udata_payload_65_128_calls",
+  "new_udata_payload_129_256_calls",
+  "new_udata_payload_gt_256_calls",
   "new_func_calls",
   "new_func_bytes",
   "new_cfunc_calls",
@@ -87,6 +94,20 @@ local cdata_fields = {
   "new_cdata_payload_bytes",
 }
 
+local udata_cache_fields = {
+  "udata_cache_hits",
+  "udata_cache_misses",
+  "udata_cache_puts",
+  "udata_cache_drops",
+  "udata_cache_hit_0_calls",
+  "udata_cache_hit_1_16_calls",
+  "udata_cache_hit_17_32_calls",
+  "udata_cache_hit_33_64_calls",
+  "udata_cache_hit_65_128_calls",
+  "udata_cache_hit_129_256_calls",
+  "udata_cache_bytes",
+}
+
 local function check_shape(t)
   assert(type(t) == "table")
   for _, name in ipairs(fields) do
@@ -105,14 +126,42 @@ local function check_shape(t)
       assert(t[name] >= 0, name)
     end
   end
+  if t.udata_cache_hits ~= nil then
+    for _, name in ipairs(udata_cache_fields) do
+      assert(type(t[name]) == "number", name)
+      assert(t[name] >= 0, name)
+    end
+  end
 end
 
 local function assert_increased(after, before, name)
   assert(after[name] > before[name], name .. ": " .. after[name] .. " <= " .. before[name])
 end
 
+local function udata_payload_bucket_calls(t)
+  return t.new_udata_payload_0_calls +
+         t.new_udata_payload_1_16_calls +
+         t.new_udata_payload_17_32_calls +
+         t.new_udata_payload_33_64_calls +
+         t.new_udata_payload_65_128_calls +
+         t.new_udata_payload_129_256_calls +
+         t.new_udata_payload_gt_256_calls
+end
+
 check_shape(jit.gcstats(true))
 local has_sweep_udata = jit.gcstats().sweep_udata_steps ~= nil
+
+do
+  jit.gcstats(true)
+  local before = jit.gcstats()
+  local u = newproxy(false)
+  local after = jit.gcstats()
+  check_shape(after)
+  assert(u ~= nil)
+  assert_increased(after, before, "new_udata_calls")
+  assert_increased(after, before, "new_udata_payload_0_calls")
+  assert(udata_payload_bucket_calls(after) == udata_payload_bucket_calls(before) + 1)
+end
 
 do
   jit.gcstats(true)
@@ -126,9 +175,6 @@ do
   refs.s = "gcstats unique string " .. tostring({})
   refs.f = loadstring("return function(x) return function() return x end end")()(true)
   refs.co = coroutine.create(function() return refs.s end)
-  local ok_tmpfile, tmpfile = false, nil
-  if io and io.tmpfile then ok_tmpfile, tmpfile = pcall(io.tmpfile) end
-  if ok_tmpfile and tmpfile then refs.tmpfile = tmpfile end
 
   local after = jit.gcstats()
   check_shape(after)
@@ -140,9 +186,6 @@ do
   assert_increased(after, before, "new_tab_hash_bytes")
   assert_increased(after, before, "new_udata_calls")
   assert_increased(after, before, "new_udata_bytes")
-  if ok_tmpfile and tmpfile then
-    assert_increased(after, before, "new_udata_payload_bytes")
-  end
   assert_increased(after, before, "new_str_calls")
   assert_increased(after, before, "new_str_bytes")
   assert_increased(after, before, "new_func_calls")
@@ -166,6 +209,22 @@ do
       assert_increased(after, before, "new_cdata_calls")
       assert_increased(after, before, "new_cdata_bytes")
       assert_increased(after, before, "new_cdata_payload_bytes")
+    end
+  end
+end
+
+do
+  local ok_tmpfile, tmpfile = false, nil
+  if io and io.tmpfile then
+    jit.gcstats(true)
+    local before = jit.gcstats()
+    ok_tmpfile, tmpfile = pcall(io.tmpfile)
+    if ok_tmpfile and tmpfile then
+      local after = jit.gcstats()
+      assert(tmpfile ~= nil)
+      assert_increased(after, before, "new_udata_payload_bytes")
+      assert(udata_payload_bucket_calls(after) > udata_payload_bucket_calls(before))
+      tmpfile:close()
     end
   end
 end
@@ -213,6 +272,13 @@ local b = jit.gcstats()
 check_shape(b)
 for _, name in ipairs(fields) do
   assert(b[name] >= a[name], name)
+end
+if a.udata_cache_hits ~= nil then
+  for _, name in ipairs(udata_cache_fields) do
+    if name ~= "udata_cache_bytes" then
+      assert(b[name] >= a[name], name)
+    end
+  end
 end
 
 local before_reset = jit.gcstats(true)
