@@ -650,6 +650,13 @@ typedef struct GCStats {
   uint64_t finalizer_scan_steps;
   uint64_t finalizer_queued;
   uint64_t finalizer_calls;
+  uint64_t finalizer_cfunc_calls;
+  uint64_t finalizer_cfunc_nup0_calls;
+  uint64_t finalizer_cfunc_upvalue_calls;
+  uint64_t finalizer_lfunc_calls;
+  uint64_t finalizer_ffunc_calls;
+  uint64_t finalizer_other_calls;
+  uint64_t finalizer_error_calls;
   uint64_t weak_tables;
   uint64_t weak_slots_cleared;
   uint64_t barrier_forward;

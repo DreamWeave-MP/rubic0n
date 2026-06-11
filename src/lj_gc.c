@@ -608,6 +608,25 @@ static void gc_call_finalizer(global_State *g, lua_State *L,
   lua_State *VL = vmthread(g);
   TValue *top;
   lj_gc_stats_inc(g, finalizer_calls);
+#ifdef LUAJIT_ENABLE_GCSTATS
+  if (tvisfunc(mo)) {
+    GCfunc *fn = funcV(mo);
+    if (iscfunc(fn)) {
+      lj_gc_stats_inc(g, finalizer_cfunc_calls);
+      if (fn->c.nupvalues == 0)
+        lj_gc_stats_inc(g, finalizer_cfunc_nup0_calls);
+      else
+        lj_gc_stats_inc(g, finalizer_cfunc_upvalue_calls);
+    } else if (isluafunc(fn)) {
+      lj_gc_stats_inc(g, finalizer_lfunc_calls);
+    } else {
+      lj_assertG(isffunc(fn), "bad finalizer function type");
+      lj_gc_stats_inc(g, finalizer_ffunc_calls);
+    }
+  } else {
+    lj_gc_stats_inc(g, finalizer_other_calls);
+  }
+#endif
   lj_trace_abort(g);
   hook_entergc(g);  /* Disable hooks and new traces during __gc. */
   if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
@@ -624,6 +643,7 @@ static void gc_call_finalizer(global_State *g, lua_State *L,
   g->gc.threshold = oldt;  /* Restore GC threshold. */
   if (errcode) {
     TValue tmp;
+    lj_gc_stats_inc(g, finalizer_error_calls);
     copyTV(VL, &tmp, VL->top-1);
     VL->top--;
     lj_vmevent_send(g, ERRFIN,

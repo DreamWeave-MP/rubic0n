@@ -223,15 +223,15 @@ static int jit_gcstats(lua_State *L)
   GCtab *t = lj_tab_new_ah(L, 0,
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
 #if LJ_HASFFI
-                           62
+                           69
 #else
-                           59
+                           66
 #endif
 #else
 #if LJ_HASFFI
-                           57
+                           64
 #else
-                           54
+                           61
 #endif
 #endif
                           );
@@ -296,6 +296,13 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_scan_steps", s->finalizer_scan_steps);
   gcstats_set(L, t, "finalizer_queued", s->finalizer_queued);
   gcstats_set(L, t, "finalizer_calls", s->finalizer_calls);
+  gcstats_set(L, t, "finalizer_cfunc_calls", s->finalizer_cfunc_calls);
+  gcstats_set(L, t, "finalizer_cfunc_nup0_calls", s->finalizer_cfunc_nup0_calls);
+  gcstats_set(L, t, "finalizer_cfunc_upvalue_calls", s->finalizer_cfunc_upvalue_calls);
+  gcstats_set(L, t, "finalizer_lfunc_calls", s->finalizer_lfunc_calls);
+  gcstats_set(L, t, "finalizer_ffunc_calls", s->finalizer_ffunc_calls);
+  gcstats_set(L, t, "finalizer_other_calls", s->finalizer_other_calls);
+  gcstats_set(L, t, "finalizer_error_calls", s->finalizer_error_calls);
   gcstats_set(L, t, "weak_tables", s->weak_tables);
   gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);
   gcstats_set(L, t, "barrier_forward", s->barrier_forward);
