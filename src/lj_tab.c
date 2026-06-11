@@ -45,6 +45,8 @@ static LJ_AINLINE void newhpart(lua_State *L, GCtab *t, uint32_t hbits)
     lj_err_msg(L, LJ_ERR_TABOV);
   hsize = 1u << hbits;
   node = lj_mem_newvec(L, hsize, Node);
+  lj_gc_stats_inc(G(L), new_tab_hash_calls);
+  lj_gc_stats_add(G(L), new_tab_hash_bytes, hsize*sizeof(Node));
   setmref(t->node, node);
   setfreetop(t, node, &node[hsize]);
   t->hmask = hsize-1;
@@ -83,11 +85,13 @@ static LJ_AINLINE void clearapart(GCtab *t)
 static GCtab *newtab(lua_State *L, uint32_t asize, uint32_t hbits)
 {
   GCtab *t;
+  GCSize size;
   /* First try to colocate the array part. */
   if (LJ_MAX_COLOSIZE != 0 && asize > 0 && asize <= LJ_MAX_COLOSIZE) {
     Node *nilnode;
     lj_assertL((sizeof(GCtab) & 7) == 0, "bad GCtab size");
-    t = (GCtab *)lj_mem_newgco(L, sizetabcolo(asize));
+    size = sizetabcolo(asize);
+    t = (GCtab *)lj_mem_newgco(L, size);
     t->gct = ~LJ_TTAB;
     t->nomm = (uint8_t)~0;
     t->colo = (int8_t)asize;
@@ -102,6 +106,7 @@ static GCtab *newtab(lua_State *L, uint32_t asize, uint32_t hbits)
 #endif
   } else {  /* Otherwise separately allocate the array part. */
     Node *nilnode;
+    size = sizeof(GCtab);
     t = lj_mem_newobj(L, GCtab);
     t->gct = ~LJ_TTAB;
     t->nomm = (uint8_t)~0;
@@ -119,9 +124,13 @@ static GCtab *newtab(lua_State *L, uint32_t asize, uint32_t hbits)
       if (asize > LJ_MAX_ASIZE)
 	lj_err_msg(L, LJ_ERR_TABOV);
       setmref(t->array, lj_mem_newvec(L, asize, TValue));
+      lj_gc_stats_inc(G(L), new_tab_separate_array_calls);
+      lj_gc_stats_add(G(L), new_tab_separate_array_bytes, asize*sizeof(TValue));
       t->asize = asize;
     }
   }
+  lj_gc_stats_inc(G(L), new_tab_calls);
+  lj_gc_stats_add(G(L), new_tab_bytes, size);
   if (hbits)
     newhpart(L, t, hbits);
   return t;
@@ -245,16 +254,21 @@ void lj_tab_resize(lua_State *L, GCtab *t, uint32_t asize, uint32_t hbits)
     uint32_t i;
     if (asize > LJ_MAX_ASIZE)
       lj_err_msg(L, LJ_ERR_TABOV);
+    /* Resize records the new target size, matching realloc-byte style. */
     if (LJ_MAX_COLOSIZE != 0 && t->colo > 0) {
       /* A colocated array must be separated and copied. */
       TValue *oarray = tvref(t->array);
       array = lj_mem_newvec(L, asize, TValue);
+      lj_gc_stats_inc(G(L), new_tab_separate_array_calls);
+      lj_gc_stats_add(G(L), new_tab_separate_array_bytes, asize*sizeof(TValue));
       t->colo = (int8_t)(t->colo | 0x80);  /* Mark as separated (colo < 0). */
       for (i = 0; i < oldasize; i++)
 	copyTV(L, &array[i], &oarray[i]);
     } else {
       array = (TValue *)lj_mem_realloc(L, tvref(t->array),
 			  oldasize*sizeof(TValue), asize*sizeof(TValue));
+      lj_gc_stats_inc(G(L), new_tab_separate_array_calls);
+      lj_gc_stats_add(G(L), new_tab_separate_array_bytes, asize*sizeof(TValue));
     }
     setmref(t->array, array);
     t->asize = asize;

@@ -599,6 +599,39 @@ typedef struct GCStats {
   uint64_t free_bytes;
   uint64_t realloc_bytes;
   uint64_t new_gcobj_calls;
+  uint64_t new_str_calls;
+  uint64_t new_str_bytes;
+  uint64_t new_tab_calls;
+  uint64_t new_tab_bytes;
+  uint64_t new_tab_separate_array_calls;
+  uint64_t new_tab_separate_array_bytes;
+  uint64_t new_tab_hash_calls;
+  uint64_t new_tab_hash_bytes;
+  uint64_t new_udata_calls;
+  uint64_t new_udata_bytes;
+  uint64_t new_udata_payload_bytes;
+  uint64_t new_udata_payload_0_calls;
+  uint64_t new_udata_payload_1_16_calls;
+  uint64_t new_udata_payload_17_32_calls;
+  uint64_t new_udata_payload_33_64_calls;
+  uint64_t new_udata_payload_65_128_calls;
+  uint64_t new_udata_payload_129_256_calls;
+  uint64_t new_udata_payload_gt_256_calls;
+#if LJ_HASFFI
+  uint64_t new_cdata_calls;
+  uint64_t new_cdata_bytes;
+  uint64_t new_cdata_payload_bytes;
+#endif
+  uint64_t new_func_calls;
+  uint64_t new_func_bytes;
+  uint64_t new_cfunc_calls;
+  uint64_t new_lfunc_calls;
+  uint64_t new_proto_calls;
+  uint64_t new_proto_bytes;
+  uint64_t new_thread_calls;
+  uint64_t new_thread_bytes;
+  uint64_t new_upval_calls;
+  uint64_t new_upval_bytes;
   uint64_t step_calls;
   uint64_t cycle_count;
   uint64_t fullgc_calls;
@@ -617,6 +650,18 @@ typedef struct GCStats {
   uint64_t finalizer_scan_steps;
   uint64_t finalizer_queued;
   uint64_t finalizer_calls;
+  uint64_t finalizer_cfunc_calls;
+  uint64_t finalizer_cfunc_nup0_calls;
+  uint64_t finalizer_cfunc_upvalue_calls;
+  uint64_t finalizer_lfunc_calls;
+  uint64_t finalizer_ffunc_calls;
+  uint64_t finalizer_other_calls;
+  uint64_t finalizer_error_calls;
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  uint64_t finalizer_direct_cfunc_calls;
+  uint64_t finalizer_direct_cfunc_nonzero_results;
+  uint64_t finalizer_direct_cfunc_fallbacks;
+#endif
   uint64_t weak_tables;
   uint64_t weak_slots_cleared;
   uint64_t barrier_forward;

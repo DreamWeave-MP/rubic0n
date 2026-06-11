@@ -40,6 +40,9 @@ GCcdata *lj_cdata_newv(lua_State *L, CTypeID id, CTSize sz, CTSize align)
   cdatav(cd)->extra = extra;
   cdatav(cd)->len = sz;
   g = G(L);
+  lj_gc_stats_inc(g, new_cdata_calls);
+  lj_gc_stats_add(g, new_cdata_bytes, extra + sz);
+  lj_gc_stats_add(g, new_cdata_payload_bytes, sz);
   setgcrefr(cd->nextgc, g->gc.root);
   setgcref(g->gc.root, obj2gco(cd));
   newwhite(g, obj2gco(cd));

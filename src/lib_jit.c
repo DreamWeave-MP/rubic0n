@@ -220,13 +220,18 @@ static int jit_gcstats(lua_State *L)
   GCStats snap = g->gc.stats;
   GCStats *s = &snap;
   int reset = L->base < L->top && tvistruecond(L->base);
-  GCtab *t = lj_tab_new_ah(L, 0,
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
-                           31
-#else
-                           26
+  GCtab *t;
+  int hsize = 61;
+#if LJ_HASFFI
+  hsize += 3;
 #endif
-                          );
+#if LJ_HAS_SWEEP_UDATA_FINALIZERS
+  hsize += 5;
+#endif
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  hsize += 3;
+#endif
+  t = lj_tab_new_ah(L, 0, hsize);
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
 
@@ -237,6 +242,39 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "free_bytes", s->free_bytes);
   gcstats_set(L, t, "realloc_bytes", s->realloc_bytes);
   gcstats_set(L, t, "new_gcobj_calls", s->new_gcobj_calls);
+  gcstats_set(L, t, "new_str_calls", s->new_str_calls);
+  gcstats_set(L, t, "new_str_bytes", s->new_str_bytes);
+  gcstats_set(L, t, "new_tab_calls", s->new_tab_calls);
+  gcstats_set(L, t, "new_tab_bytes", s->new_tab_bytes);
+  gcstats_set(L, t, "new_tab_separate_array_calls", s->new_tab_separate_array_calls);
+  gcstats_set(L, t, "new_tab_separate_array_bytes", s->new_tab_separate_array_bytes);
+  gcstats_set(L, t, "new_tab_hash_calls", s->new_tab_hash_calls);
+  gcstats_set(L, t, "new_tab_hash_bytes", s->new_tab_hash_bytes);
+  gcstats_set(L, t, "new_udata_calls", s->new_udata_calls);
+  gcstats_set(L, t, "new_udata_bytes", s->new_udata_bytes);
+  gcstats_set(L, t, "new_udata_payload_bytes", s->new_udata_payload_bytes);
+  gcstats_set(L, t, "new_udata_payload_0_calls", s->new_udata_payload_0_calls);
+  gcstats_set(L, t, "new_udata_payload_1_16_calls", s->new_udata_payload_1_16_calls);
+  gcstats_set(L, t, "new_udata_payload_17_32_calls", s->new_udata_payload_17_32_calls);
+  gcstats_set(L, t, "new_udata_payload_33_64_calls", s->new_udata_payload_33_64_calls);
+  gcstats_set(L, t, "new_udata_payload_65_128_calls", s->new_udata_payload_65_128_calls);
+  gcstats_set(L, t, "new_udata_payload_129_256_calls", s->new_udata_payload_129_256_calls);
+  gcstats_set(L, t, "new_udata_payload_gt_256_calls", s->new_udata_payload_gt_256_calls);
+#if LJ_HASFFI
+  gcstats_set(L, t, "new_cdata_calls", s->new_cdata_calls);
+  gcstats_set(L, t, "new_cdata_bytes", s->new_cdata_bytes);
+  gcstats_set(L, t, "new_cdata_payload_bytes", s->new_cdata_payload_bytes);
+#endif
+  gcstats_set(L, t, "new_func_calls", s->new_func_calls);
+  gcstats_set(L, t, "new_func_bytes", s->new_func_bytes);
+  gcstats_set(L, t, "new_cfunc_calls", s->new_cfunc_calls);
+  gcstats_set(L, t, "new_lfunc_calls", s->new_lfunc_calls);
+  gcstats_set(L, t, "new_proto_calls", s->new_proto_calls);
+  gcstats_set(L, t, "new_proto_bytes", s->new_proto_bytes);
+  gcstats_set(L, t, "new_thread_calls", s->new_thread_calls);
+  gcstats_set(L, t, "new_thread_bytes", s->new_thread_bytes);
+  gcstats_set(L, t, "new_upval_calls", s->new_upval_calls);
+  gcstats_set(L, t, "new_upval_bytes", s->new_upval_bytes);
   gcstats_set(L, t, "step_calls", s->step_calls);
   gcstats_set(L, t, "cycle_count", s->cycle_count);
   gcstats_set(L, t, "fullgc_calls", s->fullgc_calls);
@@ -255,6 +293,18 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_scan_steps", s->finalizer_scan_steps);
   gcstats_set(L, t, "finalizer_queued", s->finalizer_queued);
   gcstats_set(L, t, "finalizer_calls", s->finalizer_calls);
+  gcstats_set(L, t, "finalizer_cfunc_calls", s->finalizer_cfunc_calls);
+  gcstats_set(L, t, "finalizer_cfunc_nup0_calls", s->finalizer_cfunc_nup0_calls);
+  gcstats_set(L, t, "finalizer_cfunc_upvalue_calls", s->finalizer_cfunc_upvalue_calls);
+  gcstats_set(L, t, "finalizer_lfunc_calls", s->finalizer_lfunc_calls);
+  gcstats_set(L, t, "finalizer_ffunc_calls", s->finalizer_ffunc_calls);
+  gcstats_set(L, t, "finalizer_other_calls", s->finalizer_other_calls);
+  gcstats_set(L, t, "finalizer_error_calls", s->finalizer_error_calls);
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  gcstats_set(L, t, "finalizer_direct_cfunc_calls", s->finalizer_direct_cfunc_calls);
+  gcstats_set(L, t, "finalizer_direct_cfunc_nonzero_results", s->finalizer_direct_cfunc_nonzero_results);
+  gcstats_set(L, t, "finalizer_direct_cfunc_fallbacks", s->finalizer_direct_cfunc_fallbacks);
+#endif
   gcstats_set(L, t, "weak_tables", s->weak_tables);
   gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);
   gcstats_set(L, t, "barrier_forward", s->barrier_forward);

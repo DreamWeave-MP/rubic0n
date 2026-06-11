@@ -32,6 +32,34 @@ local fields = {
   "free_bytes",
   "realloc_bytes",
   "new_gcobj_calls",
+  "new_str_calls",
+  "new_str_bytes",
+  "new_tab_calls",
+  "new_tab_bytes",
+  "new_tab_separate_array_calls",
+  "new_tab_separate_array_bytes",
+  "new_tab_hash_calls",
+  "new_tab_hash_bytes",
+  "new_udata_calls",
+  "new_udata_bytes",
+  "new_udata_payload_bytes",
+  "new_udata_payload_0_calls",
+  "new_udata_payload_1_16_calls",
+  "new_udata_payload_17_32_calls",
+  "new_udata_payload_33_64_calls",
+  "new_udata_payload_65_128_calls",
+  "new_udata_payload_129_256_calls",
+  "new_udata_payload_gt_256_calls",
+  "new_func_calls",
+  "new_func_bytes",
+  "new_cfunc_calls",
+  "new_lfunc_calls",
+  "new_proto_calls",
+  "new_proto_bytes",
+  "new_thread_calls",
+  "new_thread_bytes",
+  "new_upval_calls",
+  "new_upval_bytes",
   "step_calls",
   "cycle_count",
   "fullgc_calls",
@@ -43,6 +71,13 @@ local fields = {
   "finalizer_scan_steps",
   "finalizer_queued",
   "finalizer_calls",
+  "finalizer_cfunc_calls",
+  "finalizer_cfunc_nup0_calls",
+  "finalizer_cfunc_upvalue_calls",
+  "finalizer_lfunc_calls",
+  "finalizer_ffunc_calls",
+  "finalizer_other_calls",
+  "finalizer_error_calls",
   "weak_tables",
   "weak_slots_cleared",
   "barrier_forward",
@@ -60,6 +95,18 @@ local sweep_udata_fields = {
   "sweep_udata_preserved",
 }
 
+local cdata_fields = {
+  "new_cdata_calls",
+  "new_cdata_bytes",
+  "new_cdata_payload_bytes",
+}
+
+local direct_finalizer_fields = {
+  "finalizer_direct_cfunc_calls",
+  "finalizer_direct_cfunc_nonzero_results",
+  "finalizer_direct_cfunc_fallbacks",
+}
+
 local function check_shape(t)
   assert(type(t) == "table")
   for _, name in ipairs(fields) do
@@ -72,10 +119,114 @@ local function check_shape(t)
       assert(t[name] >= 0, name)
     end
   end
+  if t.new_cdata_calls ~= nil then
+    for _, name in ipairs(cdata_fields) do
+      assert(type(t[name]) == "number", name)
+      assert(t[name] >= 0, name)
+    end
+  end
+  if t.finalizer_direct_cfunc_calls ~= nil then
+    for _, name in ipairs(direct_finalizer_fields) do
+      assert(type(t[name]) == "number", name)
+      assert(t[name] >= 0, name)
+    end
+  end
+end
+
+local function assert_increased(after, before, name)
+  assert(after[name] > before[name], name .. ": " .. after[name] .. " <= " .. before[name])
+end
+
+local function udata_payload_bucket_calls(t)
+  return t.new_udata_payload_0_calls +
+         t.new_udata_payload_1_16_calls +
+         t.new_udata_payload_17_32_calls +
+         t.new_udata_payload_33_64_calls +
+         t.new_udata_payload_65_128_calls +
+         t.new_udata_payload_129_256_calls +
+         t.new_udata_payload_gt_256_calls
 end
 
 check_shape(jit.gcstats(true))
 local has_sweep_udata = jit.gcstats().sweep_udata_steps ~= nil
+
+do
+  jit.gcstats(true)
+  local before = jit.gcstats()
+  local u = newproxy(false)
+  local after = jit.gcstats()
+  check_shape(after)
+  assert(u ~= nil)
+  assert_increased(after, before, "new_udata_calls")
+  assert_increased(after, before, "new_udata_payload_0_calls")
+  assert(udata_payload_bucket_calls(after) == udata_payload_bucket_calls(before) + 1)
+end
+
+do
+  jit.gcstats(true)
+  local before = jit.gcstats()
+  local refs = {}
+
+  refs.t = { 1, 2, 3, 4, a = 5, b = 6, c = 7 }
+  refs.big = {}
+  for i = 1, 32 do refs.big[i] = i end
+  refs.u = newproxy(false)
+  refs.s = "gcstats unique string " .. tostring({})
+  refs.f = loadstring("return function(x) return function() return x end end")()(true)
+  refs.co = coroutine.create(function() return refs.s end)
+
+  local after = jit.gcstats()
+  check_shape(after)
+  assert_increased(after, before, "new_tab_calls")
+  assert_increased(after, before, "new_tab_bytes")
+  assert_increased(after, before, "new_tab_separate_array_calls")
+  assert_increased(after, before, "new_tab_separate_array_bytes")
+  assert_increased(after, before, "new_tab_hash_calls")
+  assert_increased(after, before, "new_tab_hash_bytes")
+  assert_increased(after, before, "new_udata_calls")
+  assert_increased(after, before, "new_udata_bytes")
+  assert_increased(after, before, "new_str_calls")
+  assert_increased(after, before, "new_str_bytes")
+  assert_increased(after, before, "new_func_calls")
+  assert_increased(after, before, "new_func_bytes")
+  assert_increased(after, before, "new_lfunc_calls")
+  assert_increased(after, before, "new_proto_calls")
+  assert_increased(after, before, "new_proto_bytes")
+  assert_increased(after, before, "new_thread_calls")
+  assert_increased(after, before, "new_thread_bytes")
+  assert_increased(after, before, "new_upval_calls")
+  assert_increased(after, before, "new_upval_bytes")
+
+  if after.new_cdata_calls ~= nil then
+    local ok, ffi = pcall(require, "ffi")
+    if ok then
+      jit.gcstats(true)
+      before = jit.gcstats()
+      refs.cd = ffi.new("int[?]", 16)
+      after = jit.gcstats()
+      check_shape(after)
+      assert_increased(after, before, "new_cdata_calls")
+      assert_increased(after, before, "new_cdata_bytes")
+      assert_increased(after, before, "new_cdata_payload_bytes")
+    end
+  end
+end
+
+do
+  local ok_tmpfile, tmpfile = false, nil
+  if io and io.tmpfile then
+    jit.gcstats(true)
+    local before = jit.gcstats()
+    ok_tmpfile, tmpfile = pcall(io.tmpfile)
+    if ok_tmpfile and tmpfile then
+      local after = jit.gcstats()
+      assert(tmpfile ~= nil)
+      assert_increased(after, before, "new_udata_payload_bytes")
+      assert(udata_payload_bucket_calls(after) > udata_payload_bucket_calls(before))
+      tmpfile:close()
+    end
+  end
+end
 
 do
   local weak = setmetatable({}, { __mode = "v" })

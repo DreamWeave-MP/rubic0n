@@ -52,6 +52,8 @@ static GCupval *func_finduv(lua_State *L, TValue *slot)
   }
   /* No matching upvalue found. Create a new one. */
   uv = lj_mem_newt(L, sizeof(GCupval), GCupval);
+  lj_gc_stats_inc(g, new_upval_calls);
+  lj_gc_stats_add(g, new_upval_bytes, sizeof(GCupval));
   newwhite(g, uv);
   uv->gct = ~LJ_TUPVAL;
   uv->closed = 0;  /* Still open. */
@@ -72,6 +74,8 @@ static GCupval *func_finduv(lua_State *L, TValue *slot)
 static GCupval *func_emptyuv(lua_State *L)
 {
   GCupval *uv = (GCupval *)lj_mem_newgco(L, sizeof(GCupval));
+  lj_gc_stats_inc(G(L), new_upval_calls);
+  lj_gc_stats_add(G(L), new_upval_bytes, sizeof(GCupval));
   uv->gct = ~LJ_TUPVAL;
   uv->closed = 1;
   setnilV(&uv->tv);
@@ -110,7 +114,11 @@ void LJ_FASTCALL lj_func_freeuv(global_State *g, GCupval *uv)
 
 GCfunc *lj_func_newC(lua_State *L, MSize nelems, GCtab *env)
 {
-  GCfunc *fn = (GCfunc *)lj_mem_newgco(L, sizeCfunc(nelems));
+  MSize size = sizeCfunc(nelems);
+  GCfunc *fn = (GCfunc *)lj_mem_newgco(L, size);
+  lj_gc_stats_inc(G(L), new_func_calls);
+  lj_gc_stats_add(G(L), new_func_bytes, size);
+  lj_gc_stats_inc(G(L), new_cfunc_calls);
   fn->c.gct = ~LJ_TFUNC;
   fn->c.ffid = FF_C;
   fn->c.nupvalues = (uint8_t)nelems;
@@ -123,7 +131,11 @@ GCfunc *lj_func_newC(lua_State *L, MSize nelems, GCtab *env)
 static GCfunc *func_newL(lua_State *L, GCproto *pt, GCtab *env)
 {
   uint32_t count;
-  GCfunc *fn = (GCfunc *)lj_mem_newgco(L, sizeLfunc((MSize)pt->sizeuv));
+  MSize size = sizeLfunc((MSize)pt->sizeuv);
+  GCfunc *fn = (GCfunc *)lj_mem_newgco(L, size);
+  lj_gc_stats_inc(G(L), new_func_calls);
+  lj_gc_stats_add(G(L), new_func_bytes, size);
+  lj_gc_stats_inc(G(L), new_lfunc_calls);
   fn->l.gct = ~LJ_TFUNC;
   fn->l.ffid = FF_LUA;
   fn->l.nupvalues = 0;  /* Set to zero until upvalues are initialized. */

@@ -13,8 +13,28 @@
 
 GCudata *lj_udata_new(lua_State *L, MSize sz, GCtab *env)
 {
-  GCudata *ud = lj_mem_newt(L, sizeof(GCudata) + sz, GCudata);
+  MSize size = sizeof(GCudata) + sz;
+  GCudata *ud = lj_mem_newt(L, size, GCudata);
   global_State *g = G(L);
+  lj_gc_stats_inc(g, new_udata_calls);
+  lj_gc_stats_add(g, new_udata_bytes, size);
+  lj_gc_stats_add(g, new_udata_payload_bytes, sz);
+#ifdef LUAJIT_ENABLE_GCSTATS
+  if (sz == 0)
+    lj_gc_stats_inc(g, new_udata_payload_0_calls);
+  else if (sz <= 16)
+    lj_gc_stats_inc(g, new_udata_payload_1_16_calls);
+  else if (sz <= 32)
+    lj_gc_stats_inc(g, new_udata_payload_17_32_calls);
+  else if (sz <= 64)
+    lj_gc_stats_inc(g, new_udata_payload_33_64_calls);
+  else if (sz <= 128)
+    lj_gc_stats_inc(g, new_udata_payload_65_128_calls);
+  else if (sz <= 256)
+    lj_gc_stats_inc(g, new_udata_payload_129_256_calls);
+  else
+    lj_gc_stats_inc(g, new_udata_payload_gt_256_calls);
+#endif
   newwhite(g, ud);  /* Not finalized. */
   ud->gct = ~LJ_TUDATA;
   ud->udtype = UDTYPE_USERDATA;
@@ -59,4 +79,3 @@ void *lj_lightud_intern(lua_State *L, void *p)
   return (void *)(((uint64_t)segnum << LJ_LIGHTUD_BITS_LO) | lightudlo(u));
 }
 #endif
-
