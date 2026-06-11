@@ -35,6 +35,7 @@ Table of Contents
         * [Global environment specialization](#global-environment-specialization)
         * [Improved allocation sinking](#improved-allocation-sinking)
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
+        * [`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS`](#luajit_enable_unprotected_c_finalizers)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
         * [Updated `-bl` option](#updated--bl-option)
@@ -517,6 +518,41 @@ associations whose keys are dying finalizable userdata may be cleared before the
 userdata finalizers run in this mode. This is intentional under the
 static/native/leaf finalizer contract. Code using this mode must not rely on
 weak keys retaining dying finalizable userdata through finalizer execution.
+
+[Back to TOC](#table-of-contents)
+
+### `LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS`
+
+`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` is a dangerous, opt-in ABI for embedders
+that own all userdata finalizers covered by it. It is not Lua-compatible generic
+finalizer behavior and must not be enabled for applications that allow arbitrary
+Lua code or third-party C modules to install `__gc` handlers.
+
+When enabled, a full userdata whose `__gc` metamethod is a zero-upvalue C
+function may be called directly by the collector instead of through the normal
+protected finalizer path. The callable must obey this complete ABI contract:
+
+* the object is full userdata only;
+* the `__gc` callable is a zero-upvalue C function;
+* the userdata is passed at positive stack index 1;
+* the finalizer returns 0;
+* the finalizer must not throw or call `lua_error`;
+* the finalizer must not yield;
+* the finalizer must not call Lua or re-enter Lua;
+* the finalizer must not depend on upvalues or `LUA_ENVIRONINDEX`;
+* the finalizer must not depend on protected finalizer error handling.
+
+Violating this contract can crash or corrupt the runtime. Use it only when the
+embedder owns every such finalizer and has audited them as native leaf
+destructors with simple stack use.
+
+Before enabling this mode in production, build with `LUAJIT_ENABLE_GCSTATS` and
+check finalizer telemetry on representative workloads. In particular, review
+`finalizer_cfunc_nup0_calls`, `finalizer_direct_cfunc_calls`,
+`finalizer_direct_cfunc_nonzero_results`, `finalizer_cfunc_upvalue_calls`,
+`finalizer_lfunc_calls`, `finalizer_ffunc_calls`, and `finalizer_other_calls` to
+confirm that the finalizers expected to use the direct ABI are zero-upvalue C
+functions returning zero, and that other finalizer kinds are understood.
 
 [Back to TOC](#table-of-contents)
 
