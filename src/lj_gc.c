@@ -597,16 +597,62 @@ static void gc_clearweak(global_State *g, GCobj *o)
   }
 }
 
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+static int gc_unprotected_c_finalizer(global_State *g, lua_State *VL,
+				     cTValue *mo, GCobj *o)
+{
+  GCfunc *fn;
+  TValue *oldbase, *oldtop, *top;
+  int nres;
+  if (o->gch.gct != ~LJ_TUDATA || !tvisfunc(mo)) {
+    return 0;
+  }
+  fn = funcV(mo);
+  if (!iscfunc(fn) || fn->c.nupvalues != 0) {
+    return 0;
+  }
+  /*
+  ** Experimental raw destructor ABI:
+  ** LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS is only for zero-upvalue C
+  ** finalizers that accept a full userdata at positive index 1, return 0, and
+  ** never throw, yield, or call Lua. It provides curr_func() metadata for
+  ** basic C API checks plus normal stack headroom, but no protected error or
+  ** yield handling and no general lua_CFunction call-frame semantics.
+  */
+  oldbase = VL->base;
+  oldtop = VL->top;
+  top = oldtop;
+  copyTV(VL, top++, mo);
+  if (LJ_FR2) setnilV(top++);
+  setgcV(VL, top, o, ~o->gch.gct);
+  VL->base = top;
+  VL->top = top+1;
+  nres = fn->c.f(VL);
+  if (nres != 0)
+    lj_gc_stats_inc(g, finalizer_direct_cfunc_nonzero_results);
+  lj_gc_stats_inc(g, finalizer_direct_cfunc_calls);
+  VL->base = oldbase;
+  VL->top = oldtop;
+  return 1;
+}
+#endif
+
 /* Call a userdata or cdata finalizer. */
 static void gc_call_finalizer(global_State *g, lua_State *L,
 			      cTValue *mo, GCobj *o)
 {
   /* Save and restore lots of state around the __gc callback. */
-  uint8_t oldh = hook_save(g);
-  GCSize oldt = g->gc.threshold;
-  int errcode;
   lua_State *VL = vmthread(g);
+  uint8_t oldh;
+  GCSize oldt;
+  int errcode;
   TValue *top;
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  /* May throw before entering direct-finalizer context. */
+  lj_state_checkstack(VL, 1+LJ_FR2+LUA_MINSTACK);
+#endif
+  oldh = hook_save(g);
+  oldt = g->gc.threshold;
   lj_gc_stats_inc(g, finalizer_calls);
 #ifdef LUAJIT_ENABLE_GCSTATS
   if (tvisfunc(mo)) {
@@ -631,6 +677,19 @@ static void gc_call_finalizer(global_State *g, lua_State *L,
   hook_entergc(g);  /* Disable hooks and new traces during __gc. */
   if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
   g->gc.threshold = LJ_MAX_MEM;  /* Prevent GC steps. */
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  if (gc_unprotected_c_finalizer(g, VL, mo, o)) {
+    setgcref(g->cur_L, obj2gco(L));
+    hook_restore(g, oldh);
+    if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
+    g->gc.threshold = oldt;  /* Restore GC threshold. */
+    return;
+  } else if (tvisfunc(mo)) {
+    GCfunc *fn = funcV(mo);
+    if (iscfunc(fn) && fn->c.nupvalues == 0)
+      lj_gc_stats_inc(g, finalizer_direct_cfunc_fallbacks);
+  }
+#endif
   top = VL->top;
   copyTV(VL, top++, mo);
   if (LJ_FR2) setnilV(top++);

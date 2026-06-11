@@ -101,6 +101,12 @@ local cdata_fields = {
   "new_cdata_payload_bytes",
 }
 
+local direct_finalizer_fields = {
+  "finalizer_direct_cfunc_calls",
+  "finalizer_direct_cfunc_nonzero_results",
+  "finalizer_direct_cfunc_fallbacks",
+}
+
 local function check_shape(t)
   assert(type(t) == "table")
   for _, name in ipairs(fields) do
@@ -115,6 +121,12 @@ local function check_shape(t)
   end
   if t.new_cdata_calls ~= nil then
     for _, name in ipairs(cdata_fields) do
+      assert(type(t[name]) == "number", name)
+      assert(t[name] >= 0, name)
+    end
+  end
+  if t.finalizer_direct_cfunc_calls ~= nil then
+    for _, name in ipairs(direct_finalizer_fields) do
       assert(type(t[name]) == "number", name)
       assert(t[name] >= 0, name)
     end

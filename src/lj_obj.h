@@ -657,6 +657,11 @@ typedef struct GCStats {
   uint64_t finalizer_ffunc_calls;
   uint64_t finalizer_other_calls;
   uint64_t finalizer_error_calls;
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  uint64_t finalizer_direct_cfunc_calls;
+  uint64_t finalizer_direct_cfunc_nonzero_results;
+  uint64_t finalizer_direct_cfunc_fallbacks;
+#endif
   uint64_t weak_tables;
   uint64_t weak_slots_cleared;
   uint64_t barrier_forward;

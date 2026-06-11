@@ -220,21 +220,18 @@ static int jit_gcstats(lua_State *L)
   GCStats snap = g->gc.stats;
   GCStats *s = &snap;
   int reset = L->base < L->top && tvistruecond(L->base);
-  GCtab *t = lj_tab_new_ah(L, 0,
+  GCtab *t;
+  int hsize = 61;
+#if LJ_HASFFI
+  hsize += 3;
+#endif
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
-#if LJ_HASFFI
-                           69
-#else
-                           66
+  hsize += 5;
 #endif
-#else
-#if LJ_HASFFI
-                           64
-#else
-                           61
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  hsize += 3;
 #endif
-#endif
-                          );
+  t = lj_tab_new_ah(L, 0, hsize);
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
 
@@ -303,6 +300,11 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_ffunc_calls", s->finalizer_ffunc_calls);
   gcstats_set(L, t, "finalizer_other_calls", s->finalizer_other_calls);
   gcstats_set(L, t, "finalizer_error_calls", s->finalizer_error_calls);
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS
+  gcstats_set(L, t, "finalizer_direct_cfunc_calls", s->finalizer_direct_cfunc_calls);
+  gcstats_set(L, t, "finalizer_direct_cfunc_nonzero_results", s->finalizer_direct_cfunc_nonzero_results);
+  gcstats_set(L, t, "finalizer_direct_cfunc_fallbacks", s->finalizer_direct_cfunc_fallbacks);
+#endif
   gcstats_set(L, t, "weak_tables", s->weak_tables);
   gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);
   gcstats_set(L, t, "barrier_forward", s->barrier_forward);
