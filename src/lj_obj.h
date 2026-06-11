@@ -617,18 +617,6 @@ typedef struct GCStats {
   uint64_t new_udata_payload_65_128_calls;
   uint64_t new_udata_payload_129_256_calls;
   uint64_t new_udata_payload_gt_256_calls;
-#if LJ_HAS_UDATA_CACHE
-  uint64_t udata_cache_hits;
-  uint64_t udata_cache_misses;
-  uint64_t udata_cache_puts;
-  uint64_t udata_cache_drops;
-  uint64_t udata_cache_hit_0_calls;
-  uint64_t udata_cache_hit_1_16_calls;
-  uint64_t udata_cache_hit_17_32_calls;
-  uint64_t udata_cache_hit_33_64_calls;
-  uint64_t udata_cache_hit_65_128_calls;
-  uint64_t udata_cache_hit_129_256_calls;
-#endif
 #if LJ_HASFFI
   uint64_t new_cdata_calls;
   uint64_t new_cdata_bytes;
@@ -656,9 +644,6 @@ typedef struct GCStats {
   uint64_t sweep_udata_freed;
   uint64_t sweep_udata_parked;
   uint64_t sweep_udata_preserved;
-  uint64_t sweep_udata_mmcache_hits;
-  uint64_t sweep_udata_mmcache_misses;
-  uint64_t sweep_udata_preserve_skips;
 #endif
   uint64_t sweep_string_steps;
   uint64_t sweep_root_steps;
@@ -703,10 +688,6 @@ typedef struct GCState {
   MSize pause;		/* Pause between successive GC cycles. */
 #if LJ_64
   MRef lightudseg;	/* Upper bits of lightuserdata segments. */
-#endif
-#if LJ_HAS_UDATA_CACHE
-  GCSize udata_cache_bytes;	/* Detached userdata bytes retained. */
-  GCRef udata_cache[257];	/* Exact payload-size detached userdata lists. */
 #endif
 #ifdef LUAJIT_ENABLE_GCSTATS
   GCStats stats;		/* Monotonic GC observability counters. */

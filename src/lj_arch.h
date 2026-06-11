@@ -768,13 +768,6 @@ extern void *LJ_WIN_LOADLIBA(const char *path);
 #define LJ_HAS_SWEEP_UDATA_FINALIZERS	0
 #endif
 
-/* Exact-size full-userdata allocation cache. */
-#ifdef LUAJIT_ENABLE_UDATA_CACHE
-#define LJ_HAS_UDATA_CACHE		1
-#else
-#define LJ_HAS_UDATA_CACHE		0
-#endif
-
 /* -- VM security --------------------------------------------------------- */
 
 /* Don't make any changes here. Instead build with:

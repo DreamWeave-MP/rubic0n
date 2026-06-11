@@ -11,56 +11,11 @@
 #include "lj_err.h"
 #include "lj_udata.h"
 
-#if LJ_HAS_UDATA_CACHE
-#ifndef LUAJIT_UDATA_CACHE_MAXBYTES
-#define LUAJIT_UDATA_CACHE_MAXBYTES	((GCSize)16u << 20)
-#endif
-#define UDATA_CACHE_MAX_PAYLOAD	256u
-
-static LJ_AINLINE GCudata *udata_cache_get(global_State *g, MSize sz,
-					   MSize size)
-{
-  GCudata *ud;
-  if (sz > UDATA_CACHE_MAX_PAYLOAD) return NULL;
-  ud = (GCudata *)gcref(g->gc.udata_cache[sz]);
-  if (ud == NULL) return NULL;
-  /* Cached blocks are detached raw allocator blocks, not GC roots. */
-  lj_assertG(ud->udtype == UDTYPE_USERDATA && ud->len == sz,
-	     "userdata cache exact-size invariant failed");
-  setgcrefr(g->gc.udata_cache[sz], ud->nextgc);
-  g->gc.udata_cache_bytes -= size;
-  g->gc.total += size;
-  lj_gc_stats_inc(g, udata_cache_hits);
-  if (sz == 0)
-    lj_gc_stats_inc(g, udata_cache_hit_0_calls);
-  else if (sz <= 16)
-    lj_gc_stats_inc(g, udata_cache_hit_1_16_calls);
-  else if (sz <= 32)
-    lj_gc_stats_inc(g, udata_cache_hit_17_32_calls);
-  else if (sz <= 64)
-    lj_gc_stats_inc(g, udata_cache_hit_33_64_calls);
-  else if (sz <= 128)
-    lj_gc_stats_inc(g, udata_cache_hit_65_128_calls);
-  else
-    lj_gc_stats_inc(g, udata_cache_hit_129_256_calls);
-  return ud;
-}
-#endif
-
 GCudata *lj_udata_new(lua_State *L, MSize sz, GCtab *env)
 {
   MSize size = sizeof(GCudata) + sz;
+  GCudata *ud = lj_mem_newt(L, size, GCudata);
   global_State *g = G(L);
-  GCudata *ud;
-#if LJ_HAS_UDATA_CACHE
-  ud = udata_cache_get(g, sz, size);
-  if (ud == NULL) {
-    lj_gc_stats_inc(g, udata_cache_misses);
-    ud = lj_mem_newt(L, size, GCudata);
-  }
-#else
-  ud = lj_mem_newt(L, size, GCudata);
-#endif
   lj_gc_stats_inc(g, new_udata_calls);
   lj_gc_stats_add(g, new_udata_bytes, size);
   lj_gc_stats_add(g, new_udata_payload_bytes, sz);
@@ -95,49 +50,8 @@ GCudata *lj_udata_new(lua_State *L, MSize sz, GCtab *env)
 
 void LJ_FASTCALL lj_udata_free(global_State *g, GCudata *ud)
 {
-#if LJ_HAS_UDATA_CACHE
-  MSize sz = ud->len;
-  MSize size = sizeudata(ud);
-  if (ud->udtype == UDTYPE_USERDATA && sz <= UDATA_CACHE_MAX_PAYLOAD &&
-      g->gc.udata_cache_bytes + size <= LUAJIT_UDATA_CACHE_MAXBYTES) {
-    /* lj_udata_free() is reached only after finalizers have run and sweep has
-    ** detached the object. Reuse nextgc as a raw freelist link; the GC must not
-    ** traverse cache lists because cached blocks are no longer live objects.
-    */
-    lj_assertG(size == sizeof(GCudata) + sz,
-	       "userdata cache exact-size invariant failed");
-    setgcrefr(ud->nextgc, g->gc.udata_cache[sz]);
-    setgcref(g->gc.udata_cache[sz], obj2gco(ud));
-    g->gc.udata_cache_bytes += size;
-    g->gc.total -= size;
-    lj_gc_stats_inc(g, udata_cache_puts);
-    return;
-  }
-  lj_gc_stats_inc(g, udata_cache_drops);
-#endif
   lj_mem_free(g, ud, sizeudata(ud));
 }
-
-#if LJ_HAS_UDATA_CACHE
-void lj_udata_cache_freeall(global_State *g)
-{
-  MSize sz;
-  for (sz = 0; sz <= UDATA_CACHE_MAX_PAYLOAD; sz++) {
-    GCudata *ud = (GCudata *)gcref(g->gc.udata_cache[sz]);
-    setgcrefnull(g->gc.udata_cache[sz]);
-    while (ud) {
-      GCudata *next = (GCudata *)gcref(ud->nextgc);
-      MSize size = sizeudata(ud);
-      lj_assertG(ud->udtype == UDTYPE_USERDATA && ud->len == sz &&
-		 size == sizeof(GCudata) + sz,
-		 "userdata cache exact-size invariant failed");
-      g->allocf(g->allocd, ud, size, 0);
-      ud = next;
-    }
-  }
-  g->gc.udata_cache_bytes = 0;
-}
-#endif
 
 #if LJ_64
 void *lj_lightud_intern(lua_State *L, void *p)

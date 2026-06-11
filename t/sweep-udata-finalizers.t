@@ -31,9 +31,6 @@ local function check_stats(t)
   assert(type(t.sweep_udata_queued) == "number")
   assert(type(t.sweep_udata_freed) == "number")
   assert(type(t.sweep_udata_parked) == "number")
-  assert(type(t.sweep_udata_mmcache_hits) == "number")
-  assert(type(t.sweep_udata_mmcache_misses) == "number")
-  assert(type(t.sweep_udata_preserve_skips) == "number")
   assert(type(t.finalizer_scan_steps) == "number")
 end
 
@@ -73,50 +70,6 @@ do
   local s = jit.gcstats(true)
   check_stats(s)
   assert(s.finalizer_scan_steps == 0, s.finalizer_scan_steps)
-  assert(s.sweep_udata_queued >= n, s.sweep_udata_queued)
-  assert(s.finalizer_calls >= n, s.finalizer_calls)
-end
-
-do
-  local n = 120
-  local proto = newproxy(true)
-  getmetatable(proto).__gc = tostring
-
-  for i = 1, n do
-    local u = newproxy(proto)
-  end
-  proto = nil
-
-  collectgarbage("collect")
-  local s = jit.gcstats(true)
-  check_stats(s)
-  assert(s.finalizer_scan_steps == 0, s.finalizer_scan_steps)
-  assert(s.sweep_udata_mmcache_hits > 0, s.sweep_udata_mmcache_hits)
-  assert(s.sweep_udata_mmcache_misses > 0, s.sweep_udata_mmcache_misses)
-  assert(s.sweep_udata_preserve_skips > 0, s.sweep_udata_preserve_skips)
-  assert(s.sweep_udata_queued >= n, s.sweep_udata_queued)
-  assert(s.finalizer_calls >= n, s.finalizer_calls)
-end
-
-do
-  local n = 24
-  local proto1 = newproxy(true)
-  local proto2 = newproxy(true)
-  getmetatable(proto1).__gc = tostring
-  getmetatable(proto2).__gc = tostring
-
-  for i = 1, n do
-    local u = newproxy(i % 2 == 0 and proto1 or proto2)
-  end
-  proto1 = nil
-  proto2 = nil
-
-  collectgarbage("collect")
-  local s = jit.gcstats(true)
-  check_stats(s)
-  assert(s.finalizer_scan_steps == 0, s.finalizer_scan_steps)
-  assert(s.sweep_udata_mmcache_hits > 0, s.sweep_udata_mmcache_hits)
-  assert(s.sweep_udata_mmcache_misses > 0, s.sweep_udata_mmcache_misses)
   assert(s.sweep_udata_queued >= n, s.sweep_udata_queued)
   assert(s.finalizer_calls >= n, s.finalizer_calls)
 end

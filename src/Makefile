@@ -102,8 +102,6 @@ XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
 # Enable sweep-time userdata finalizer discovery by default. Remove or comment
 # this define to use the stock atomic userdata finalizer discovery path.
 XCFLAGS+= -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
-# Enable exact-size full-userdata allocation cache by default.
-XCFLAGS+= -DLUAJIT_ENABLE_UDATA_CACHE
 #
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
 #XCFLAGS+= -DLUAJIT_DISABLE_JIT

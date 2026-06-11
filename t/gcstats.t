@@ -86,29 +86,12 @@ local sweep_udata_fields = {
   "sweep_udata_freed",
   "sweep_udata_parked",
   "sweep_udata_preserved",
-  "sweep_udata_mmcache_hits",
-  "sweep_udata_mmcache_misses",
-  "sweep_udata_preserve_skips",
 }
 
 local cdata_fields = {
   "new_cdata_calls",
   "new_cdata_bytes",
   "new_cdata_payload_bytes",
-}
-
-local udata_cache_fields = {
-  "udata_cache_hits",
-  "udata_cache_misses",
-  "udata_cache_puts",
-  "udata_cache_drops",
-  "udata_cache_hit_0_calls",
-  "udata_cache_hit_1_16_calls",
-  "udata_cache_hit_17_32_calls",
-  "udata_cache_hit_33_64_calls",
-  "udata_cache_hit_65_128_calls",
-  "udata_cache_hit_129_256_calls",
-  "udata_cache_bytes",
 }
 
 local function check_shape(t)
@@ -125,12 +108,6 @@ local function check_shape(t)
   end
   if t.new_cdata_calls ~= nil then
     for _, name in ipairs(cdata_fields) do
-      assert(type(t[name]) == "number", name)
-      assert(t[name] >= 0, name)
-    end
-  end
-  if t.udata_cache_hits ~= nil then
-    for _, name in ipairs(udata_cache_fields) do
       assert(type(t[name]) == "number", name)
       assert(t[name] >= 0, name)
     end
@@ -275,13 +252,6 @@ local b = jit.gcstats()
 check_shape(b)
 for _, name in ipairs(fields) do
   assert(b[name] >= a[name], name)
-end
-if a.udata_cache_hits ~= nil then
-  for _, name in ipairs(udata_cache_fields) do
-    if name ~= "udata_cache_bytes" then
-      assert(b[name] >= a[name], name)
-    end
-  end
 end
 
 local before_reset = jit.gcstats(true)
