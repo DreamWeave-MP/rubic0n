@@ -146,10 +146,8 @@ local function build_geometry(ffi)
 
   local function quat_inverse(q)
     local len2 = q.qx*q.qx + q.qy*q.qy + q.qz*q.qz + q.qw*q.qw
-    if len2 > 0 then
-      return transformq(-q.qx/len2, -q.qy/len2, -q.qz/len2, q.qw/len2)
-    end
-    return transformq(0, 0, 0, 1)
+    -- Keep invalid quaternion inverses visible; match osg::Quat::inverse().
+    return transformq(-q.qx/len2, -q.qy/len2, -q.qz/len2, q.qw/len2)
   end
 
   local function matrix_from_quat_components(qx, qy, qz, qw)
