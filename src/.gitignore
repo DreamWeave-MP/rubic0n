@@ -7,4 +7,6 @@ lj_libdef.h
 lj_recdef.h
 lj_folddef.h
 lib_math_geometry.inc
+lib_math_extensions.inc
+lib_table_extensions.inc
 lj_vm.[sS]

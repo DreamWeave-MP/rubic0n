@@ -566,7 +566,7 @@ ALL_T= $(LUAJIT_T) $(LUAJIT_A) $(LUAJIT_SO) $(HOST_T)
 ALL_HDRGEN= lj_bcdef.h lj_ffdef.h lj_libdef.h lj_recdef.h lj_folddef.h \
 	    host/buildvm_arch.h luajit.h
 ALL_GEN= $(LJVM_S) $(ALL_HDRGEN) luajit_relver.txt $(LIB_VMDEFP) \
-	 lib_math_geometry.inc
+	 lib_math_geometry.inc lib_math_extensions.inc lib_table_extensions.inc
 WIN_RM= *.obj *.lib *.exp *.dll *.exe *.manifest *.pdb *.ilk
 ALL_RM= $(ALL_T) $(ALL_GEN) *.o host/*.o $(WIN_RM)
 
@@ -729,9 +729,17 @@ $(LIB_VMDEF): $(BUILDVM_T) $(LJLIB_C)
 	$(E) "BUILDVM   $@"
 	$(Q)$(BUILDVM_X) -m vmdef -o $(LIB_VMDEFP) $(LJLIB_C)
 
-lib_math_geometry.inc: lib_math_geometry.lua host/genembed.lua $(MINILUA_DEP)
+lib_math_geometry.inc: lib_ext/math_geometry.lua host/genembed.lua $(MINILUA_DEP)
 	$(E) "GEN       $@"
-	$(Q)$(HOST_LUA) host/genembed.lua -n math_geometry_lua -o $@ lib_math_geometry.lua
+	$(Q)$(HOST_LUA) host/genembed.lua -n math_geometry_lua -o $@ lib_ext/math_geometry.lua
+
+lib_math_extensions.inc: lib_ext/math_extensions.lua host/genembed.lua $(MINILUA_DEP)
+	$(E) "GEN       $@"
+	$(Q)$(HOST_LUA) host/genembed.lua -n math_extensions_lua -o $@ lib_ext/math_extensions.lua
+
+lib_table_extensions.inc: lib_ext/table_extensions.lua host/genembed.lua $(MINILUA_DEP)
+	$(E) "GEN       $@"
+	$(Q)$(HOST_LUA) host/genembed.lua -n table_extensions_lua -o $@ lib_ext/table_extensions.lua
 
 lj_folddef.h: $(BUILDVM_T) lj_opt_fold.c
 	$(E) "BUILDVM   $@"
@@ -755,7 +763,8 @@ $(LUAJIT_O):
 	$(E) "CC        $@"
 	$(Q)$(TARGET_STCC) $(TARGET_ACFLAGS) -c -o $@ $<
 
-lib_math.o ljamalg.o: lib_math_geometry.inc
+lib_math.o ljamalg.o: lib_math_geometry.inc lib_math_extensions.inc
+lib_table.o ljamalg.o: lib_table_extensions.inc
 
 $(HOST_O): %.o: %.c
 	$(E) "HOSTCC    $@"

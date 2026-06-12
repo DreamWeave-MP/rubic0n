@@ -1,0 +1,286 @@
+# vim: set ss=4 ft= sw=4 et sts=4 ts=4:
+
+use v5.10.1;
+use Test::More;
+use File::Temp qw(tempdir);
+use Cwd qw(abs_path cwd);
+use FindBin qw($Bin);
+
+my $luajit = abs_path("$Bin/../src/luajit");
+
+plan skip_all => "src/luajit is not built" unless defined $luajit && -x $luajit;
+
+my $cwd = cwd;
+my $dir = tempdir "testlj_math_table_extensions_XXXXXXX", CLEANUP => 1;
+chdir $dir or die "Cannot chdir to $dir: $!";
+
+open my $fh, '>', 'test.lua' or die "Cannot open test.lua: $!";
+print $fh <<'LUA';
+local function fail(msg)
+  error(msg, 2)
+end
+
+local function assert_true(v, msg)
+  if not v then fail(msg) end
+end
+
+local function assert_false(v, msg)
+  if v then fail(msg) end
+end
+
+local function assert_eq(actual, expected, msg)
+  if actual ~= expected then
+    fail(('%s: expected %s, got %s'):format(msg, tostring(expected), tostring(actual)))
+  end
+end
+
+local function assert_close(actual, expected, msg, eps)
+  eps = eps or 0.000001
+  if math.abs(actual - expected) > eps then
+    fail(('%s: expected %.17g, got %.17g'):format(msg, expected, actual))
+  end
+end
+
+local math_added = {
+  'approach', 'clamp', 'eerp', 'isclose', 'lerp', 'nextpoweroftwo',
+  'normalizeangle', 'oscillate', 'remap', 'remapclamped', 'round',
+  'smoothstep', 'smootherstep', 'snap',
+}
+assert_eq(#math_added, 14, 'math added function count')
+for _, name in ipairs(math_added) do
+  assert_eq(type(math[name]), 'function', 'math.' .. name .. ' exists')
+end
+assert_eq(type(math.epsilon), 'number', 'math.epsilon exists')
+assert_eq(math.isClose, nil, 'math.isClose camelCase alias absent')
+assert_eq(math.nextPowerOfTwo, nil, 'math.nextPowerOfTwo camelCase alias absent')
+assert_eq(math.normalizeAngle, nil, 'math.normalizeAngle camelCase alias absent')
+assert_eq(math.remapClamped, nil, 'math.remapClamped camelCase alias absent')
+
+assert_close(math.lerp(10, 20, 0.25), 12.5, 'math.lerp')
+assert_eq(math.approach(1, 5, 2), 3, 'math.approach step')
+assert_eq(math.approach(4, 5, 2), 5, 'math.approach no overshoot')
+assert_eq(math.clamp(5, 10, 0), 5, 'math.clamp reversed bounds')
+assert_eq(math.remap(5, 0, 10, 0, 100), 50, 'math.remap')
+assert_eq(math.remapclamped(15, 0, 10, 0, 100), 100, 'math.remapclamped')
+assert_eq(math.round(1.25, 1), 1.3, 'math.round digits')
+assert_true(math.isclose(1, 1 + 1e-10), 'math.isclose')
+assert_eq(math.nextpoweroftwo(9), 16, 'math.nextpoweroftwo')
+assert_close(math.normalizeangle(3 * math.pi), -math.pi, 'math.normalizeangle')
+assert_close(math.eerp(2, 8, 0.5), 4, 'math.eerp')
+assert_eq(math.oscillate(7, 0, 5), 3, 'math.oscillate')
+assert_close(math.smoothstep(0, 1, 0.5), 0.5, 'math.smoothstep')
+assert_close(math.smootherstep(0, 1, 0.5), 0.5, 'math.smootherstep')
+assert_eq(math.snap(12, 5), 10, 'math.snap')
+
+local table_added = {
+  'bininsert', 'binsearch', 'calleventhandlers', 'callmultipleeventhandlers',
+  'choice', 'contains', 'copymissing', 'deepcopy', 'deeptostring', 'filter',
+  'filterarray', 'find', 'findminscore', 'get', 'getorset', 'getprintabletable',
+  'gettablefromcommasplit', 'gettablefromsplit', 'invert', 'isequal', 'keys',
+  'makereadonly', 'map', 'mapfilter', 'mapfiltersort', 'print', 'removevalue',
+  'shallowcopy', 'shuffle', 'sortedpairs', 'swap', 'traverse', 'unwind',
+  'unwindarray', 'values', 'wrapindex',
+}
+assert_eq(#table_added, 36, 'table added function count')
+for _, name in ipairs(table_added) do
+  assert_eq(type(table[name]), 'function', 'table.' .. name .. ' exists')
+end
+assert_eq(table.observabletable, nil, 'table.observabletable absent')
+assert_eq(table.tablesubscribe, nil, 'table.tablesubscribe absent')
+assert_eq(table.binSearch, nil, 'table.binSearch camelCase alias absent')
+assert_eq(table.deepCopy, nil, 'table.deepCopy camelCase alias absent')
+assert_eq(table.filterArray, nil, 'table.filterArray camelCase alias absent')
+assert_eq(table.getOrSet, nil, 'table.getOrSet camelCase alias absent')
+assert_eq(table.isEqual, nil, 'table.isEqual camelCase alias absent')
+assert_eq(type(table.isarray), 'function', 'OpenResty table.isarray exists')
+assert_true(table.isarray({}), 'OpenResty table.isarray empty table')
+assert_true(table.isarray({ [3] = 'a', [5] = true }), 'OpenResty table.isarray integer hash keys')
+assert_false(table.isarray({ [5.3] = true }), 'OpenResty table.isarray rejects non-integer number key')
+assert_false(table.isarray({ ['1'] = true }), 'OpenResty table.isarray rejects string key')
+assert_eq(type(table.isempty), 'function', 'OpenResty table.isempty exists')
+assert_true(table.isempty({}), 'OpenResty table.isempty empty table')
+assert_true(table.isempty({ nil }), 'OpenResty table.isempty nil-only array')
+assert_false(table.isempty({ false }), 'OpenResty table.isempty false array value')
+assert_false(table.isempty({ dogs = 3 }), 'OpenResty table.isempty hash value')
+
+local sorted = { 1, 2, 2, 2, 4 }
+local low, high = table.binsearch(sorted, 2, nil, true)
+assert_eq(low, 2, 'table.binsearch low')
+assert_eq(high, 4, 'table.binsearch high')
+assert_eq(table.bininsert(sorted, 3), 5, 'table.bininsert index')
+assert_eq(sorted[5], 3, 'table.bininsert value')
+
+local mapped = table.map({ a = 2, b = 3 }, function(k, v) return k .. v end)
+assert_eq(mapped.a, 'a2', 'table.map')
+local filtered = table.filter({ a = 1, b = 2 }, function(_, v) return v > 1 end)
+assert_eq(filtered.a, nil, 'table.filter removed')
+assert_eq(filtered.b, 2, 'table.filter kept')
+local filtered_array = table.filterarray({ 1, 2, 3, 4 }, function(_, v) return v % 2 == 0 end)
+assert_eq(#filtered_array, 2, 'table.filterarray count')
+assert_eq(filtered_array[2], 4, 'table.filterarray order')
+
+local mt = { marker = true }
+local original = setmetatable({ child = { x = 1 } }, mt)
+local copied = table.deepcopy(original)
+assert_false(copied == original, 'table.deepcopy creates new root')
+assert_false(copied.child == original.child, 'table.deepcopy creates new child')
+assert_eq(getmetatable(copied), mt, 'table.deepcopy preserves metatable')
+
+assert_true(table.contains({ a = 'x' }, 'x'), 'table.contains')
+assert_eq(table.find({ a = 'x' }, 'x'), 'a', 'table.find')
+assert_true(table.isequal({ a = { 1, 2 } }, { a = { 1, 2 } }), 'table.isequal')
+assert_eq(table.get({ a = 1 }, 'b', 9), 9, 'table.get default')
+local got = { a = 1 }
+assert_eq(table.getorset(got, 'b', 2), 2, 'table.getorset default')
+assert_eq(got.b, 2, 'table.getorset stored')
+assert_eq(table.swap(got, 'b', 3), 2, 'table.swap old')
+assert_eq(got.b, 3, 'table.swap new')
+
+local keys = table.keys({ b = true, a = true }, true)
+assert_eq(table.concat(keys, ','), 'a,b', 'table.keys sorted')
+local values = table.values({ b = 2, a = 1 }, true)
+assert_eq(table.concat(values, ','), '1,2', 'table.values sorted')
+local inv = table.invert({ a = 'x' })
+assert_eq(inv.x, 'a', 'table.invert')
+
+local to = { nested = { keep = true } }
+table.copymissing(to, { nested = { add = true }, top = true })
+assert_true(to.nested.keep and to.nested.add and to.top, 'table.copymissing')
+local shallow_to = {}
+assert_eq(table.shallowcopy({ a = 1 }, shallow_to), shallow_to, 'table.shallowcopy return')
+assert_eq(shallow_to.a, 1, 'table.shallowcopy value')
+
+local parts = table.gettablefromcommasplit('a, b,c')
+assert_eq(table.concat(parts, '|'), 'a|b|c', 'table.gettablefromcommasplit')
+local printable = table.getprintabletable({ a = 1 }, 1, ' ')
+assert_true(printable:find('a: 1', 1, true) ~= nil, 'table.getprintabletable')
+assert_true(table.deeptostring({ a = 1 }, 1):find('a = 1', 1, true) ~= nil, 'table.deeptostring')
+
+assert_eq(table.wrapindex({ 1, 2, 3 }, 4), 1, 'table.wrapindex')
+math.randomseed(1)
+local shuffled = { 1, 2, 3 }
+table.shuffle(shuffled)
+table.sort(shuffled)
+assert_eq(table.concat(shuffled, ','), '1,2,3', 'table.shuffle preserves values')
+assert_true(table.removevalue(shuffled, 2), 'table.removevalue removed')
+assert_eq(table.concat(shuffled, ','), '1,3', 'table.removevalue result')
+
+local sorted_pairs_seen = {}
+for k, v in table.sortedpairs({ b = 2, a = 1 }) do
+  sorted_pairs_seen[#sorted_pairs_seen + 1] = k .. v
+end
+assert_eq(table.concat(sorted_pairs_seen, ','), 'a1,b2', 'table.sortedpairs')
+
+local traversal = {}
+for node in table.traverse({ { id = 'root', children = { { id = 'leaf' } } } }) do
+  traversal[#traversal + 1] = node.id
+end
+assert_eq(table.concat(traversal, ','), 'root,leaf', 'table.traverse')
+local a, b = table.unwindarray({ 'x', 'y' })
+assert_eq(a .. b, 'xy', 'table.unwindarray')
+
+local best, score, index = table.findminscore({ 'aaa', 'b', 'cc' }, function(v) return #v end)
+assert_eq(best, 'b', 'table.findminscore value')
+assert_eq(score, 1, 'table.findminscore score')
+assert_eq(index, 2, 'table.findminscore index')
+local mapfiltered, scores = table.mapfilter({ 1, 2, 3 }, function(v) return v > 1 and v * 10 end)
+assert_eq(table.concat(mapfiltered, ','), '2,3', 'table.mapfilter values')
+assert_eq(table.concat(scores, ','), '20,30', 'table.mapfilter scores')
+local sortedvalues, sortedscores = table.mapfiltersort({ 3, 1, 2 }, function(v) return v end)
+assert_eq(table.concat(sortedvalues, ','), '1,2,3', 'table.mapfiltersort values')
+assert_eq(table.concat(sortedscores, ','), '1,2,3', 'table.mapfiltersort scores')
+
+local handled = table.calleventhandlers({ function() return true end, function() return false end })
+assert_true(handled, 'table.calleventhandlers')
+local multi = table.callmultipleeventhandlers({ { function() return true end }, { function() return false end } })
+assert_true(multi, 'table.callmultipleeventhandlers')
+
+local ro = table.makereadonly({ 'x', 'y', a = 1, nested = { x = 2 } }, true)
+assert_eq(ro.a, 1, 'table.makereadonly reads existing key')
+assert_eq(ro.nested.x, 2, 'table.makereadonly reads nested key')
+local ok = pcall(function() ro.b = 2 end)
+assert_false(ok, 'table.makereadonly rejects new-key write')
+ok = pcall(function() ro.a = 2 end)
+assert_false(ok, 'table.makereadonly rejects existing-key write')
+ok = pcall(function() ro.nested.x = 3 end)
+assert_false(ok, 'table.makereadonly rejects nested existing-key write')
+assert_eq(ro.a, 1, 'table.makereadonly existing key unchanged')
+assert_eq(ro.nested.x, 2, 'table.makereadonly nested key unchanged')
+
+local ropairs = {}
+for k, v in pairs(ro) do
+  ropairs[k] = v
+end
+assert_eq(ropairs.a, 1, 'table.makereadonly pairs sees backing key')
+assert_eq(ropairs.nested.x, 2, 'table.makereadonly pairs sees nested proxy')
+
+local roipairs = {}
+for _, v in ipairs(ro) do
+  roipairs[#roipairs + 1] = v
+end
+assert_eq(table.concat(roipairs, ','), 'x,y', 'table.makereadonly ipairs sees backing array')
+
+local original_ro = { a = 1 }
+local same_ro = table.makereadonly(original_ro, false)
+assert_eq(same_ro, original_ro, 'table.makereadonly copy=false returns original proxy')
+assert_eq(original_ro.a, 1, 'table.makereadonly copy=false reads through original')
+ok = pcall(function() original_ro.a = 2 end)
+assert_false(ok, 'table.makereadonly copy=false rejects existing-key write')
+
+local hidden_source = setmetatable({ visible = 1, hidden = 2 }, {
+  __pairs = function(t)
+    return next, { visible = rawget(t, 'visible') }, nil
+  end,
+})
+local hidden_ro = table.makereadonly(hidden_source, false)
+assert_eq(hidden_ro.hidden, 2, 'table.makereadonly copy=false raw-freezes hidden __pairs key')
+ok = pcall(function() hidden_ro.hidden = 3 end)
+assert_false(ok, 'table.makereadonly rejects hidden existing-key write')
+assert_eq(hidden_ro.hidden, 2, 'table.makereadonly hidden key unchanged')
+
+local protected_source = setmetatable({ a = 1 }, { __metatable = 'locked' })
+ok = pcall(function() table.makereadonly(protected_source, false) end)
+assert_false(ok, 'table.makereadonly copy=false rejects protected source metatable')
+assert_eq(rawget(protected_source, 'a'), 1, 'table.makereadonly protected source keeps raw entry')
+assert_eq(getmetatable(protected_source), 'locked', 'table.makereadonly protected source keeps metatable')
+
+local protected_child = setmetatable({ secret = 7 }, { __metatable = 'locked' })
+local protected_parent = { root = 1, child = protected_child }
+ok = pcall(function() table.makereadonly(protected_parent, false) end)
+assert_false(ok, 'table.makereadonly copy=false rejects nested protected metatable')
+assert_eq(rawget(protected_parent, 'root'), 1, 'table.makereadonly protected nested keeps root entry')
+assert_eq(rawget(protected_parent, 'child'), protected_child, 'table.makereadonly protected nested keeps child ref')
+assert_eq(rawget(protected_child, 'secret'), 7, 'table.makereadonly protected nested keeps child entry')
+
+local cycle = { name = 'cycle' }
+cycle.self = cycle
+local rocycle = table.makereadonly(cycle, true)
+assert_eq(rocycle.self, rocycle, 'table.makereadonly preserves cycles')
+ok = pcall(function() rocycle.self.name = 'changed' end)
+assert_false(ok, 'table.makereadonly rejects cyclic nested write')
+
+print('ok')
+LUA
+close $fh;
+
+my $rc;
+{
+    local $ENV{LUA_INIT};
+    delete $ENV{LUA_INIT};
+    system qq{"$luajit" test.lua >stdout.txt 2>stderr.txt};
+    $rc = $? >> 8;
+}
+
+open my $outfh, '<', 'stdout.txt' or die "Cannot open stdout.txt: $!";
+my $out = do { local $/; <$outfh> };
+close $outfh;
+
+open my $errfh, '<', 'stderr.txt' or die "Cannot open stderr.txt: $!";
+my $err = do { local $/; <$errfh> };
+close $errfh;
+
+chdir $cwd or die $!;
+
+plan tests => 1;
+
+is "$rc:$out$err", "0:ok\n", 'math/table extension API smoke coverage';

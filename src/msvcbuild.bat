@@ -6,7 +6,7 @@
 @rem options (in order), if needed. The default is a dynamic release build.
 @rem
 @rem   nogc64        disable LJ_GC64 mode for x64
-@rem   lua52compat   enable extra Lua 5.2 extensions
+@rem   lua52compat   accepted for compatibility; Lua 5.2 extensions are on by default
 @rem   debug         emit debug symbols
 @rem   amalg         amalgamated build
 @rem   static        create static lib to statically link into your project
@@ -67,16 +67,21 @@ if exist minilua.exe.manifest^
 :DA
 @rem Enabled by default; remove/comment to use stock atomic userdata finalizer discovery.
 @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
+@rem Enabled by default in this fork, matching the Unix Makefile.
+@set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_LUA52COMPAT
 @if "%1" neq "lua52compat" goto :NOLUA52COMPAT
 @shift
-@set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_LUA52COMPAT
 :NOLUA52COMPAT
 minilua %DASM% -LN %DASMFLAGS% -o host\buildvm_arch.h %DASC%
 @if errorlevel 1 goto :BAD
 
 if exist ..\.git ( git show -s --format=%%ct >luajit_relver.txt ) else ( type ..\.relver >luajit_relver.txt )
 minilua host\genversion.lua
-minilua host\genembed.lua -n math_geometry_lua -o lib_math_geometry.inc lib_math_geometry.lua
+minilua host\genembed.lua -n math_geometry_lua -o lib_math_geometry.inc lib_ext\math_geometry.lua
+@if errorlevel 1 goto :BAD
+minilua host\genembed.lua -n math_extensions_lua -o lib_math_extensions.inc lib_ext\math_extensions.lua
+@if errorlevel 1 goto :BAD
+minilua host\genembed.lua -n table_extensions_lua -o lib_table_extensions.inc lib_ext\table_extensions.lua
 @if errorlevel 1 goto :BAD
 
 @setlocal
@@ -155,7 +160,7 @@ if exist luajit.exe.manifest^
 @del *.obj *.manifest minilua.exe buildvm.exe
 @del host\buildvm_arch.h
 @del lj_bcdef.h lj_ffdef.h lj_libdef.h lj_recdef.h lj_folddef.h
-@del lib_math_geometry.inc
+@del lib_math_geometry.inc lib_math_extensions.inc lib_table_extensions.inc
 @echo.
 @echo === Successfully built LuaJIT for Windows/%LJARCH% ===
 

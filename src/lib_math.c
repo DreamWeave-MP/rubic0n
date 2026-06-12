@@ -198,6 +198,18 @@ LJLIB_CF(math_randomseed)
 
 #include "lj_libdef.h"
 
+#include "lib_math_extensions.inc"
+
+static void math_init_extensions(lua_State *L)
+{
+  int mathtop = lua_gettop(L);
+  if (luaL_loadbuffer(L, math_extensions_lua, sizeof(math_extensions_lua)-1,
+		      "=(math.extensions)"))
+    lua_error(L);
+  lua_pushvalue(L, mathtop);
+  lua_call(L, 1, 0);
+}
+
 #if LJ_HASFFI
 #include "lib_math_geometry.inc"
 
@@ -241,6 +253,7 @@ LUALIB_API int luaopen_math(lua_State *L)
   PRNGState *rs = (PRNGState *)lua_newuserdata(L, sizeof(PRNGState));
   lj_prng_seed_fixed(rs);
   LJ_LIB_REG(L, LUA_MATHLIBNAME, math);
+  math_init_extensions(L);
 #if LJ_HASFFI
   math_init_geometry(L);
 #endif
