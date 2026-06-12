@@ -199,14 +199,14 @@ LJLIB_CF(math_randomseed)
 #include "lj_libdef.h"
 
 #if LJ_HASFFI
-#include "lib_math_vectors.inc"
+#include "lib_math_geometry.inc"
 
-static const char math_vectors_registry_key = 0;
+static const char math_geometry_registry_key = 0;
 
-static int math_vectors_loadffi(lua_State *L)
+static int math_geometry_loadffi(lua_State *L)
 {
   if (lua_gettop(L) != 0) {
-    lua_pushlightuserdata(L, (void *)&math_vectors_registry_key);
+    lua_pushlightuserdata(L, (void *)&math_geometry_registry_key);
     lua_pushvalue(L, 1);
     lua_rawset(L, LUA_REGISTRYINDEX);
     return 0;
@@ -219,19 +219,19 @@ static int math_vectors_loadffi(lua_State *L)
   lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_getfield(L, -1, LUA_FFILIBNAME);
   lua_remove(L, -2);
-  lua_pushlightuserdata(L, (void *)&math_vectors_registry_key);
+  lua_pushlightuserdata(L, (void *)&math_geometry_registry_key);
   lua_rawget(L, LUA_REGISTRYINDEX);
   return 2;
 }
 
-static void math_init_vectors(lua_State *L)
+static void math_init_geometry(lua_State *L)
 {
   int mathtop = lua_gettop(L);
-  if (luaL_loadbuffer(L, math_vectors_lua, sizeof(math_vectors_lua)-1,
-		      "=(math.vectors)"))
+  if (luaL_loadbuffer(L, math_geometry_lua, sizeof(math_geometry_lua)-1,
+		      "=(math.geometry)"))
     lua_error(L);
   lua_pushvalue(L, mathtop);
-  lua_pushcfunction(L, math_vectors_loadffi);
+  lua_pushcfunction(L, math_geometry_loadffi);
   lua_call(L, 2, 0);
 }
 #endif
@@ -242,7 +242,7 @@ LUALIB_API int luaopen_math(lua_State *L)
   lj_prng_seed_fixed(rs);
   LJ_LIB_REG(L, LUA_MATHLIBNAME, math);
 #if LJ_HASFFI
-  math_init_vectors(L);
+  math_init_geometry(L);
 #endif
   return 1;
 }

@@ -3,6 +3,7 @@ local sqrt, cos, sin = math.sqrt, math.cos, math.sin
 local string_byte = string.byte
 local vector2_ctor, vector3_ctor, vector4_ctor
 local immutable_vector2_ctor, immutable_vector3_ctor, immutable_vector4_ctor
+local box_ctor
 
 local function badarg(n, name)
   error('bad argument #'..n..' to '..name..' (number expected)', 3)
@@ -17,10 +18,10 @@ local function check_constructor(name, n, ...)
   end
 end
 
-local function build_vectors(ffi)
+local function build_geometry(ffi)
   if type(ffi) ~= 'table' or type(ffi.typeof) ~= 'function' or
      type(ffi.metatype) ~= 'function' or type(ffi.istype) ~= 'function' then
-    error('math vectors require a valid ffi module', 3)
+    error('math geometry requires a valid ffi module', 3)
   end
 
   local vector2_type = ffi.typeof('struct { float x, y; }')
@@ -29,14 +30,17 @@ local function build_vectors(ffi)
   local immutable_vector2_type = ffi.typeof('struct { const float x, y; }')
   local immutable_vector3_type = ffi.typeof('struct { const float x, y, z; }')
   local immutable_vector4_type = ffi.typeof('struct { const float x, y, z, w; }')
+  local box_type = ffi.typeof('struct { const $ center; const $ halfSize; const float qx, qy, qz, qw; }', immutable_vector3_type, immutable_vector3_type)
   local vector2, vector3, vector4
   local immutable_vector2, immutable_vector3, immutable_vector4
+  local box
   local function is_mvec2(v) return ffi.istype(vector2_type, v) end
   local function is_mvec3(v) return ffi.istype(vector3_type, v) end
   local function is_mvec4(v) return ffi.istype(vector4_type, v) end
   local function is_ivec2(v) return ffi.istype(immutable_vector2_type, v) end
   local function is_ivec3(v) return ffi.istype(immutable_vector3_type, v) end
   local function is_ivec4(v) return ffi.istype(immutable_vector4_type, v) end
+  local function is_box(v) return ffi.istype(box_type, v) end
   local function err_type(name, op)
     error(name..' expected for '..op, 3)
   end
@@ -533,22 +537,76 @@ local function build_vectors(ffi)
     return MT
   end
 
+  local function box_vertex(b, x, y, z)
+    local qx, qy, qz, qw = b.qx, b.qy, b.qz, b.qw
+    local tx = 2 * (qy*z - qz*y)
+    local ty = 2 * (qz*x - qx*z)
+    local tz = 2 * (qx*y - qy*x)
+    return immutable_vector3(
+      b.center.x + x + qw*tx + qy*tz - qz*ty,
+      b.center.y + y + qw*ty + qz*tx - qx*tz,
+      b.center.z + z + qw*tz + qx*ty - qy*tx)
+  end
+
+  local function box_mt()
+    local MT = {}
+    MT.__index = function(b, key)
+      if key == 'vertices' then
+        local hx, hy, hz = b.halfSize.x, b.halfSize.y, b.halfSize.z
+        return {
+          box_vertex(b, -hx, -hy, -hz),
+          box_vertex(b,  hx, -hy, -hz),
+          box_vertex(b,  hx,  hy, -hz),
+          box_vertex(b, -hx,  hy, -hz),
+          box_vertex(b, -hx, -hy,  hz),
+          box_vertex(b,  hx, -hy,  hz),
+          box_vertex(b,  hx,  hy,  hz),
+          box_vertex(b, -hx,  hy,  hz),
+        }
+      end
+      return nil
+    end
+    MT.__eq = function(a, b)
+      return is_box(a) and is_box(b) and
+        a.center.x == b.center.x and a.center.y == b.center.y and a.center.z == b.center.z and
+        a.halfSize.x == b.halfSize.x and a.halfSize.y == b.halfSize.y and a.halfSize.z == b.halfSize.z and
+        a.qx == b.qx and a.qy == b.qy and a.qz == b.qz and a.qw == b.qw
+    end
+    MT.__tostring = function(b)
+      return ('Box{ center(%.38g, %.38g, %.38g) halfSize(%.38g, %.38g, %.38g) }'):
+        format(b.center.x, b.center.y, b.center.z, b.halfSize.x, b.halfSize.y, b.halfSize.z)
+    end
+    return MT
+  end
+
+  local function box_constructor(center, halfSize)
+    if not (is_mvec3(center) or is_ivec3(center)) then
+      error('box constructor requires center to be a vector3', 3)
+    end
+    if not (is_mvec3(halfSize) or is_ivec3(halfSize)) then
+      error('box constructor requires halfSize to be a vector3', 3)
+    end
+    return box(immutable_vector3(center.x, center.y, center.z), immutable_vector3(halfSize.x, halfSize.y, halfSize.z), 0, 0, 0, 1)
+  end
+
   vector2 = ffi.metatype(vector2_type, vec2_mt(false, is_mvec2, is_ivec2))
   immutable_vector2 = ffi.metatype(immutable_vector2_type, vec2_mt(true, is_ivec2, is_mvec2))
   vector3 = ffi.metatype(vector3_type, vec3_mt(false, is_mvec3, is_ivec3))
   immutable_vector3 = ffi.metatype(immutable_vector3_type, vec3_mt(true, is_ivec3, is_mvec3))
   vector4 = ffi.metatype(vector4_type, vec4_mt(false, is_mvec4, is_ivec4))
   immutable_vector4 = ffi.metatype(immutable_vector4_type, vec4_mt(true, is_ivec4, is_mvec4))
-  return { vector2, vector3, vector4, immutable_vector2, immutable_vector3, immutable_vector4 }
+  box = ffi.metatype(box_type, box_mt())
+  return { vector2, vector3, vector4, immutable_vector2, immutable_vector3, immutable_vector4, box_constructor }
 end
 
-local function ensure_vectors()
+local function ensure_geometry()
   local vector2 = vector2_ctor
   if not vector2 then
     local ffi, cached = loadffi()
-    local ctors = cached or build_vectors(ffi)
+    local ctors = cached or build_geometry(ffi)
     vector2_ctor, vector3_ctor, vector4_ctor = ctors[1], ctors[2], ctors[3]
     immutable_vector2_ctor, immutable_vector3_ctor, immutable_vector4_ctor = ctors[4], ctors[5], ctors[6]
+    box_ctor = ctors[7]
     if not cached then loadffi(ctors) end
   end
 end
@@ -556,41 +614,54 @@ end
 math.vector2 = function(...)
   check_constructor('vector2', 2, ...)
   local x, y = ...
-  ensure_vectors()
+  ensure_geometry()
   return vector2_ctor(x, y)
 end
 
 math.vector3 = function(...)
   check_constructor('vector3', 3, ...)
   local x, y, z = ...
-  ensure_vectors()
+  ensure_geometry()
   return vector3_ctor(x, y, z)
 end
 
 math.vector4 = function(...)
   check_constructor('vector4', 4, ...)
   local x, y, z, w = ...
-  ensure_vectors()
+  ensure_geometry()
   return vector4_ctor(x, y, z, w)
 end
 
 math.immutableVector2 = function(...)
   check_constructor('immutableVector2', 2, ...)
   local x, y = ...
-  ensure_vectors()
+  ensure_geometry()
   return immutable_vector2_ctor(x, y)
 end
 
 math.immutableVector3 = function(...)
   check_constructor('immutableVector3', 3, ...)
   local x, y, z = ...
-  ensure_vectors()
+  ensure_geometry()
   return immutable_vector3_ctor(x, y, z)
 end
 
 math.immutableVector4 = function(...)
   check_constructor('immutableVector4', 4, ...)
   local x, y, z, w = ...
-  ensure_vectors()
+  ensure_geometry()
   return immutable_vector4_ctor(x, y, z, w)
+end
+
+math.box = function(...)
+  local n = select('#', ...)
+  if n == 1 then
+    error('box transform constructor is not supported', 2)
+  end
+  if n ~= 2 then
+    error('box constructor requires center and halfSize vector3 arguments', 2)
+  end
+  local center, halfSize = ...
+  ensure_geometry()
+  return box_ctor(center, halfSize)
 end
