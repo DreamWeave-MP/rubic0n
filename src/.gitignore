@@ -6,5 +6,5 @@ lj_ffdef.h
 lj_libdef.h
 lj_recdef.h
 lj_folddef.h
-lib_math_vector3.inc
+lib_math_vectors.inc
 lj_vm.[sS]

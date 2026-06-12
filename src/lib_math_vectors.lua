@@ -1,0 +1,531 @@
+local math, loadffi = ...
+local sqrt, cos, sin = math.sqrt, math.cos, math.sin
+local vector2_ctor, vector3_ctor, vector4_ctor
+local immutable_vector2_ctor, immutable_vector3_ctor, immutable_vector4_ctor
+
+local function badarg(n, name)
+  error('bad argument #'..n..' to '..name..' (number expected)', 3)
+end
+
+local function check_constructor(name, n, ...)
+  if select('#', ...) ~= n then
+    error(name..' constructor requires exactly '..n..' numeric arguments', 3)
+  end
+  for i = 1, n do
+    if type(select(i, ...)) ~= 'number' then badarg(i, name) end
+  end
+end
+
+local function build_vectors(ffi)
+  if type(ffi) ~= 'table' or type(ffi.typeof) ~= 'function' or
+     type(ffi.metatype) ~= 'function' or type(ffi.istype) ~= 'function' then
+    error('math vectors require a valid ffi module', 3)
+  end
+
+  local vector2_type = ffi.typeof('struct { float x, y; }')
+  local vector3_type = ffi.typeof('struct { float x, y, z; }')
+  local vector4_type = ffi.typeof('struct { float x, y, z, w; }')
+  local immutable_vector2_type = ffi.typeof('struct { const float x, y; }')
+  local immutable_vector3_type = ffi.typeof('struct { const float x, y, z; }')
+  local immutable_vector4_type = ffi.typeof('struct { const float x, y, z, w; }')
+  local vector2, vector3, vector4
+  local immutable_vector2, immutable_vector3, immutable_vector4
+  local function is_mvec2(v) return ffi.istype(vector2_type, v) end
+  local function is_mvec3(v) return ffi.istype(vector3_type, v) end
+  local function is_mvec4(v) return ffi.istype(vector4_type, v) end
+  local function is_ivec2(v) return ffi.istype(immutable_vector2_type, v) end
+  local function is_ivec3(v) return ffi.istype(immutable_vector3_type, v) end
+  local function is_ivec4(v) return ffi.istype(immutable_vector4_type, v) end
+  local function err_type(name, op)
+    error(name..' expected for '..op, 3)
+  end
+  local function err_scalar(name, op)
+    error(name..' can only be '..op..' by scalar', 3)
+  end
+
+  local function vec2_mt(immutable, is_self, is_other)
+    local Methods = {}
+    local MT = { __index = Methods }
+    if immutable then
+      MT.__add = function(a, b)
+        if not is_self(a) then err_type('vector2', 'addition') end
+        if is_self(b) or is_other(b) then return immutable_vector2(a.x+b.x, a.y+b.y) end
+        err_type('vector2', 'addition')
+      end
+      MT.__sub = function(a, b)
+        if not is_self(a) then err_type('vector2', 'subtraction') end
+        if is_self(b) or is_other(b) then return immutable_vector2(a.x-b.x, a.y-b.y) end
+        err_type('vector2', 'subtraction')
+      end
+      MT.__unm = function(v) return immutable_vector2(-v.x, -v.y) end
+      MT.__eq = function(a, b)
+        return (is_self(a) or is_other(a)) and (is_self(b) or is_other(b)) and a.x == b.x and a.y == b.y
+      end
+      MT.__mul = function(a, b)
+        if type(a) == 'number' then
+          if not is_self(b) then err_type('vector2', 'multiplication') end
+          return immutable_vector2(a*b.x, a*b.y)
+        end
+        if not is_self(a) then err_type('vector2', 'multiplication') end
+        if type(b) == 'number' then return immutable_vector2(a.x*b, a.y*b) end
+        if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y end
+        err_type('vector2', 'multiplication')
+      end
+      MT.__div = function(a, scalar)
+        if not is_self(a) then err_type('vector2', 'division') end
+        if type(scalar) ~= 'number' then err_scalar('vector2', 'divided') end
+        return immutable_vector2(a.x/scalar, a.y/scalar)
+      end
+      MT.__tostring = function(v) return ('(%.9g, %.9g)'):format(v.x, v.y) end
+      MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y) end
+      Methods.length2 = function(v)
+        if not is_self(v) then err_type('vector2', 'length2') end
+        return v.x*v.x + v.y*v.y
+      end
+      Methods.length = function(v)
+        if not is_self(v) then err_type('vector2', 'length') end
+        return sqrt(v.x*v.x + v.y*v.y)
+      end
+      Methods.normalize = function(v)
+        if not is_self(v) then err_type('vector2', 'normalize') end
+        local len = sqrt(v.x*v.x + v.y*v.y)
+        if len > 0 then return immutable_vector2(v.x/len, v.y/len), len end
+        return immutable_vector2(0, 0), len
+      end
+      Methods.dot = function(a, b)
+        if not is_self(a) then err_type('vector2', 'dot') end
+        if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y end
+        err_type('vector2', 'dot')
+      end
+      Methods.emul = function(a, b)
+        if not is_self(a) then err_type('vector2', 'element multiplication') end
+        if is_self(b) or is_other(b) then return immutable_vector2(a.x*b.x, a.y*b.y) end
+        err_type('vector2', 'element multiplication')
+      end
+      Methods.ediv = function(a, b)
+        if not is_self(a) then err_type('vector2', 'element division') end
+        if is_self(b) or is_other(b) then return immutable_vector2(a.x/b.x, a.y/b.y) end
+        err_type('vector2', 'element division')
+      end
+      Methods.rotate = function(v, angle)
+        if not is_self(v) then err_type('vector2', 'rotate') end
+        if type(angle) ~= 'number' then badarg(2, 'rotate') end
+        local c, s = cos(angle), sin(angle)
+        return immutable_vector2(v.x*c - v.y*s, v.x*s + v.y*c)
+      end
+      Methods.is = function(v) return is_self(v) or is_other(v) end
+      return MT
+    end
+    MT.__add = function(a, b)
+      if not is_self(a) then err_type('vector2', 'addition') end
+      if is_self(b) or is_other(b) then return vector2(a.x+b.x, a.y+b.y) end
+      err_type('vector2', 'addition')
+    end
+    MT.__sub = function(a, b)
+      if not is_self(a) then err_type('vector2', 'subtraction') end
+      if is_self(b) or is_other(b) then return vector2(a.x-b.x, a.y-b.y) end
+      err_type('vector2', 'subtraction')
+    end
+    MT.__unm = function(v) return vector2(-v.x, -v.y) end
+    MT.__eq = function(a, b)
+      return (is_self(a) or is_other(a)) and (is_self(b) or is_other(b)) and a.x == b.x and a.y == b.y
+    end
+    MT.__mul = function(a, b)
+      if type(a) == 'number' then
+        if not is_self(b) then err_type('vector2', 'multiplication') end
+        return vector2(a*b.x, a*b.y)
+      end
+      if not is_self(a) then err_type('vector2', 'multiplication') end
+      if type(b) == 'number' then return vector2(a.x*b, a.y*b) end
+      if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y end
+      err_type('vector2', 'multiplication')
+    end
+    MT.__div = function(a, scalar)
+      if not is_self(a) then err_type('vector2', 'division') end
+      if type(scalar) ~= 'number' then err_scalar('vector2', 'divided') end
+      return vector2(a.x/scalar, a.y/scalar)
+    end
+    MT.__tostring = function(v) return ('(%.9g, %.9g)'):format(v.x, v.y) end
+    MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y) end
+    Methods.length2 = function(v)
+      if not is_self(v) then err_type('vector2', 'length2') end
+      return v.x*v.x + v.y*v.y
+    end
+    Methods.length = function(v)
+      if not is_self(v) then err_type('vector2', 'length') end
+      return sqrt(v.x*v.x + v.y*v.y)
+    end
+    Methods.normalize = function(v)
+      if not is_self(v) then err_type('vector2', 'normalize') end
+      local len = sqrt(v.x*v.x + v.y*v.y)
+      if len > 0 then return vector2(v.x/len, v.y/len), len end
+      return vector2(0, 0), len
+    end
+    Methods.dot = function(a, b)
+      if not is_self(a) then err_type('vector2', 'dot') end
+      if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y end
+      err_type('vector2', 'dot')
+    end
+    Methods.emul = function(a, b)
+      if not is_self(a) then err_type('vector2', 'element multiplication') end
+      if is_self(b) or is_other(b) then return vector2(a.x*b.x, a.y*b.y) end
+      err_type('vector2', 'element multiplication')
+    end
+    Methods.ediv = function(a, b)
+      if not is_self(a) then err_type('vector2', 'element division') end
+      if is_self(b) or is_other(b) then return vector2(a.x/b.x, a.y/b.y) end
+      err_type('vector2', 'element division')
+    end
+    Methods.rotate = function(v, angle)
+      if not is_self(v) then err_type('vector2', 'rotate') end
+      if type(angle) ~= 'number' then badarg(2, 'rotate') end
+      local c, s = cos(angle), sin(angle)
+      return vector2(v.x*c - v.y*s, v.x*s + v.y*c)
+    end
+    Methods.is = function(v) return is_self(v) or is_other(v) end
+    return MT
+  end
+
+  local function vec3_mt(immutable, is_self, is_other)
+    local Methods = {}
+    local MT = { __index = Methods }
+    if immutable then
+      MT.__add = function(a, b)
+        if not is_self(a) then err_type('vector3', 'addition') end
+        if is_self(b) or is_other(b) then return immutable_vector3(a.x+b.x, a.y+b.y, a.z+b.z) end
+        err_type('vector3', 'addition')
+      end
+      MT.__sub = function(a, b)
+        if not is_self(a) then err_type('vector3', 'subtraction') end
+        if is_self(b) or is_other(b) then return immutable_vector3(a.x-b.x, a.y-b.y, a.z-b.z) end
+        err_type('vector3', 'subtraction')
+      end
+      MT.__unm = function(v) return immutable_vector3(-v.x, -v.y, -v.z) end
+      MT.__eq = function(a, b)
+        return (is_self(a) or is_other(a)) and (is_self(b) or is_other(b)) and a.x == b.x and a.y == b.y and a.z == b.z
+      end
+      MT.__mul = function(a, b)
+        if type(a) == 'number' then
+          if not is_self(b) then err_type('vector3', 'multiplication') end
+          return immutable_vector3(a*b.x, a*b.y, a*b.z)
+        end
+        if not is_self(a) then err_type('vector3', 'multiplication') end
+        if type(b) == 'number' then return immutable_vector3(a.x*b, a.y*b, a.z*b) end
+        if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z end
+        err_type('vector3', 'multiplication')
+      end
+      MT.__div = function(a, scalar)
+        if not is_self(a) then err_type('vector3', 'division') end
+        if type(scalar) ~= 'number' then err_scalar('vector3', 'divided') end
+        return immutable_vector3(a.x/scalar, a.y/scalar, a.z/scalar)
+      end
+      MT.__pow = function(a, b)
+        if not is_self(a) then err_type('vector3', 'cross') end
+        if is_self(b) or is_other(b) then return immutable_vector3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x) end
+        err_type('vector3', 'cross')
+      end
+      MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g)'):format(v.x, v.y, v.z) end
+      MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z) end
+      Methods.length2 = function(v)
+        if not is_self(v) then err_type('vector3', 'length2') end
+        return v.x*v.x + v.y*v.y + v.z*v.z
+      end
+      Methods.length = function(v)
+        if not is_self(v) then err_type('vector3', 'length') end
+        return sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
+      end
+      Methods.normalize = function(v)
+        if not is_self(v) then err_type('vector3', 'normalize') end
+        local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
+        if len > 0 then return immutable_vector3(v.x/len, v.y/len, v.z/len), len end
+        return immutable_vector3(0, 0, 0), len
+      end
+      Methods.dot = function(a, b)
+        if not is_self(a) then err_type('vector3', 'dot') end
+        if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z end
+        err_type('vector3', 'dot')
+      end
+      Methods.cross = function(a, b)
+        if not is_self(a) then err_type('vector3', 'cross') end
+        if is_self(b) or is_other(b) then return immutable_vector3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x) end
+        err_type('vector3', 'cross')
+      end
+      Methods.emul = function(a, b)
+        if not is_self(a) then err_type('vector3', 'element multiplication') end
+        if is_self(b) or is_other(b) then return immutable_vector3(a.x*b.x, a.y*b.y, a.z*b.z) end
+        err_type('vector3', 'element multiplication')
+      end
+      Methods.ediv = function(a, b)
+        if not is_self(a) then err_type('vector3', 'element division') end
+        if is_self(b) or is_other(b) then return immutable_vector3(a.x/b.x, a.y/b.y, a.z/b.z) end
+        err_type('vector3', 'element division')
+      end
+      Methods.is = function(v) return is_self(v) or is_other(v) end
+      return MT
+    end
+    MT.__add = function(a, b)
+      if not is_self(a) then err_type('vector3', 'addition') end
+      if is_self(b) or is_other(b) then return vector3(a.x+b.x, a.y+b.y, a.z+b.z) end
+      err_type('vector3', 'addition')
+    end
+    MT.__sub = function(a, b)
+      if not is_self(a) then err_type('vector3', 'subtraction') end
+      if is_self(b) or is_other(b) then return vector3(a.x-b.x, a.y-b.y, a.z-b.z) end
+      err_type('vector3', 'subtraction')
+    end
+    MT.__unm = function(v) return vector3(-v.x, -v.y, -v.z) end
+    MT.__eq = function(a, b)
+      return (is_self(a) or is_other(a)) and (is_self(b) or is_other(b)) and a.x == b.x and a.y == b.y and a.z == b.z
+    end
+    MT.__mul = function(a, b)
+      if type(a) == 'number' then
+        if not is_self(b) then err_type('vector3', 'multiplication') end
+        return vector3(a*b.x, a*b.y, a*b.z)
+      end
+      if not is_self(a) then err_type('vector3', 'multiplication') end
+      if type(b) == 'number' then return vector3(a.x*b, a.y*b, a.z*b) end
+      if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z end
+      err_type('vector3', 'multiplication')
+    end
+    MT.__div = function(a, scalar)
+      if not is_self(a) then err_type('vector3', 'division') end
+      if type(scalar) ~= 'number' then err_scalar('vector3', 'divided') end
+      return vector3(a.x/scalar, a.y/scalar, a.z/scalar)
+    end
+    MT.__pow = function(a, b)
+      if not is_self(a) then err_type('vector3', 'cross') end
+      if is_self(b) or is_other(b) then return vector3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x) end
+      err_type('vector3', 'cross')
+    end
+    MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g)'):format(v.x, v.y, v.z) end
+    MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z) end
+    Methods.length2 = function(v)
+      if not is_self(v) then err_type('vector3', 'length2') end
+      return v.x*v.x + v.y*v.y + v.z*v.z
+    end
+    Methods.length = function(v)
+      if not is_self(v) then err_type('vector3', 'length') end
+      return sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
+    end
+    Methods.normalize = function(v)
+      if not is_self(v) then err_type('vector3', 'normalize') end
+      local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
+      if len > 0 then return vector3(v.x/len, v.y/len, v.z/len), len end
+      return vector3(0, 0, 0), len
+    end
+    Methods.dot = function(a, b)
+      if not is_self(a) then err_type('vector3', 'dot') end
+      if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z end
+      err_type('vector3', 'dot')
+    end
+    Methods.cross = function(a, b)
+      if not is_self(a) then err_type('vector3', 'cross') end
+      if is_self(b) or is_other(b) then return vector3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x) end
+      err_type('vector3', 'cross')
+    end
+    Methods.emul = function(a, b)
+      if not is_self(a) then err_type('vector3', 'element multiplication') end
+      if is_self(b) or is_other(b) then return vector3(a.x*b.x, a.y*b.y, a.z*b.z) end
+      err_type('vector3', 'element multiplication')
+    end
+    Methods.ediv = function(a, b)
+      if not is_self(a) then err_type('vector3', 'element division') end
+      if is_self(b) or is_other(b) then return vector3(a.x/b.x, a.y/b.y, a.z/b.z) end
+      err_type('vector3', 'element division')
+    end
+    Methods.is = function(v) return is_self(v) or is_other(v) end
+    return MT
+  end
+
+  local function vec4_mt(immutable, is_self, is_other)
+    local Methods = {}
+    local MT = { __index = Methods }
+    if immutable then
+      MT.__add = function(a, b)
+        if not is_self(a) then err_type('vector4', 'addition') end
+        if is_self(b) or is_other(b) then return immutable_vector4(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w) end
+        err_type('vector4', 'addition')
+      end
+      MT.__sub = function(a, b)
+        if not is_self(a) then err_type('vector4', 'subtraction') end
+        if is_self(b) or is_other(b) then return immutable_vector4(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w) end
+        err_type('vector4', 'subtraction')
+      end
+      MT.__unm = function(v) return immutable_vector4(-v.x, -v.y, -v.z, -v.w) end
+      MT.__eq = function(a, b)
+        return (is_self(a) or is_other(a)) and (is_self(b) or is_other(b)) and a.x == b.x and a.y == b.y and a.z == b.z and a.w == b.w
+      end
+      MT.__mul = function(a, b)
+        if type(a) == 'number' then
+          if not is_self(b) then err_type('vector4', 'multiplication') end
+          return immutable_vector4(a*b.x, a*b.y, a*b.z, a*b.w)
+        end
+        if not is_self(a) then err_type('vector4', 'multiplication') end
+        if type(b) == 'number' then return immutable_vector4(a.x*b, a.y*b, a.z*b, a.w*b) end
+        if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w end
+        err_type('vector4', 'multiplication')
+      end
+      MT.__div = function(a, scalar)
+        if not is_self(a) then err_type('vector4', 'division') end
+        if type(scalar) ~= 'number' then err_scalar('vector4', 'divided') end
+        return immutable_vector4(a.x/scalar, a.y/scalar, a.z/scalar, a.w/scalar)
+      end
+      MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g, %.9g)'):format(v.x, v.y, v.z, v.w) end
+      MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w) end
+      Methods.length2 = function(v)
+        if not is_self(v) then err_type('vector4', 'length2') end
+        return v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w
+      end
+      Methods.length = function(v)
+        if not is_self(v) then err_type('vector4', 'length') end
+        return sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w)
+      end
+      Methods.normalize = function(v)
+        if not is_self(v) then err_type('vector4', 'normalize') end
+        local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w)
+        if len > 0 then return immutable_vector4(v.x/len, v.y/len, v.z/len, v.w/len), len end
+        return immutable_vector4(0, 0, 0, 0), len
+      end
+      Methods.dot = function(a, b)
+        if not is_self(a) then err_type('vector4', 'dot') end
+        if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w end
+        err_type('vector4', 'dot')
+      end
+      Methods.emul = function(a, b)
+        if not is_self(a) then err_type('vector4', 'element multiplication') end
+        if is_self(b) or is_other(b) then return immutable_vector4(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w) end
+        err_type('vector4', 'element multiplication')
+      end
+      Methods.ediv = function(a, b)
+        if not is_self(a) then err_type('vector4', 'element division') end
+        if is_self(b) or is_other(b) then return immutable_vector4(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w) end
+        err_type('vector4', 'element division')
+      end
+      Methods.is = function(v) return is_self(v) or is_other(v) end
+      return MT
+    end
+    MT.__add = function(a, b)
+      if not is_self(a) then err_type('vector4', 'addition') end
+      if is_self(b) or is_other(b) then return vector4(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w) end
+      err_type('vector4', 'addition')
+    end
+    MT.__sub = function(a, b)
+      if not is_self(a) then err_type('vector4', 'subtraction') end
+      if is_self(b) or is_other(b) then return vector4(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w) end
+      err_type('vector4', 'subtraction')
+    end
+    MT.__unm = function(v) return vector4(-v.x, -v.y, -v.z, -v.w) end
+    MT.__eq = function(a, b)
+      return (is_self(a) or is_other(a)) and (is_self(b) or is_other(b)) and a.x == b.x and a.y == b.y and a.z == b.z and a.w == b.w
+    end
+    MT.__mul = function(a, b)
+      if type(a) == 'number' then
+        if not is_self(b) then err_type('vector4', 'multiplication') end
+        return vector4(a*b.x, a*b.y, a*b.z, a*b.w)
+      end
+      if not is_self(a) then err_type('vector4', 'multiplication') end
+      if type(b) == 'number' then return vector4(a.x*b, a.y*b, a.z*b, a.w*b) end
+      if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w end
+      err_type('vector4', 'multiplication')
+    end
+    MT.__div = function(a, scalar)
+      if not is_self(a) then err_type('vector4', 'division') end
+      if type(scalar) ~= 'number' then err_scalar('vector4', 'divided') end
+      return vector4(a.x/scalar, a.y/scalar, a.z/scalar, a.w/scalar)
+    end
+    MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g, %.9g)'):format(v.x, v.y, v.z, v.w) end
+    MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w) end
+    Methods.length2 = function(v)
+      if not is_self(v) then err_type('vector4', 'length2') end
+      return v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w
+    end
+    Methods.length = function(v)
+      if not is_self(v) then err_type('vector4', 'length') end
+      return sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w)
+    end
+    Methods.normalize = function(v)
+      if not is_self(v) then err_type('vector4', 'normalize') end
+      local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w)
+      if len > 0 then return vector4(v.x/len, v.y/len, v.z/len, v.w/len), len end
+      return vector4(0, 0, 0, 0), len
+    end
+    Methods.dot = function(a, b)
+      if not is_self(a) then err_type('vector4', 'dot') end
+      if is_self(b) or is_other(b) then return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w end
+      err_type('vector4', 'dot')
+    end
+    Methods.emul = function(a, b)
+      if not is_self(a) then err_type('vector4', 'element multiplication') end
+      if is_self(b) or is_other(b) then return vector4(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w) end
+      err_type('vector4', 'element multiplication')
+    end
+    Methods.ediv = function(a, b)
+      if not is_self(a) then err_type('vector4', 'element division') end
+      if is_self(b) or is_other(b) then return vector4(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w) end
+      err_type('vector4', 'element division')
+    end
+    Methods.is = function(v) return is_self(v) or is_other(v) end
+    return MT
+  end
+
+  vector2 = ffi.metatype(vector2_type, vec2_mt(false, is_mvec2, is_ivec2))
+  immutable_vector2 = ffi.metatype(immutable_vector2_type, vec2_mt(true, is_ivec2, is_mvec2))
+  vector3 = ffi.metatype(vector3_type, vec3_mt(false, is_mvec3, is_ivec3))
+  immutable_vector3 = ffi.metatype(immutable_vector3_type, vec3_mt(true, is_ivec3, is_mvec3))
+  vector4 = ffi.metatype(vector4_type, vec4_mt(false, is_mvec4, is_ivec4))
+  immutable_vector4 = ffi.metatype(immutable_vector4_type, vec4_mt(true, is_ivec4, is_mvec4))
+  return { vector2, vector3, vector4, immutable_vector2, immutable_vector3, immutable_vector4 }
+end
+
+local function ensure_vectors()
+  local vector2 = vector2_ctor
+  if not vector2 then
+    local ffi, cached = loadffi()
+    local ctors = cached or build_vectors(ffi)
+    vector2_ctor, vector3_ctor, vector4_ctor = ctors[1], ctors[2], ctors[3]
+    immutable_vector2_ctor, immutable_vector3_ctor, immutable_vector4_ctor = ctors[4], ctors[5], ctors[6]
+    if not cached then loadffi(ctors) end
+  end
+end
+
+math.vector2 = function(...)
+  check_constructor('vector2', 2, ...)
+  local x, y = ...
+  ensure_vectors()
+  return vector2_ctor(x, y)
+end
+
+math.vector3 = function(...)
+  check_constructor('vector3', 3, ...)
+  local x, y, z = ...
+  ensure_vectors()
+  return vector3_ctor(x, y, z)
+end
+
+math.vector4 = function(...)
+  check_constructor('vector4', 4, ...)
+  local x, y, z, w = ...
+  ensure_vectors()
+  return vector4_ctor(x, y, z, w)
+end
+
+math.immutableVector2 = function(...)
+  check_constructor('immutableVector2', 2, ...)
+  local x, y = ...
+  ensure_vectors()
+  return immutable_vector2_ctor(x, y)
+end
+
+math.immutableVector3 = function(...)
+  check_constructor('immutableVector3', 3, ...)
+  local x, y, z = ...
+  ensure_vectors()
+  return immutable_vector3_ctor(x, y, z)
+end
+
+math.immutableVector4 = function(...)
+  check_constructor('immutableVector4', 4, ...)
+  local x, y, z, w = ...
+  ensure_vectors()
+  return immutable_vector4_ctor(x, y, z, w)
+end
