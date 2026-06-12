@@ -107,6 +107,47 @@ local sorted = { 1, 2, 2, 2, 4 }
 local low, high = table.binsearch(sorted, 2, nil, true)
 assert_eq(low, 2, 'table.binsearch low')
 assert_eq(high, 4, 'table.binsearch high')
+local rank_mt = { __lt = function(a, b) return a.rank < b.rank end }
+local rank1 = setmetatable({ rank = 1 }, rank_mt)
+local rank2a = setmetatable({ rank = 2 }, rank_mt)
+local rank2b = setmetatable({ rank = 2 }, rank_mt)
+local rank2c = setmetatable({ rank = 2 }, rank_mt)
+local rank2d = setmetatable({ rank = 2 }, rank_mt)
+local rank2e = setmetatable({ rank = 2 }, rank_mt)
+local rank2missing = setmetatable({ rank = 2 }, rank_mt)
+local rank3 = setmetatable({ rank = 3 }, rank_mt)
+local rank_missing_run = { rank1, rank2a, rank2c, rank3 }
+low, high = table.binsearch(rank_missing_run, rank2missing, nil, false)
+assert_eq(low, nil, 'table.binsearch comp=nil raw inequality returns nil low')
+assert_eq(high, nil, 'table.binsearch comp=nil raw inequality returns nil high')
+low, high = table.binsearch(rank_missing_run, rank2missing, false, true)
+assert_eq(low, nil, 'table.binsearch comp=false findall raw inequality returns nil low')
+assert_eq(high, nil, 'table.binsearch comp=false findall raw inequality returns nil high')
+local rank_run = { rank1, rank2a, rank2c, rank2d, rank2b, rank2b, rank2e, rank3 }
+low, high = table.binsearch(rank_run, rank2b, nil, false)
+assert_true(low ~= nil, 'table.binsearch comp=nil finds raw-equal entry inside equivalent run')
+assert_eq(rank_run[low], rank2b, 'table.binsearch comp=nil returns raw-equal entry')
+assert_eq(high, low, 'table.binsearch comp=nil non-findall returns single index')
+low, high = table.binsearch(rank_run, rank2b, false, true)
+assert_eq(low, 5, 'table.binsearch comp=false raw equality low')
+assert_eq(high, 6, 'table.binsearch comp=false raw equality high')
+local search_ok, search_err = pcall(function() table.binsearch(sorted, 2, true) end)
+assert_false(search_ok, 'table.binsearch rejects non-function comparator')
+assert_true(tostring(search_err):find('comparator must be a function', 1, true) ~= nil,
+  'table.binsearch non-function comparator error message')
+local function rank_less(a, b) return a.rank < b.rank end
+low, high = table.binsearch(rank_run, rank2missing, rank_less, true)
+assert_eq(low, 2, 'table.binsearch comparator-equivalent rank objects low')
+assert_eq(high, 7, 'table.binsearch comparator-equivalent rank objects high')
+local records = { { rank = 1 }, { rank = 2 }, { rank = 2 }, { rank = 2 }, { rank = 3 } }
+low, high = table.binsearch(records, { rank = 2 }, rank_less, true)
+assert_eq(low, 2, 'table.binsearch comparator-equivalent records low')
+assert_eq(high, 4, 'table.binsearch comparator-equivalent records high')
+local lower = string.lower
+local function caseless_less(a, b) return lower(a) < lower(b) end
+low, high = table.binsearch({ 'A', 'a', 'B', 'b', 'C' }, 'b', caseless_less, true)
+assert_eq(low, 3, 'table.binsearch comparator-equivalent strings low')
+assert_eq(high, 4, 'table.binsearch comparator-equivalent strings high')
 assert_eq(table.bininsert(sorted, 3), 5, 'table.bininsert index')
 assert_eq(sorted[5], 3, 'table.bininsert value')
 
@@ -129,6 +170,16 @@ assert_eq(getmetatable(copied), mt, 'table.deepcopy preserves metatable')
 assert_true(table.contains({ a = 'x' }, 'x'), 'table.contains')
 assert_eq(table.find({ a = 'x' }, 'x'), 'a', 'table.find')
 assert_true(table.isequal({ a = { 1, 2 } }, { a = { 1, 2 } }), 'table.isequal')
+local equal_cycle_left = { name = 'cycle' }
+equal_cycle_left.self = equal_cycle_left
+local equal_cycle_right = { name = 'cycle' }
+equal_cycle_right.self = equal_cycle_right
+assert_true(table.isequal(equal_cycle_left, equal_cycle_right), 'table.isequal equal cycles')
+local unequal_cycle_left = { name = 'cycle' }
+unequal_cycle_left.self = unequal_cycle_left
+local unequal_cycle_right = { name = 'cycle', self = { name = 'cycle' } }
+unequal_cycle_right.self.self = unequal_cycle_right.self
+assert_false(table.isequal(unequal_cycle_left, unequal_cycle_right), 'table.isequal unequal cycles')
 assert_eq(table.get({ a = 1 }, 'b', 9), 9, 'table.get default')
 local got = { a = 1 }
 assert_eq(table.getorset(got, 'b', 2), 2, 'table.getorset default')
@@ -156,7 +207,11 @@ local printable = table.getprintabletable({ a = 1 }, 1, ' ')
 assert_true(printable:find('a: 1', 1, true) ~= nil, 'table.getprintabletable')
 assert_true(table.deeptostring({ a = 1 }, 1):find('a = 1', 1, true) ~= nil, 'table.deeptostring')
 
-assert_eq(table.wrapindex({ 1, 2, 3 }, 4), 1, 'table.wrapindex')
+assert_eq(table.wrapindex({ 1, 2, 3 }, 4), 1, 'table.wrapindex wraps past end')
+assert_eq(table.wrapindex({ 1, 2, 3, extra = true }, 5), 2, 'table.wrapindex uses sequence length')
+local ok, err = pcall(function() table.wrapindex({}, 1) end)
+assert_false(ok, 'table.wrapindex rejects empty sequence')
+assert_true(tostring(err):find('empty sequence', 1, true) ~= nil, 'table.wrapindex empty error message')
 math.randomseed(1)
 local shuffled = { 1, 2, 3 }
 table.shuffle(shuffled)
@@ -219,6 +274,25 @@ for _, v in ipairs(ro) do
   roipairs[#roipairs + 1] = v
 end
 assert_eq(table.concat(roipairs, ','), 'x,y', 'table.makereadonly ipairs sees backing array')
+
+local rochoice = table.makereadonly({ first = 'a', second = 'b' }, true)
+local choicevalue, choicekey = table.choice(rochoice)
+assert_true(choicevalue == 'a' or choicevalue == 'b', 'table.choice readonly value is present')
+assert_true(choicekey == 'first' or choicekey == 'second', 'table.choice readonly key is present')
+math.randomseed(24601)
+table.choice({ 'a', 'b', 'c', 'd', 'e' })
+local after_choice = math.random()
+math.randomseed(24601)
+math.random(5)
+assert_eq(after_choice, math.random(),
+  'table.choice non-empty table consumes one random draw')
+math.randomseed(13579)
+local emptyvalue, emptykey = table.choice({})
+local after_empty_choice = math.random()
+math.randomseed(13579)
+assert_eq(emptyvalue, nil, 'table.choice empty table returns nil value')
+assert_eq(emptykey, nil, 'table.choice empty table returns nil key')
+assert_eq(after_empty_choice, math.random(), 'table.choice empty table consumes no random draw')
 
 local original_ro = { a = 1 }
 local same_ro = table.makereadonly(original_ro, false)

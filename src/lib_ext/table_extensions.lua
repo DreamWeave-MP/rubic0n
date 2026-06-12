@@ -1,6 +1,7 @@
 local table = ...
 
 local concat, insert, remove, sort = table.concat, table.insert, table.remove, table.sort
+local pairs, ipairs, next = pairs, ipairs, next
 local FCompDefault = function(a, b) return a < b end
 
 local function readonlywriteerror(intable, key)
@@ -131,9 +132,10 @@ local function deeptostring(val, level, prefix)
 end
 
 local function gettablefromsplit(inputstring, pattern)
+  local gmatch = string.gmatch
   local newtable = {}
 
-  for value in string.gmatch(inputstring, pattern) do
+  for value in gmatch(inputstring, pattern) do
     insert(newtable, value)
   end
 
@@ -145,6 +147,7 @@ local function gettablefromcommasplit(inputstring)
 end
 
 local function getprintabletable(inputtable, maxdepth, indentstr, indentlevel)
+  local rep = string.rep
   local inputtype = type(inputtable)
   if inputtype ~= 'table' and inputtype ~= 'userdata' then
     return inputtype
@@ -155,7 +158,7 @@ local function getprintabletable(inputtable, maxdepth, indentstr, indentlevel)
   maxdepth = maxdepth or 50
 
   local parts = {}
-  local currentindent = string.rep(indentstr, indentlevel + 1)
+  local currentindent = rep(indentstr, indentlevel + 1)
 
   for index, value in pairs(inputtable) do
     local valuestr
@@ -177,16 +180,23 @@ local function tableprint(inputtable, maxdepth, indentstr, indentlevel)
 end
 
 local function choice(t)
-  local size = tablesize(t)
-  if size == 0 then return end
+  local random = math.random
+  local count = 0
 
-  local key = nil
-  local nextcount = math.random(size)
-  for _ = 1, nextcount do
-    key = next(t, key)
+  for _ in pairs(t) do
+    count = count + 1
   end
 
-  return t[key], key
+  if count == 0 then return nil end
+
+  local target = random(count)
+  count = 0
+  for k, v in pairs(t) do
+    count = count + 1
+    if count == target then
+      return v, k
+    end
+  end
 end
 
 local function find(t, value)
@@ -201,7 +211,7 @@ local function contains(t, value)
   return find(t, value) ~= nil
 end
 
-local function isequal(left, right)
+local function isequalimpl(left, right, leftseen, rightseen)
   if left == right then
     return true
   end
@@ -210,18 +220,38 @@ local function isequal(left, right)
     return false
   end
 
+  local mappedright = leftseen[left]
+  if mappedright ~= nil then
+    return mappedright == right
+  end
+
+  local mappedleft = rightseen[right]
+  if mappedleft ~= nil then
+    return mappedleft == left
+  end
+
+  leftseen[left] = right
+  rightseen[right] = left
+
   local size1 = 0
 
   for k, v1 in pairs(left) do
     local v2 = right[k]
-    if v1 ~= v2 and not isequal(v1, v2) then
+    if v1 ~= v2 and not isequalimpl(v1, v2, leftseen, rightseen) then
       return false
     end
 
     size1 = size1 + 1
   end
 
-  return size1 == tablesize(right)
+  local equal = size1 == tablesize(right)
+  leftseen[left] = nil
+  rightseen[right] = nil
+  return equal
+end
+
+local function isequal(left, right)
+  return isequalimpl(left, right, {}, {})
 end
 
 local function removevalue(list, value)
@@ -256,12 +286,13 @@ local function copymissing(to, from)
 end
 
 local function traverse(t, k)
+  local coroutine_wrap, coroutine_yield = coroutine.wrap, coroutine.yield
   k = k or 'children'
 
   local function iter(nodes)
     for _, node in ipairs(nodes or t) do
       if node then
-        coroutine.yield(node)
+        coroutine_yield(node)
 
         if node[k] then
           iter(node[k])
@@ -270,7 +301,7 @@ local function traverse(t, k)
     end
   end
 
-  return coroutine.wrap(iter)
+  return coroutine_wrap(iter)
 end
 
 local function keys(t, sortorsortfunc)
@@ -362,7 +393,10 @@ local function getorset(t, key, defaultvalue)
 end
 
 local function wrapindex(t, index)
-  local size = tablesize(t)
+  local size = #t
+  if size == 0 then
+    error('wrapindex: empty sequence', 2)
+  end
 
   local newindex = index % size
   if newindex == 0 then
@@ -373,33 +407,81 @@ local function wrapindex(t, index)
 end
 
 local function shuffle(t, n)
+  local random = math.random
   n = n or #t
   for i = n, 2, -1 do
-    local j = math.random(i)
+    local j = random(i)
     t[i], t[j] = t[j], t[i]
   end
 end
 
 local function binsearch(tbl, value, comp, findall)
-  local first, last, midpt = 1, #tbl, 0
-  comp = comp or FCompDefault
+  local floor = math.floor
+  local size = #tbl
+  local first, last, midpt = 1, size, 0
+  local usecomp = comp ~= nil and comp ~= false
+  if usecomp then
+    if type(comp) ~= 'function' then
+      error('binsearch: comparator must be a function', 2)
+    end
+  else
+    comp = FCompDefault
+  end
 
   while first <= last do
-    midpt = math.floor((first + last) / 2)
+    midpt = floor((first + last) / 2)
 
     if comp(value, tbl[midpt]) then
       last = midpt - 1
     elseif comp(tbl[midpt], value) then
       first = midpt + 1
     else
-      if not findall then return midpt, midpt end
-
       local lowestmatch, highestmatch = midpt, midpt
-      while value == tbl[lowestmatch - 1] do
-        lowestmatch = lowestmatch - 1
-      end
-      while value == tbl[highestmatch + 1] do
-        highestmatch = highestmatch + 1
+      if usecomp then
+        if not findall then return midpt, midpt end
+
+        while lowestmatch > 1 do
+          local previous = tbl[lowestmatch - 1]
+          if comp(value, previous) or comp(previous, value) then break end
+          lowestmatch = lowestmatch - 1
+        end
+        while highestmatch < size do
+          local following = tbl[highestmatch + 1]
+          if comp(value, following) or comp(following, value) then break end
+          highestmatch = highestmatch + 1
+        end
+      else
+        if tbl[midpt] ~= value then
+          while lowestmatch > 1 do
+            local previous = tbl[lowestmatch - 1]
+            if comp(value, previous) or comp(previous, value) then break end
+            lowestmatch = lowestmatch - 1
+          end
+          while highestmatch < size do
+            local following = tbl[highestmatch + 1]
+            if comp(value, following) or comp(following, value) then break end
+            highestmatch = highestmatch + 1
+          end
+
+          midpt = nil
+          for i = lowestmatch, highestmatch do
+            if tbl[i] == value then
+              midpt = i
+              break
+            end
+          end
+          if not midpt then return nil end
+        end
+
+        if not findall then return midpt, midpt end
+
+        lowestmatch, highestmatch = midpt, midpt
+        while lowestmatch > 1 and value == tbl[lowestmatch - 1] do
+          lowestmatch = lowestmatch - 1
+        end
+        while highestmatch < size and value == tbl[highestmatch + 1] do
+          highestmatch = highestmatch + 1
+        end
       end
       return lowestmatch, highestmatch
     end
@@ -407,10 +489,11 @@ local function binsearch(tbl, value, comp, findall)
 end
 
 local function bininsert(t, value, comp)
+  local floor = math.floor
   comp = comp or FCompDefault
   local istart, iend, imid, istate = 1, #t, 1, 0
   while istart <= iend do
-    imid = math.floor((istart + iend) / 2)
+    imid = floor((istart + iend) / 2)
     if comp(value, t[imid]) then
       iend, istate = imid - 1, 0
     else

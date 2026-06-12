@@ -2,10 +2,11 @@ local math = ...
 
 local abs, ceil, floor, log, max, min, pow =
   math.abs, math.ceil, math.floor, math.log, math.max, math.min, math.pow
+local pi = math.pi
 
 local Epsilon = 2.2204460492503e-16
 local Log2 = log(2)
-local TwoPi = 2 * math.pi
+local TwoPi = 2 * pi
 
 math.epsilon = Epsilon
 
@@ -28,12 +29,13 @@ function math.clamp(value, low, high)
   return max(low, min(high, value))
 end
 
-function math.remap(value, lowin, highin, lowout, highout)
+local function remap(value, lowin, highin, lowout, highout)
   return lowout + (value - lowin) * (highout - lowout) / (highin - lowin)
 end
+math.remap = remap
 
 function math.remapclamped(value, inmin, inmax, outmin, outmax)
-  local result = math.remap(value, inmin, inmax, outmin, outmax)
+  local result = remap(value, inmin, inmax, outmin, outmax)
   local lo = outmin < outmax and outmin or outmax
   local hi = outmin < outmax and outmax or outmin
   return max(lo, min(hi, result))

@@ -22,10 +22,15 @@ table = table or {}
 function table.bininsert(t, value, comp) end
 
 ---Finds value in a sorted array by binary search.
+---With findall and a comparator, the returned range includes all
+---comparator-equivalent values, where neither comp(a, b) nor comp(b, a) is
+---true. Without a comparator, or when comp is false, default `<` only locates
+---order-equivalent candidates; a match still requires `==`, and findall
+---expands by raw equality.
 ---@generic V
 ---@param tbl V[]
 ---@param value V
----@param comp? fun(a: V, b: V): boolean Defaults to a < b.
+---@param comp? table.SortFunc|false Defaults to a < b. False is treated like nil.
 ---@param findall? boolean Return lowest and highest matching indices.
 ---@return integer? index
 ---@return integer? highestmatch
@@ -161,7 +166,8 @@ function table.isarray(t) end
 ---@return boolean result
 function table.isempty(t) end
 
----Recursively compares tables by key/value equality.
+---Recursively compares tables by key/value equality without recursing forever
+---on cycles.
 ---@param left any
 ---@param right any
 ---@return boolean result
@@ -176,8 +182,13 @@ function table.keys(t, sortorsortfunc) end
 
 ---Returns a proxy that guards normal assignment through the returned table.
 ---This protects `t.k = v` and `t[k] = v` on the proxy/converted tables, but it
----is not a sandbox boundary against rawset, debug-library metatable/upvalue
----access, or hostile privileged code.
+---only guards normal assignment. It is not a sandbox boundary against rawset,
+---debug-library metatable/upvalue access, or hostile privileged code.
+---With copy=false, raw entries are rehomed behind backing storage; rawget,
+---next, and raw serializers see different storage after conversion.
+---Builds without LUAJIT_ENABLE_LUA52COMPAT do not make pairs, ipairs, or #
+---reflect readonly proxy backing storage. Normal field reads and normal
+---assignment guarding still work.
 ---@generic T: table
 ---@param intable T
 ---@param copy? boolean Copy instead of converting the original table in place.
@@ -275,8 +286,9 @@ function table.unwindarray(object) end
 ---@return V[] values
 function table.values(t, sortorsortfunc) end
 
----Wraps an arbitrary index into the table's 1-based size range.
----@param t table
+---Wraps an arbitrary index into the sequence's 1-based #t range.
+---Throws when #t is zero because an empty sequence has no valid wrapped index.
+---@param t any[]
 ---@param index integer
 ---@return integer index
 function table.wrapindex(t, index) end

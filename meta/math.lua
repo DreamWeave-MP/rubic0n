@@ -3,6 +3,10 @@
 ---@class mathlib
 math = math or {}
 
+---Geometry helpers intentionally retain OpenMW-style camelCase names such as
+---math.immutableVector3, math.color.commaString, and math.transform.rotateZ.
+---See README.md "math geometry" for the supported surface.
+
 ---Machine epsilon used by math.isclose by default.
 ---@type number
 math.epsilon = math.epsilon
@@ -65,7 +69,7 @@ function math.isclose(a, b, absolutetolerance, relativetolerance) end
 ---@return integer result
 function math.nextpoweroftwo(value) end
 
----Normalizes an angle into the range [-pi, pi].
+---Normalizes an angle into the range [-pi, pi).
 ---@param angle number
 ---@return number normalized
 function math.normalizeangle(angle) end
