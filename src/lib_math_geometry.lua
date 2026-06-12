@@ -217,6 +217,7 @@ local function build_geometry(ffi)
     local a10, a11, a12 = m.m10, m.m11, m.m12
     local a20, a21, a22 = m.m20, m.m21, m.m22
     local det = a00*(a11*a22 - a12*a21) - a01*(a10*a22 - a12*a20) + a02*(a10*a21 - a11*a20)
+    if det == 0 then error('This Transform is not invertible') end
     local invdet = 1 / det
     local i00 =  (a11*a22 - a12*a21) * invdet
     local i01 =  (a02*a21 - a01*a22) * invdet
