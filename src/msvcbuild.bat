@@ -76,6 +76,8 @@ minilua %DASM% -LN %DASMFLAGS% -o host\buildvm_arch.h %DASC%
 
 if exist ..\.git ( git show -s --format=%%ct >luajit_relver.txt ) else ( type ..\.relver >luajit_relver.txt )
 minilua host\genversion.lua
+minilua host\genembed.lua -n math_geometry_lua -o lib_math_geometry.inc lib_math_geometry.lua
+@if errorlevel 1 goto :BAD
 
 @setlocal
 @call :SETHOSTVARS
@@ -153,6 +155,7 @@ if exist luajit.exe.manifest^
 @del *.obj *.manifest minilua.exe buildvm.exe
 @del host\buildvm_arch.h
 @del lj_bcdef.h lj_ffdef.h lj_libdef.h lj_recdef.h lj_folddef.h
+@del lib_math_geometry.inc
 @echo.
 @echo === Successfully built LuaJIT for Windows/%LJARCH% ===
 
