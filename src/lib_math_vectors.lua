@@ -43,6 +43,7 @@ local function build_vectors(ffi)
   local function err_scalar(name, op)
     error(name..' can only be '..op..' by scalar', 3)
   end
+  local nil_index = { __index = function() return nil end }
 
   local function swizzle2_component(v, c)
     if c == 120 then return v.x end
@@ -68,10 +69,8 @@ local function build_vectors(ffi)
     if c == 49 then return 1 end
   end
 
-  local function swizzle_index(Methods, component, immutable)
+  local function make_swizzle(component, immutable)
     return function(v, key)
-      local method = Methods[key]
-      if method ~= nil then return method end
       if type(key) ~= 'string' then return nil end
       local n = #key
       if n < 1 or n > 4 then return nil end
@@ -98,7 +97,7 @@ local function build_vectors(ffi)
   end
 
   local function vec2_mt(immutable, is_self, is_other)
-    local Methods = {}
+    local Methods = setmetatable({}, nil_index)
     local MT = {}
     if immutable then
       MT.__add = function(a, b)
@@ -168,7 +167,8 @@ local function build_vectors(ffi)
         return immutable_vector2(v.x*c - v.y*s, v.x*s + v.y*c)
       end
       Methods.is = function(v) return is_self(v) or is_other(v) end
-      MT.__index = swizzle_index(Methods, swizzle2_component, true)
+      Methods.swizzle = make_swizzle(swizzle2_component, true)
+      MT.__index = Methods
       return MT
     end
     MT.__add = function(a, b)
@@ -238,12 +238,13 @@ local function build_vectors(ffi)
       return vector2(v.x*c - v.y*s, v.x*s + v.y*c)
     end
     Methods.is = function(v) return is_self(v) or is_other(v) end
-    MT.__index = swizzle_index(Methods, swizzle2_component, false)
+    Methods.swizzle = make_swizzle(swizzle2_component, false)
+    MT.__index = Methods
     return MT
   end
 
   local function vec3_mt(immutable, is_self, is_other)
-    local Methods = {}
+    local Methods = setmetatable({}, nil_index)
     local MT = {}
     if immutable then
       MT.__add = function(a, b)
@@ -317,7 +318,8 @@ local function build_vectors(ffi)
         err_type('vector3', 'element division')
       end
       Methods.is = function(v) return is_self(v) or is_other(v) end
-      MT.__index = swizzle_index(Methods, swizzle3_component, true)
+      Methods.swizzle = make_swizzle(swizzle3_component, true)
+      MT.__index = Methods
       return MT
     end
     MT.__add = function(a, b)
@@ -391,12 +393,13 @@ local function build_vectors(ffi)
       err_type('vector3', 'element division')
     end
     Methods.is = function(v) return is_self(v) or is_other(v) end
-    MT.__index = swizzle_index(Methods, swizzle3_component, false)
+    Methods.swizzle = make_swizzle(swizzle3_component, false)
+    MT.__index = Methods
     return MT
   end
 
   local function vec4_mt(immutable, is_self, is_other)
-    local Methods = {}
+    local Methods = setmetatable({}, nil_index)
     local MT = {}
     if immutable then
       MT.__add = function(a, b)
@@ -460,7 +463,8 @@ local function build_vectors(ffi)
         err_type('vector4', 'element division')
       end
       Methods.is = function(v) return is_self(v) or is_other(v) end
-      MT.__index = swizzle_index(Methods, swizzle4_component, true)
+      Methods.swizzle = make_swizzle(swizzle4_component, true)
+      MT.__index = Methods
       return MT
     end
     MT.__add = function(a, b)
@@ -524,7 +528,8 @@ local function build_vectors(ffi)
       err_type('vector4', 'element division')
     end
     Methods.is = function(v) return is_self(v) or is_other(v) end
-    MT.__index = swizzle_index(Methods, swizzle4_component, false)
+    Methods.swizzle = make_swizzle(swizzle4_component, false)
+    MT.__index = Methods
     return MT
   end
 
