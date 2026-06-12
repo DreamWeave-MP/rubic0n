@@ -133,11 +133,11 @@ local function build_geometry(ffi)
 
   local function quat_from_axis_angle(angle, x, y, z)
     local len = sqrt(x*x + y*y + z*z)
-    if len >= 0.0000001 then
-      local s = sin(angle * 0.5) / len
-      return transformq(x*s, y*s, z*s, cos(angle * 0.5))
-    end
-    return transformq(0, 0, 0, 1)
+    -- Match osg::Quat::makeRotate: tiny finite axes are identity, but NaN
+    -- axes must propagate instead of being laundered into identity.
+    if len < 0.0000001 then return transformq(0, 0, 0, 1) end
+    local s = sin(angle * 0.5) / len
+    return transformq(x*s, y*s, z*s, cos(angle * 0.5))
   end
 
   local function quat_mul(a, b)
