@@ -1,10 +1,11 @@
 local math, loadffi = ...
-local sqrt, cos, sin, abs = math.sqrt, math.cos, math.sin, math.abs
+local sqrt, cos, sin, abs, floor = math.sqrt, math.cos, math.sin, math.abs, math.floor
 local asin, atan2 = math.asin, math.atan2
-local string_byte = string.byte
+local string_byte, string_find, string_match, string_sub = string.byte, string.find, string.match, string.sub
 local vector2_ctor, vector3_ctor, vector4_ctor
 local immutable_vector2_ctor, immutable_vector3_ctor, immutable_vector4_ctor
 local box_ctor
+local color_rgba_ctor, color_rgb_ctor, color_hex_ctor, color_comma_string_ctor
 local transform_move_ctor, transform_scale_ctor, transform_rotate_ctor
 local transform_rotatex_ctor, transform_rotatey_ctor, transform_rotatez_ctor
 local transform_identity_value
@@ -13,9 +14,22 @@ local function badarg(n, name)
   error('bad argument #'..n..' to '..name..' (number expected)', 3)
 end
 
+local function badarg_string(n, name)
+  error('bad argument #'..n..' to '..name..' (string expected)', 3)
+end
+
 local function check_constructor(name, n, ...)
   if select('#', ...) ~= n then
     error(name..' constructor requires exactly '..n..' numeric arguments', 3)
+  end
+  for i = 1, n do
+    if type(select(i, ...)) ~= 'number' then badarg(i, name) end
+  end
+end
+
+local function check_min_constructor(name, n, ...)
+  if select('#', ...) < n then
+    error(name..' constructor requires at least '..n..' numeric arguments', 3)
   end
   for i = 1, n do
     if type(select(i, ...)) ~= 'number' then badarg(i, name) end
@@ -37,10 +51,12 @@ local function build_geometry(ffi)
   local transformm_type = ffi.typeof('struct { const float m00, m01, m02, m10, m11, m12, m20, m21, m22, m30, m31, m32; }')
   local transformq_type = ffi.typeof('struct { const float qx, qy, qz, qw; }')
   local box_type = ffi.typeof('struct { const $ center; const $ halfSize; const float qx, qy, qz, qw; }', immutable_vector3_type, immutable_vector3_type)
+  local color_type = ffi.typeof('struct { const float r, g, b, a; }')
   local vector2, vector3, vector4
   local immutable_vector2, immutable_vector3, immutable_vector4
   local transformm, transformq
   local box
+  local color
   local function is_mvec2(v) return ffi.istype(vector2_type, v) end
   local function is_mvec3(v) return ffi.istype(vector3_type, v) end
   local function is_mvec4(v) return ffi.istype(vector4_type, v) end
@@ -50,6 +66,7 @@ local function build_geometry(ffi)
   local function is_transformm(v) return ffi.istype(transformm_type, v) end
   local function is_transformq(v) return ffi.istype(transformq_type, v) end
   local function is_box(v) return ffi.istype(box_type, v) end
+  local function is_color(v) return ffi.istype(color_type, v) end
   local function err_type(name, op)
     error(name..' expected for '..op, 3)
   end
@@ -887,6 +904,41 @@ local function build_geometry(ffi)
     return MT
   end
 
+  local function color_clamp(v)
+    -- Match std::clamp for normal values, but let NaN pass through visibly.
+    if v < 0 then return 0 end
+    if v > 1 then return 1 end
+    return v
+  end
+
+  local function color_hex_byte(v)
+    if v ~= v then error('cannot convert NaN color component to hex', 3) end
+    return floor(v * 255)
+  end
+
+  local function color_mt()
+    local Methods = {}
+    local MT = {}
+    MT.__eq = function(a, b)
+      return is_color(a) and is_color(b) and a.r == b.r and a.g == b.g and a.b == b.b and a.a == b.a
+    end
+    MT.__tostring = function(c) return ('(%g, %g, %g, %g)'):format(c.r, c.g, c.b, c.a) end
+    Methods.asRgba = function(c)
+      if not is_color(c) then err_type('color', 'asRgba') end
+      return vector4(c.r, c.g, c.b, c.a)
+    end
+    Methods.asRgb = function(c)
+      if not is_color(c) then err_type('color', 'asRgb') end
+      return vector3(c.r, c.g, c.b)
+    end
+    Methods.asHex = function(c)
+      if not is_color(c) then err_type('color', 'asHex') end
+      return ('%02x%02x%02x'):format(color_hex_byte(c.r), color_hex_byte(c.g), color_hex_byte(c.b))
+    end
+    MT.__index = function(_, key) return Methods[key] end
+    return MT
+  end
+
   local function vec2_mt(immutable, is_self, is_other)
     local Methods = {}
     local MT = {}
@@ -1403,6 +1455,40 @@ local function build_geometry(ffi)
     return box(immutable_vector3(center.x, center.y, center.z), immutable_vector3(halfSize.x, halfSize.y, halfSize.z), 0, 0, 0, 1)
   end
 
+  local function color_rgba_constructor(r, g, b, a)
+    return color(color_clamp(r), color_clamp(g), color_clamp(b), color_clamp(a))
+  end
+
+  local function color_rgb_constructor(r, g, b)
+    return color_rgba_constructor(r, g, b, 1)
+  end
+
+  local function color_hex_constructor(hex)
+    if #hex ~= 6 or not string_find(hex, '^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$') then
+      error('Invalid hex color: '..hex, 3)
+    end
+    return color(
+      tonumber(string_sub(hex, 1, 2), 16) / 255,
+      tonumber(string_sub(hex, 3, 4), 16) / 255,
+      tonumber(string_sub(hex, 5, 6), 16) / 255,
+      1)
+  end
+
+  local function color_comma_string_constructor(str)
+    if string_find(str, '[^0-9, ]') then
+      error('Invalid comma-separated color: '..str, 3)
+    end
+    local r, g, b, a = string_match(str, '^ *([0-9]+) *, *([0-9]+) *, *([0-9]+) *, *([0-9]+) *$')
+    if not r then
+      r, g, b = string_match(str, '^ *([0-9]+) *, *([0-9]+) *, *([0-9]+) *$')
+      a = '255'
+    end
+    if not r then
+      error('Invalid comma-separated color: '..str, 3)
+    end
+    return color_rgba_constructor(tonumber(r) / 255, tonumber(g) / 255, tonumber(b) / 255, tonumber(a) / 255)
+  end
+
   local function transform_vector_or_xyz(name, ...)
     local n = select('#', ...)
     if n == 1 then
@@ -1467,10 +1553,12 @@ local function build_geometry(ffi)
   transformm = ffi.metatype(transformm_type, transformm_mt())
   transformq = ffi.metatype(transformq_type, transformq_mt())
   box = ffi.metatype(box_type, box_mt())
+  color = ffi.metatype(color_type, color_mt())
   return { vector2, vector3, vector4, immutable_vector2, immutable_vector3, immutable_vector4, box_constructor,
     transform_move_constructor, transform_scale_constructor, transform_rotate_constructor,
     transform_rotatex_constructor, transform_rotatey_constructor, transform_rotatez_constructor,
-    transformq(0, 0, 0, 1) }
+    transformq(0, 0, 0, 1), color_rgba_constructor, color_rgb_constructor,
+    color_hex_constructor, color_comma_string_constructor }
 end
 
 local function ensure_geometry()
@@ -1484,6 +1572,8 @@ local function ensure_geometry()
     transform_move_ctor, transform_scale_ctor, transform_rotate_ctor = ctors[8], ctors[9], ctors[10]
     transform_rotatex_ctor, transform_rotatey_ctor, transform_rotatez_ctor = ctors[11], ctors[12], ctors[13]
     transform_identity_value = ctors[14]
+    color_rgba_ctor, color_rgb_ctor = ctors[15], ctors[16]
+    color_hex_ctor, color_comma_string_ctor = ctors[17], ctors[18]
     if not cached then loadffi(ctors) end
   end
 end
@@ -1538,6 +1628,35 @@ math.box = function(...)
   ensure_geometry()
   return box_ctor(...)
 end
+
+math.color = {
+  rgba = function(...)
+    check_min_constructor('color.rgba', 4, ...)
+    local r, g, b, a = ...
+    ensure_geometry()
+    return color_rgba_ctor(r, g, b, a)
+  end,
+  rgb = function(...)
+    check_min_constructor('color.rgb', 3, ...)
+    local r, g, b = ...
+    ensure_geometry()
+    return color_rgb_ctor(r, g, b)
+  end,
+  hex = function(...)
+    if select('#', ...) < 1 then error('color.hex constructor requires a string argument', 3) end
+    local hex = ...
+    if type(hex) ~= 'string' then badarg_string(1, 'color.hex') end
+    ensure_geometry()
+    return color_hex_ctor(hex)
+  end,
+  commaString = function(...)
+    if select('#', ...) < 1 then error('color.commaString constructor requires a string argument', 3) end
+    local str = ...
+    if type(str) ~= 'string' then badarg_string(1, 'color.commaString') end
+    ensure_geometry()
+    return color_comma_string_ctor(str)
+  end,
+}
 
 local transform_table = {
   move = function(...)
