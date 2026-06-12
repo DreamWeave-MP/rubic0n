@@ -15,6 +15,7 @@ Table of Contents
         * [table.clone](#tableclone)
         * [jit.prngstate](#jitprngstate)
         * [jit.gcstats](#jitgcstats)
+        * [math geometry](#math-geometry)
         * [thread.exdata](#threadexdata)
         * [thread.exdata2](#threadexdata2)
     * [New C API](#new-c-api)
@@ -262,6 +263,50 @@ Sweep-udata stats fields are shown as `n/a` by the benchmark when they are
 absent from a stock stats build, or from a stats build where
 `LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` was explicitly omitted by replacing the
 default build flags.
+
+[Back to TOC](#table-of-contents)
+
+### math geometry
+
+This fork exposes a small FFI-backed geometry surface under the standard
+`math.*` table. These are LuaJIT-side math values, not OpenMW/Sol userdata:
+engine APIs do not automatically accept them unless the engine adds explicit
+compatibility glue. No new build flag controls these APIs, but they are absent
+from builds compiled with `-DLUAJIT_DISABLE_FFI`.
+
+Exposed constructors and helpers:
+
+* `math.vector2`, `math.vector3`, `math.vector4`
+* `math.immutableVector2`, `math.immutableVector3`, `math.immutableVector4`
+* vector property swizzles such as `v.x`, `v.xy`, or `v.yxw`; there is no
+  `:swizzle()` method
+* `math.box`
+* `math.transform.identity`, `math.transform.move`, `math.transform.scale`,
+  `math.transform.rotate`, `math.transform.rotateX`,
+  `math.transform.rotateY`, and `math.transform.rotateZ`
+* `math.color.rgb`, `math.color.rgba`, `math.color.hex`, and
+  `math.color.commaString`
+
+The `math.vector2/3/4` constructors intentionally create mutable vectors by
+default. Use the `math.immutableVector2/3/4` constructors when immutable vector
+values are required. Single-component swizzles return a number;
+multi-component swizzles allocate a new vector cdata value matching the
+receiver's mutable or immutable kind.
+
+Some convenience accessors allocate. In particular, `box.vertices` allocates a
+Lua table and eight immutable vectors. `box.transform` and
+`color:asRgb()`/`color:asRgba()` allocate new values.
+
+Transform multiplication follows normal matrix composition order:
+`A * B * v` applies `B` to `v` first, then applies `A`. `TransformM:inverse()`
+throws for finite but non-invertible matrices.
+
+Numeric geometry constructors perform type and arity checks, but generally do
+not finite-check numeric inputs. Vector, transform, and box values may carry
+NaNs and infinities through later math operations rather than laundering them
+into zero, identity, or another safe sentinel. Color constructors clamp normal
+numeric components to `[0, 1]`; NaN components remain visible. Engine
+boundaries should reject non-finite values before accepting them.
 
 [Back to TOC](#table-of-contents)
 
