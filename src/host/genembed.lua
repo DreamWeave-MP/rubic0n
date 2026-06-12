@@ -45,6 +45,7 @@ local function c_quote_line(line)
 end
 
 local function generate(name, data)
+  data = data:gsub("\r\n", "\n"):gsub("\r", "\n")
   local out = {
     "/* This is a generated file. DO NOT EDIT! */\n",
     "static const char ", name, "[] =\n"
