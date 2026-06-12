@@ -17,6 +17,9 @@
 #include "lj_lib.h"
 #include "lj_vm.h"
 #include "lj_prng.h"
+#if LJ_HASFFI
+#include "lj_ctype.h"
+#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -195,11 +198,51 @@ LJLIB_CF(math_randomseed)
 
 #include "lj_libdef.h"
 
+#if LJ_HASFFI
+#include "lib_math_vector3.inc"
+
+static const char math_vector3_registry_key = 0;
+
+static int math_vector3_loadffi(lua_State *L)
+{
+  if (lua_gettop(L) != 0) {
+    lua_pushlightuserdata(L, (void *)&math_vector3_registry_key);
+    lua_pushvalue(L, 1);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+    return 0;
+  }
+
+  if (luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1) != NULL)
+    return luaL_error(L, "registry _LOADED is not a table");
+  lua_pop(L, 1);
+  ctype_loadffi(L);
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_getfield(L, -1, LUA_FFILIBNAME);
+  lua_remove(L, -2);
+  lua_pushlightuserdata(L, (void *)&math_vector3_registry_key);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+  return 2;
+}
+
+static void math_init_vector3(lua_State *L)
+{
+  int mathtop = lua_gettop(L);
+  if (luaL_loadbuffer(L, math_vector3_lua, sizeof(math_vector3_lua)-1,
+		      "=(math.vector3)"))
+    lua_error(L);
+  lua_pushvalue(L, mathtop);
+  lua_pushcfunction(L, math_vector3_loadffi);
+  lua_call(L, 2, 0);
+}
+#endif
+
 LUALIB_API int luaopen_math(lua_State *L)
 {
   PRNGState *rs = (PRNGState *)lua_newuserdata(L, sizeof(PRNGState));
   lj_prng_seed_fixed(rs);
   LJ_LIB_REG(L, LUA_MATHLIBNAME, math);
+#if LJ_HASFFI
+  math_init_vector3(L);
+#endif
   return 1;
 }
-
