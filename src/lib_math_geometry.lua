@@ -782,18 +782,14 @@ local function build_geometry(ffi)
       format(angle, ax, ay, az)
   end
 
-  local function osg_matrix_component_equal(a, b)
-    -- osg::Matrixf::operator== delegates to compare(), which uses ordering
-    -- checks rather than IEEE ==. Preserve that compatibility quirk here.
-    return not (a < b or b < a)
-  end
-
   local function transformm_equal(a, b)
+    -- Transform equality is new Lua API, not OSG Matrixf::compare(); use IEEE
+    -- == so NaNs stay visible instead of equal to arbitrary values.
     return is_transformm(a) and is_transformm(b) and
-      osg_matrix_component_equal(a.m00, b.m00) and osg_matrix_component_equal(a.m01, b.m01) and osg_matrix_component_equal(a.m02, b.m02) and
-      osg_matrix_component_equal(a.m10, b.m10) and osg_matrix_component_equal(a.m11, b.m11) and osg_matrix_component_equal(a.m12, b.m12) and
-      osg_matrix_component_equal(a.m20, b.m20) and osg_matrix_component_equal(a.m21, b.m21) and osg_matrix_component_equal(a.m22, b.m22) and
-      osg_matrix_component_equal(a.m30, b.m30) and osg_matrix_component_equal(a.m31, b.m31) and osg_matrix_component_equal(a.m32, b.m32)
+      a.m00 == b.m00 and a.m01 == b.m01 and a.m02 == b.m02 and
+      a.m10 == b.m10 and a.m11 == b.m11 and a.m12 == b.m12 and
+      a.m20 == b.m20 and a.m21 == b.m21 and a.m22 == b.m22 and
+      a.m30 == b.m30 and a.m31 == b.m31 and a.m32 == b.m32
   end
 
   local function transformq_equal(a, b)
