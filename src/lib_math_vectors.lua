@@ -76,7 +76,7 @@ local function build_vectors(ffi)
         if type(scalar) ~= 'number' then err_scalar('vector2', 'divided') end
         return immutable_vector2(a.x/scalar, a.y/scalar)
       end
-      MT.__tostring = function(v) return ('(%.9g, %.9g)'):format(v.x, v.y) end
+      MT.__tostring = function(v) return ('(%.38g, %.38g)'):format(v.x, v.y) end
       MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y) end
       Methods.length2 = function(v)
         if not is_self(v) then err_type('vector2', 'length2') end
@@ -145,7 +145,7 @@ local function build_vectors(ffi)
       if type(scalar) ~= 'number' then err_scalar('vector2', 'divided') end
       return vector2(a.x/scalar, a.y/scalar)
     end
-    MT.__tostring = function(v) return ('(%.9g, %.9g)'):format(v.x, v.y) end
+    MT.__tostring = function(v) return ('(%.38g, %.38g)'):format(v.x, v.y) end
     MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y) end
     Methods.length2 = function(v)
       if not is_self(v) then err_type('vector2', 'length2') end
@@ -224,7 +224,7 @@ local function build_vectors(ffi)
         if is_self(b) or is_other(b) then return immutable_vector3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x) end
         err_type('vector3', 'cross')
       end
-      MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g)'):format(v.x, v.y, v.z) end
+      MT.__tostring = function(v) return ('(%.38g, %.38g, %.38g)'):format(v.x, v.y, v.z) end
       MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z) end
       Methods.length2 = function(v)
         if not is_self(v) then err_type('vector3', 'length2') end
@@ -297,7 +297,7 @@ local function build_vectors(ffi)
       if is_self(b) or is_other(b) then return vector3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x) end
       err_type('vector3', 'cross')
     end
-    MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g)'):format(v.x, v.y, v.z) end
+    MT.__tostring = function(v) return ('(%.38g, %.38g, %.38g)'):format(v.x, v.y, v.z) end
     MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z) end
     Methods.length2 = function(v)
       if not is_self(v) then err_type('vector3', 'length2') end
@@ -370,7 +370,7 @@ local function build_vectors(ffi)
         if type(scalar) ~= 'number' then err_scalar('vector4', 'divided') end
         return immutable_vector4(a.x/scalar, a.y/scalar, a.z/scalar, a.w/scalar)
       end
-      MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g, %.9g)'):format(v.x, v.y, v.z, v.w) end
+      MT.__tostring = function(v) return ('(%.38g, %.38g, %.38g, %.38g)'):format(v.x, v.y, v.z, v.w) end
       MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w) end
       Methods.length2 = function(v)
         if not is_self(v) then err_type('vector4', 'length2') end
@@ -433,7 +433,7 @@ local function build_vectors(ffi)
       if type(scalar) ~= 'number' then err_scalar('vector4', 'divided') end
       return vector4(a.x/scalar, a.y/scalar, a.z/scalar, a.w/scalar)
     end
-    MT.__tostring = function(v) return ('(%.9g, %.9g, %.9g, %.9g)'):format(v.x, v.y, v.z, v.w) end
+    MT.__tostring = function(v) return ('(%.38g, %.38g, %.38g, %.38g)'):format(v.x, v.y, v.z, v.w) end
     MT.__len = function(v) return sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w) end
     Methods.length2 = function(v)
       if not is_self(v) then err_type('vector4', 'length2') end
