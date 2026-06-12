@@ -938,8 +938,8 @@ local function build_geometry(ffi)
       Methods.normalize = function(v)
         if not is_self(v) then err_type('vector2', 'normalize') end
         local len = sqrt(v.x*v.x + v.y*v.y)
-        if len > 0 then return immutable_vector2(v.x/len, v.y/len), len end
-        return immutable_vector2(0, 0), len
+        if len == 0 then return immutable_vector2(0, 0), len end
+        return immutable_vector2(v.x/len, v.y/len), len
       end
       Methods.dot = function(a, b)
         if not is_self(a) then err_type('vector2', 'dot') end
@@ -1008,8 +1008,8 @@ local function build_geometry(ffi)
     Methods.normalize = function(v)
       if not is_self(v) then err_type('vector2', 'normalize') end
       local len = sqrt(v.x*v.x + v.y*v.y)
-      if len > 0 then return vector2(v.x/len, v.y/len), len end
-      return vector2(0, 0), len
+      if len == 0 then return vector2(0, 0), len end
+      return vector2(v.x/len, v.y/len), len
     end
     Methods.dot = function(a, b)
       if not is_self(a) then err_type('vector2', 'dot') end
@@ -1088,8 +1088,8 @@ local function build_geometry(ffi)
       Methods.normalize = function(v)
         if not is_self(v) then err_type('vector3', 'normalize') end
         local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
-        if len > 0 then return immutable_vector3(v.x/len, v.y/len, v.z/len), len end
-        return immutable_vector3(0, 0, 0), len
+        if len == 0 then return immutable_vector3(0, 0, 0), len end
+        return immutable_vector3(v.x/len, v.y/len, v.z/len), len
       end
       Methods.dot = function(a, b)
         if not is_self(a) then err_type('vector3', 'dot') end
@@ -1162,8 +1162,8 @@ local function build_geometry(ffi)
     Methods.normalize = function(v)
       if not is_self(v) then err_type('vector3', 'normalize') end
       local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
-      if len > 0 then return vector3(v.x/len, v.y/len, v.z/len), len end
-      return vector3(0, 0, 0), len
+      if len == 0 then return vector3(0, 0, 0), len end
+      return vector3(v.x/len, v.y/len, v.z/len), len
     end
     Methods.dot = function(a, b)
       if not is_self(a) then err_type('vector3', 'dot') end
@@ -1236,8 +1236,8 @@ local function build_geometry(ffi)
       Methods.normalize = function(v)
         if not is_self(v) then err_type('vector4', 'normalize') end
         local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w)
-        if len > 0 then return immutable_vector4(v.x/len, v.y/len, v.z/len, v.w/len), len end
-        return immutable_vector4(0, 0, 0, 0), len
+        if len == 0 then return immutable_vector4(0, 0, 0, 0), len end
+        return immutable_vector4(v.x/len, v.y/len, v.z/len, v.w/len), len
       end
       Methods.dot = function(a, b)
         if not is_self(a) then err_type('vector4', 'dot') end
@@ -1300,8 +1300,8 @@ local function build_geometry(ffi)
     Methods.normalize = function(v)
       if not is_self(v) then err_type('vector4', 'normalize') end
       local len = sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w)
-      if len > 0 then return vector4(v.x/len, v.y/len, v.z/len, v.w/len), len end
-      return vector4(0, 0, 0, 0), len
+      if len == 0 then return vector4(0, 0, 0, 0), len end
+      return vector4(v.x/len, v.y/len, v.z/len, v.w/len), len
     end
     Methods.dot = function(a, b)
       if not is_self(a) then err_type('vector4', 'dot') end
