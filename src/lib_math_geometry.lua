@@ -729,11 +729,12 @@ local function build_geometry(ffi)
 
   local function quat_get_rotate_components(qx, qy, qz, qw)
     local s = sqrt(qx*qx + qy*qy + qz*qz)
-    if s > 0 then
-      local inv = 1 / s
-      return 2 * atan2(s, qw), qx*inv, qy*inv, qz*inv
+    if s == 0 then
+      return 0, 0, 0, 1
     end
-    return 0, 0, 0, 1
+    -- Only exact zero is identity; NaN vector parts must remain diagnostic.
+    local inv = 1 / s
+    return 2 * atan2(s, qw), qx*inv, qy*inv, qz*inv
   end
 
   local function angles_xz_from_forward(x, y, z)
