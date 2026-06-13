@@ -1,5 +1,8 @@
 ---@meta
 
+---Expanded helpers that use pattern matching, random selection/shuffling,
+---sorting, or coroutine traversal assume the normal standard-library globals
+---are available at call time.
 ---@class tablelib
 table = table or {}
 

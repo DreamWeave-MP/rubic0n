@@ -1,7 +1,5 @@
 local table = ...
 
-local concat, insert, remove, sort = table.concat, table.insert, table.remove, table.sort
-local pairs, ipairs, next, rawequal = pairs, ipairs, next, rawequal
 local FCompDefault = function(a, b) return a < b end
 
 local function readonlywriteerror(intable, key)
@@ -128,15 +126,14 @@ local function deeptostring(val, level, prefix)
   end
 
   strs[#strs + 1] = prefix .. '}'
-  return concat(strs)
+  return table.concat(strs)
 end
 
 local function gettablefromsplit(inputstring, pattern)
-  local gmatch = string.gmatch
   local newtable = {}
 
-  for value in gmatch(inputstring, pattern) do
-    insert(newtable, value)
+  for value in string.gmatch(inputstring, pattern) do
+    table.insert(newtable, value)
   end
 
   return newtable
@@ -147,7 +144,6 @@ local function gettablefromcommasplit(inputstring)
 end
 
 local function getprintabletable(inputtable, maxdepth, indentstr, indentlevel)
-  local rep = string.rep
   local inputtype = type(inputtable)
   if inputtype ~= 'table' and inputtype ~= 'userdata' then
     return inputtype
@@ -158,7 +154,7 @@ local function getprintabletable(inputtable, maxdepth, indentstr, indentlevel)
   maxdepth = maxdepth or 50
 
   local parts = {}
-  local currentindent = rep(indentstr, indentlevel + 1)
+  local currentindent = string.rep(indentstr, indentlevel + 1)
 
   for index, value in pairs(inputtable) do
     local valuestr
@@ -172,7 +168,7 @@ local function getprintabletable(inputtable, maxdepth, indentstr, indentlevel)
     parts[#parts + 1] = currentindent .. tostring(index) .. ': ' .. valuestr
   end
 
-  return concat(parts, '')
+  return table.concat(parts, '')
 end
 
 local function tableprint(inputtable, maxdepth, indentstr, indentlevel)
@@ -180,7 +176,6 @@ local function tableprint(inputtable, maxdepth, indentstr, indentlevel)
 end
 
 local function choice(t)
-  local random = math.random
   local count = 0
 
   for _ in pairs(t) do
@@ -189,7 +184,7 @@ local function choice(t)
 
   if count == 0 then return nil end
 
-  local target = random(count)
+  local target = math.random(count)
   count = 0
   for k, v in pairs(t) do
     count = count + 1
@@ -257,7 +252,7 @@ end
 local function removevalue(list, value)
   for i = 1, #list do
     if list[i] == value then
-      remove(list, i)
+      table.remove(list, i)
       return true
     end
   end
@@ -286,13 +281,12 @@ local function copymissing(to, from)
 end
 
 local function traverse(t, k)
-  local coroutine_wrap, coroutine_yield = coroutine.wrap, coroutine.yield
   k = k or 'children'
 
   local function iter(nodes)
     for _, node in ipairs(nodes or t) do
       if node then
-        coroutine_yield(node)
+        coroutine.yield(node)
 
         if node[k] then
           iter(node[k])
@@ -301,14 +295,14 @@ local function traverse(t, k)
     end
   end
 
-  return coroutine_wrap(iter)
+  return coroutine.wrap(iter)
 end
 
 local function keys(t, sortorsortfunc)
   local tablekeys = {}
 
   for k in pairs(t) do
-    insert(tablekeys, k)
+    table.insert(tablekeys, k)
   end
 
   if sortorsortfunc then
@@ -316,7 +310,7 @@ local function keys(t, sortorsortfunc)
       sortorsortfunc = nil
     end
 
-    sort(tablekeys, sortorsortfunc)
+    table.sort(tablekeys, sortorsortfunc)
   end
 
   return tablekeys
@@ -326,7 +320,7 @@ local function values(t, sortorsortfunc)
   local tablevalues = {}
 
   for _, v in pairs(t) do
-    insert(tablevalues, v)
+    table.insert(tablevalues, v)
   end
 
   if sortorsortfunc then
@@ -336,7 +330,7 @@ local function values(t, sortorsortfunc)
       sortfunction = sortorsortfunc
     end
 
-    sort(tablevalues, sortfunction)
+    table.sort(tablevalues, sortfunction)
   end
 
   return tablevalues
@@ -354,9 +348,9 @@ end
 
 local function sortedpairs(tbl, comparator)
   local tablekeys = {}
-  for key in pairs(tbl) do insert(tablekeys, key) end
+  for key in pairs(tbl) do table.insert(tablekeys, key) end
 
-  sort(tablekeys, comparator)
+  table.sort(tablekeys, comparator)
   local i = 0
 
   return function()
@@ -407,16 +401,14 @@ local function wrapindex(t, index)
 end
 
 local function shuffle(t, n)
-  local random = math.random
   n = n or #t
   for i = n, 2, -1 do
-    local j = random(i)
+    local j = math.random(i)
     t[i], t[j] = t[j], t[i]
   end
 end
 
 local function binsearch(tbl, value, comp, findall)
-  local floor = math.floor
   local size = #tbl
   local first, last, midpt = 1, size, 0
   local usecomp = comp ~= nil and comp ~= false
@@ -429,7 +421,7 @@ local function binsearch(tbl, value, comp, findall)
   end
 
   while first <= last do
-    midpt = floor((first + last) / 2)
+    midpt = math.floor((first + last) / 2)
 
     if comp(value, tbl[midpt]) then
       last = midpt - 1
@@ -489,11 +481,10 @@ local function binsearch(tbl, value, comp, findall)
 end
 
 local function bininsert(t, value, comp)
-  local floor = math.floor
   comp = comp or FCompDefault
   local istart, iend, imid, istate = 1, #t, 1, 0
   while istart <= iend do
-    imid = floor((istart + iend) / 2)
+    imid = math.floor((istart + iend) / 2)
     if comp(value, t[imid]) then
       iend, istate = imid - 1, 0
     else
@@ -501,7 +492,7 @@ local function bininsert(t, value, comp)
     end
   end
 
-  insert(t, imid + istate, value)
+  table.insert(t, imid + istate, value)
   return imid + istate
 end
 
@@ -532,7 +523,7 @@ local function filterarray(arr, f, ...)
 
   for i, v in ipairs(arr) do
     if f(i, v, ...) then
-      insert(tbl, v)
+      table.insert(tbl, v)
     end
   end
 
@@ -540,8 +531,7 @@ local function filterarray(arr, f, ...)
 end
 
 local function unpackvalues(t)
-  local unpack = table.unpack or _G.unpack
-  return unpack(t)
+  return (table.unpack or _G.unpack)(t)
 end
 
 local function unwind(object)
@@ -635,7 +625,7 @@ local function mapfiltersort(array, scorefn)
   local size = #mapvalues
   local ids = {}
   for i = 1, size do ids[i] = i end
-  sort(ids, function(i, j) return scores[i] < scores[j] end)
+  table.sort(ids, function(i, j) return scores[i] < scores[j] end)
   local sortedvalues = {}
   local sortedscores = {}
   for i = 1, size do
