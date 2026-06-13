@@ -21,7 +21,7 @@ function math.lerp(v0, v1, t) end
 ---Moves current toward target by at most step, without overshooting.
 ---@param current number
 ---@param target number
----@param step number Positive step expected.
+---@param step number Non-negative step expected.
 ---@return number result
 function math.approach(current, target, step) end
 

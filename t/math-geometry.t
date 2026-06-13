@@ -70,8 +70,8 @@ local function is_nan(v)
 end
 
 -- Accessing constructor tables/functions should stay lazy; constructing may
--- legitimately load ffi. If the binary cannot provide FFI-backed geometry,
--- use the same exit-77 skip pattern as math-color.t.
+-- legitimately load ffi. Missing API support is skipped, but constructor
+-- failures are fatal.
 local ffi_loaded_before_geometry_access = package.loaded.ffi ~= nil
 local have_api = type(math.vector3) == 'function' and type(math.box) == 'function' and
   type(math.transform) == 'table' and type(math.color) == 'table'
@@ -80,7 +80,7 @@ if not ffi_loaded_before_geometry_access then
   assert_eq(package.loaded.ffi, nil, 'geometry API table/function access should not load ffi')
 end
 local ok_ctor, ctor_or_err = pcall(function() return math.vector3(1, 2, 3) end)
-if not ok_ctor then os.exit(77) end
+assert(ok_ctor, ctor_or_err)
 if not ffi_loaded_before_geometry_access then
   assert_true(package.loaded.ffi ~= nil, 'first geometry constructor should load ffi')
 end

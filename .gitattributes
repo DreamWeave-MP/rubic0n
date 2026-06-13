@@ -1,1 +1,2 @@
 /.relver export-subst
+/src/msvcbuild.bat text eol=crlf

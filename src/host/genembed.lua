@@ -51,6 +51,7 @@ local function generate(name, data)
     "static const char ", name, "[] =\n"
   }
   local pos = 1
+  local emitted = false
   while pos <= #data do
     local nextpos = data:find("\n", pos, true)
     local line
@@ -58,12 +59,17 @@ local function generate(name, data)
       line = data:sub(pos, nextpos - 1)
       pos = nextpos + 1
       out[#out+1] = '"'..c_quote_line(line)..'\\n"\n'
+      emitted = true
     else
       line = data:sub(pos)
       pos = #data + 1
-      if #line > 0 then out[#out+1] = '"'..c_quote_line(line)..'"\n' end
+      if #line > 0 then
+        out[#out+1] = '"'..c_quote_line(line)..'"\n'
+        emitted = true
+      end
     end
   end
+  if not emitted then out[#out+1] = '""\n' end
   out[#out+1] = ";\n"
   return table.concat(out)
 end

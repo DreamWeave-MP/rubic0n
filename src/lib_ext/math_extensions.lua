@@ -15,6 +15,9 @@ function math.lerp(v0, v1, t)
 end
 
 function math.approach(current, target, step)
+  if step < 0 then
+    error('math.approach: step must be non-negative', 2)
+  end
   local delta = target - current
   if abs(delta) <= step then
     return target
@@ -30,11 +33,17 @@ function math.clamp(value, low, high)
 end
 
 local function remap(value, lowin, highin, lowout, highout)
+  if highin == lowin then
+    error('remap: lowin and highin must differ', 2)
+  end
   return lowout + (value - lowin) * (highout - lowout) / (highin - lowin)
 end
 math.remap = remap
 
 function math.remapclamped(value, inmin, inmax, outmin, outmax)
+  if inmax == inmin then
+    error('math.remapclamped: lowin and highin must differ', 2)
+  end
   local result = remap(value, inmin, inmax, outmin, outmax)
   local lo = outmin < outmax and outmin or outmax
   local hi = outmin < outmax and outmax or outmin

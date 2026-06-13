@@ -93,9 +93,26 @@ assert_eq(math.remapClamped, nil, 'math.remapClamped camelCase alias absent')
 assert_close(math.lerp(10, 20, 0.25), 12.5, 'math.lerp')
 assert_eq(math.approach(1, 5, 2), 3, 'math.approach step')
 assert_eq(math.approach(4, 5, 2), 5, 'math.approach no overshoot')
+assert_eq(math.approach(1, 5, 0), 1, 'math.approach zero step')
+local approach_ok, approach_err = pcall(function() math.approach(1, 5, -1) end)
+assert_false(approach_ok, 'math.approach rejects negative step')
+assert_true(tostring(approach_err):find('step must be non-negative', 1, true) ~= nil,
+  'math.approach negative step error message')
 assert_eq(math.clamp(5, 10, 0), 5, 'math.clamp reversed bounds')
 assert_eq(math.remap(5, 0, 10, 0, 100), 50, 'math.remap')
 assert_eq(math.remapclamped(15, 0, 10, 0, 100), 100, 'math.remapclamped')
+local remap_ok, remap_err = pcall(function() math.remap(1, 1, 1, 0, 10) end)
+assert_false(remap_ok, 'math.remap rejects zero-width input range')
+assert_true(tostring(remap_err):find('lowin and highin must differ', 1, true) ~= nil,
+  'math.remap zero-width error message')
+local remapclamped_ok, remapclamped_err = pcall(function() math.remapclamped(1, 1, 1, 0, 10) end)
+assert_false(remapclamped_ok, 'math.remapclamped rejects zero-width input range')
+assert_true(tostring(remapclamped_err):find('lowin and highin must differ', 1, true) ~= nil,
+  'math.remapclamped zero-width error message')
+assert_true(tostring(remapclamped_err):find('math.remapclamped:', 1, true) ~= nil,
+  'math.remapclamped zero-width error names function')
+assert_true(tostring(remapclamped_err):find('(math.extensions)', 1, true) == nil,
+  'math.remapclamped zero-width error blames caller')
 assert_eq(math.round(1.25, 1), 1.3, 'math.round digits')
 assert_true(math.isclose(1, 1 + 1e-10), 'math.isclose')
 assert_eq(math.nextpoweroftwo(1), 1, 'math.nextpoweroftwo one')
@@ -308,6 +325,15 @@ assert_eq(inv.x, 'a', 'table.invert')
 local to = { nested = { keep = true } }
 table.copymissing(to, { nested = { add = true }, top = true })
 assert_true(to.nested.keep and to.nested.add and to.top, 'table.copymissing')
+local cyclic_to = { nested = { keep = true } }
+cyclic_to.self = cyclic_to
+cyclic_to.nested.loop = cyclic_to
+local cyclic_from = { nested = { add = true }, top = true }
+cyclic_from.self = cyclic_from
+cyclic_from.nested.loop = cyclic_from
+table.copymissing(cyclic_to, cyclic_from)
+assert_true(cyclic_to.nested.keep and cyclic_to.nested.add and cyclic_to.top,
+  'table.copymissing cyclic structures')
 local shallow_to = {}
 assert_eq(table.shallowcopy({ a = 1 }, shallow_to), shallow_to, 'table.shallowcopy return')
 assert_eq(shallow_to.a, 1, 'table.shallowcopy value')

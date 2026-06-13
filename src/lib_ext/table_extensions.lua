@@ -296,14 +296,27 @@ local function shallowcopy(from, to)
   return to
 end
 
-local function copymissing(to, from)
+local function copymissingimpl(to, from, visited)
+  local seen = visited[from]
+  if seen then
+    if seen[to] then return end
+  else
+    seen = {}
+    visited[from] = seen
+  end
+  seen[to] = true
+
   for k, v in pairs(from) do
     if type(to[k]) == 'table' and type(v) == 'table' then
-      copymissing(to[k], v)
+      copymissingimpl(to[k], v, visited)
     elseif to[k] == nil then
       to[k] = v
     end
   end
+end
+
+local function copymissing(to, from)
+  copymissingimpl(to, from, {})
 end
 
 local function traverse(t, k)
