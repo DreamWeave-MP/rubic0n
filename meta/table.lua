@@ -204,13 +204,13 @@ function table.keys(t, sortorsortfunc) end
 ---Builds without LUAJIT_ENABLE_LUA52COMPAT do not make pairs, ipairs, or #
 ---reflect readonly proxy backing storage. Normal field reads and normal
 ---assignment guarding still work.
+---Cyclic table graphs are handled internally.
 ---@generic T: table
 ---@param intable T
 ---@param copy? boolean Defaults to false. Copy instead of converting in place.
 ---@param strict? boolean Throw when reading missing keys.
----@param visited? table<table, table>
 ---@return table.ReadOnlyTable result
-function table.makereadonly(intable, copy, strict, visited) end
+function table.makereadonly(intable, copy, strict) end
 
 ---Maps key/value pairs into a new table.
 ---@generic K, V, N
