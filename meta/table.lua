@@ -1,8 +1,8 @@
 ---@meta
 
----Expanded helpers that use pattern matching, random selection/shuffling,
----sorting, or coroutine traversal assume the normal standard-library globals
----are available at call time.
+---Expanded helpers assume normal standard-library globals are available at call
+---time, including math, string, coroutine, table, base functions such as pairs,
+---next, and type, and _G.unpack where applicable.
 ---@class tablelib
 table = table or {}
 
@@ -152,7 +152,9 @@ function table.getprintabletable(inputtable, maxdepth, indentstr, indentlevel) e
 ---@return string[] matchingparts
 function table.gettablefromcommasplit(inputstring) end
 
----Splits a string using a Lua pattern and returns all captures/matches.
+---Splits a string using a Lua pattern.
+---Stores one value per string.gmatch iteration: the first capture when captures
+---exist, or the full match when there are no captures.
 ---@param inputstring string
 ---@param pattern string
 ---@return string[] matchingparts
@@ -164,14 +166,21 @@ function table.gettablefromsplit(inputstring, pattern) end
 ---@return table<V, K> result
 function table.invert(t) end
 
----Returns true when all non-nil keys are integer number keys.
----This is the OpenResty C implementation; arrays may be sparse.
+---Returns true when all raw non-nil keys are integer number keys.
+---This raw OpenResty/LuaJIT C helper inspects table storage directly; arrays
+---may be sparse. It does not honor __pairs, readonly proxy backing storage, or
+---table.makereadonly backing contents. A readonly proxy can therefore look
+---empty or array-like to this helper even when normal Lua52 field reads or
+---pairs see backing contents.
 ---@param t table
 ---@return boolean result
 function table.isarray(t) end
 
----Returns true when the table has no non-nil values.
----This is the OpenResty C implementation.
+---Returns true when raw table storage has no non-nil values.
+---This raw OpenResty/LuaJIT C helper inspects table storage directly. It does
+---not honor __pairs, readonly proxy backing storage, or table.makereadonly
+---backing contents. A readonly proxy can therefore look empty or array-like to
+---this helper even when normal Lua52 field reads or pairs see backing contents.
 ---@param t table
 ---@return boolean result
 function table.isempty(t) end
@@ -195,12 +204,16 @@ function table.isequal(left, right) end
 function table.keys(t, sortorsortfunc) end
 
 ---Returns a proxy that guards normal assignment through the returned table.
+---This public helper installs/replaces table behavior with its own readonly
+---metatable; existing table metatables and object behavior are not preserved.
 ---This protects `t.k = v` and `t[k] = v` on the proxy/converted tables, but it
 ---only guards normal assignment. It is not a sandbox boundary against rawset,
 ---debug-library metatable/upvalue access, or hostile privileged code.
 ---Omitting copy uses copy=false: table.makereadonly(t) converts t in place and
 ---rehomes raw entries behind backing storage. rawget, next, and raw serializers
 ---see different storage after conversion.
+---With copy=true, table keys and values are recursively proxied; external
+---lookups that depend on original table identity can be affected.
 ---Builds without LUAJIT_ENABLE_LUA52COMPAT do not make pairs, ipairs, or #
 ---reflect readonly proxy backing storage. Normal field reads and normal
 ---assignment guarding still work.
@@ -279,6 +292,8 @@ function table.sortedpairs(tbl, comparator) end
 function table.swap(t, key, value) end
 
 ---Traverses an array/list of root nodes depth-first, yielding each node.
+---Expects an array/list of roots and an acyclic tree/graph through the child
+---array key; there is no cycle detection.
 ---@param t table Array/list of root nodes.
 ---@param k? string Child array key. Defaults to "children".
 ---@return fun(): any iterator
