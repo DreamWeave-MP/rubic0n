@@ -168,6 +168,14 @@ assert_eq(high, low, 'table.binsearch comp=nil non-findall returns single index'
 low, high = table.binsearch(rank_run, rank2b, false, true)
 assert_eq(low, 5, 'table.binsearch comp=false raw equality low')
 assert_eq(high, 6, 'table.binsearch comp=false raw equality high')
+local disjoint_x = setmetatable({ rank = 2 }, rank_mt)
+local disjoint_y = setmetatable({ rank = 2 }, rank_mt)
+local disjoint_raw_run = { disjoint_x, disjoint_y, disjoint_x }
+low, high = table.binsearch(disjoint_raw_run, disjoint_x, nil, true)
+assert_true(low ~= nil, 'table.binsearch raw findall finds one disjoint raw-equal run')
+assert_true(rawequal(disjoint_raw_run[low], disjoint_x),
+  'table.binsearch raw findall returned run is raw-equal')
+assert_eq(high, low, 'table.binsearch raw findall does not merge disjoint raw-equal entries')
 local search_ok, search_err = pcall(function() table.binsearch(sorted, 2, true) end)
 assert_false(search_ok, 'table.binsearch rejects non-function comparator')
 assert_true(tostring(search_err):find('comparator must be a function', 1, true) ~= nil,

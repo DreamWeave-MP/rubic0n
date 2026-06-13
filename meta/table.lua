@@ -24,14 +24,18 @@ function table.bininsert(t, value, comp) end
 ---Finds value in a sorted array by binary search.
 ---With findall and a comparator, the returned range includes all
 ---comparator-equivalent values, where neither comp(a, b) nor comp(b, a) is
----true. Without a comparator, or when comp is false, default `<` only locates
----order-equivalent candidates; actual matches and findall ranges require
----rawequal(tbl[i], value).
+---true. Without a comparator, or when comp is false, default `<` locates an
+---order-equivalent candidate block, but matches require rawequal(tbl[i], value).
+---In this raw mode, findall returns only the contiguous rawequal run around
+---the raw-equal entry that was found. To get all raw-mode matches in one range,
+---exact duplicate references must be contiguous in sort order; identical
+---references separated by other order-equivalent values are not reported as a
+---disjoint/all range.
 ---@generic V
 ---@param tbl V[]
 ---@param value V
 ---@param comp? table.SortFunc|false Defaults to a < b. False is treated like nil.
----@param findall? boolean Return lowest and highest matching indices.
+---@param findall? boolean Return the matching range.
 ---@return integer? index
 ---@return integer? highestmatch
 function table.binsearch(tbl, value, comp, findall) end
