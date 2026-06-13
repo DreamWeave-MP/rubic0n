@@ -345,6 +345,21 @@ assert_false(ok, 'table.makereadonly rejects nested existing-key write')
 assert_eq(ro.a, 1, 'table.makereadonly existing key unchanged')
 assert_eq(ro.nested.x, 2, 'table.makereadonly nested key unchanged')
 
+local poisoned_source = { a = 1, nested = { x = 2 } }
+local poisoned_proxy = { a = 'poisoned', nested = { x = 'poisoned' } }
+local poisoned_visited = {}
+poisoned_visited[poisoned_source] = { proxy = poisoned_proxy }
+local poisoned_ro = table.makereadonly(poisoned_source, true, false, poisoned_visited)
+assert_false(poisoned_ro == poisoned_proxy, 'table.makereadonly ignores caller visited proxy')
+assert_eq(poisoned_ro.a, 1, 'table.makereadonly poisoned visited reads source key')
+assert_eq(poisoned_ro.nested.x, 2, 'table.makereadonly poisoned visited reads nested source key')
+ok = pcall(function() poisoned_ro.a = 3 end)
+assert_false(ok, 'table.makereadonly poisoned visited rejects existing-key write')
+ok = pcall(function() poisoned_ro.b = 4 end)
+assert_false(ok, 'table.makereadonly poisoned visited rejects new-key write')
+ok = pcall(function() poisoned_ro.nested.x = 5 end)
+assert_false(ok, 'table.makereadonly poisoned visited rejects nested write')
+
 if lua52_table_metamethods then
   local ropairs = {}
   for k, v in pairs(ro) do

@@ -590,11 +590,7 @@ local function unwindarray(object)
   return unpackvalues(results)
 end
 
-local function makereadonly(intable, copy, strict, visited)
-  if type(intable) ~= 'table' then
-    error('makereadonly: expected table, got ' .. type(intable), 2)
-  end
-
+local function makereadonlyimpl(intable, copy, strict, visited)
   visited = visited or {}
   local plan = {}
   local proxy = collectreadonlyplan(intable, copy, visited, plan)
@@ -617,6 +613,14 @@ local function makereadonly(intable, copy, strict, visited)
   end
 
   return proxy
+end
+
+local function makereadonly(intable, copy, strict)
+  if type(intable) ~= 'table' then
+    error('makereadonly: expected table, got ' .. type(intable), 2)
+  end
+
+  return makereadonlyimpl(intable, copy, strict, {})
 end
 
 local function findminscore(array, scorefn)
