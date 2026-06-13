@@ -565,7 +565,11 @@ LUAJIT_T= luajit
 ALL_T= $(LUAJIT_T) $(LUAJIT_A) $(LUAJIT_SO) $(HOST_T)
 ALL_HDRGEN= lj_bcdef.h lj_ffdef.h lj_libdef.h lj_recdef.h lj_folddef.h \
 	    host/buildvm_arch.h luajit.h
-ALL_GEN= $(LJVM_S) $(ALL_HDRGEN) luajit_relver.txt $(LIB_VMDEFP)
+LIB_MATH_GENINC= lib_math_geometry.inc lib_math_extensions.inc
+LIB_TABLE_GENINC= lib_table_extensions.inc
+ALL_GENINC= $(LIB_MATH_GENINC) $(LIB_TABLE_GENINC)
+ALL_GEN= $(LJVM_S) $(ALL_HDRGEN) luajit_relver.txt $(LIB_VMDEFP) \
+	 $(ALL_GENINC)
 WIN_RM= *.obj *.lib *.exp *.dll *.exe *.manifest *.pdb *.ilk
 ALL_RM= $(ALL_T) $(ALL_GEN) *.o host/*.o $(WIN_RM)
 
@@ -665,19 +669,34 @@ libbc:
 	./$(LUAJIT_T) host/genlibbc.lua -o host/buildvm_libbc.h $(LJLIB_C)
 	$(MAKE) all
 
-depend:
+depend: $(ALL_GENINC)
 	@for file in $(ALL_HDRGEN); do \
 	  test -f $$file || touch $$file; \
 	  done
-	@$(HOST_CC) $(HOST_ACFLAGS) -MM *.c host/*.c | \
-	  sed -e "s| [^ ]*/dasm_\S*\.h||g" \
-	      -e "s|^\([^l ]\)|host/\1|" \
-	      -e "s| lj_target_\S*\.h| lj_target_*.h|g" \
-	      -e "s| lj_emit_\S*\.h| lj_emit_*.h|g" \
-	      -e "s| lj_asm_\S*\.h| lj_asm_*.h|g" >Makefile.dep
-	@for file in $(ALL_HDRGEN); do \
-	  test -s $$file || $(HOST_RM) $$file; \
-	  done
+	@tmp=Makefile.dep.tmp; out=Makefile.dep.new; \
+	  if ( for file in *.c; do \
+	         case $$file in \
+	         lj_str_hash.c) $(TARGET_CC) $(TARGET_ACFLAGS) $(lj_str_hash-CFLAGS) -MM $$file ;; \
+	         *) $(TARGET_CC) $(TARGET_ACFLAGS) -MM $$file ;; \
+	         esac || exit $$?; \
+	       done ) >$$tmp && \
+	     $(HOST_CC) $(HOST_ACFLAGS) -MM host/*.c >>$$tmp && \
+	     sed -e "s| [^ ]*/dasm_\S*\.h||g" \
+	         -e "s|^\([^l ]\)|host/\1|" \
+	         -e "s| lj_target_\S*\.h| lj_target_*.h|g" \
+	         -e "s| lj_emit_\S*\.h| lj_emit_*.h|g" \
+	         -e "s| lj_asm_\S*\.h| lj_asm_*.h|g" $$tmp >$$out && \
+	     mv $$out Makefile.dep; then \
+	    status=0; \
+	  else \
+	    status=$$?; \
+	  fi; \
+	  test ! -f $$tmp || $(HOST_RM) $$tmp; \
+	  test ! -f $$out || $(HOST_RM) $$out; \
+	  for file in $(ALL_HDRGEN); do \
+	    test -s $$file || $(HOST_RM) $$file; \
+	  done; \
+	  exit $$status
 
 .PHONY: default all amalg clean libbc depend
 
@@ -728,6 +747,18 @@ $(LIB_VMDEF): $(BUILDVM_T) $(LJLIB_C)
 	$(E) "BUILDVM   $@"
 	$(Q)$(BUILDVM_X) -m vmdef -o $(LIB_VMDEFP) $(LJLIB_C)
 
+lib_math_geometry.inc: lib_ext/math_geometry.lua host/genembed.lua $(MINILUA_DEP)
+	$(E) "GEN       $@"
+	$(Q)$(HOST_LUA) host/genembed.lua -n math_geometry_lua -o $@ lib_ext/math_geometry.lua
+
+lib_math_extensions.inc: lib_ext/math_extensions.lua host/genembed.lua $(MINILUA_DEP)
+	$(E) "GEN       $@"
+	$(Q)$(HOST_LUA) host/genembed.lua -n math_extensions_lua -o $@ lib_ext/math_extensions.lua
+
+lib_table_extensions.inc: lib_ext/table_extensions.lua host/genembed.lua $(MINILUA_DEP)
+	$(E) "GEN       $@"
+	$(Q)$(HOST_LUA) host/genembed.lua -n table_extensions_lua -o $@ lib_ext/table_extensions.lua
+
 lj_folddef.h: $(BUILDVM_T) lj_opt_fold.c
 	$(E) "BUILDVM   $@"
 	$(Q)$(BUILDVM_X) -m folddef -o $@ lj_opt_fold.c
@@ -749,6 +780,9 @@ lj_folddef.h: $(BUILDVM_T) lj_opt_fold.c
 $(LUAJIT_O):
 	$(E) "CC        $@"
 	$(Q)$(TARGET_STCC) $(TARGET_ACFLAGS) -c -o $@ $<
+
+lib_math.o ljamalg.o: $(LIB_MATH_GENINC)
+lib_table.o ljamalg.o: $(LIB_TABLE_GENINC)
 
 $(HOST_O): %.o: %.c
 	$(E) "HOSTCC    $@"

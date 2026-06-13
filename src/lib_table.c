@@ -344,6 +344,18 @@ LJLIB_CF(table_clear)	LJLIB_REC(.)
 
 #include "lj_libdef.h"
 
+#include "lib_table_extensions.inc"
+
+static void table_init_extensions(lua_State *L)
+{
+  int tabletop = lua_gettop(L);
+  if (luaL_loadbuffer(L, table_extensions_lua, sizeof(table_extensions_lua)-1,
+		      "=(table.extensions)"))
+    lua_error(L);
+  lua_pushvalue(L, tabletop);
+  lua_call(L, 1, 0);
+}
+
 LUALIB_API int luaopen_table(lua_State *L)
 {
   LJ_LIB_REG(L, LUA_TABLIBNAME, table);
@@ -351,6 +363,6 @@ LUALIB_API int luaopen_table(lua_State *L)
   lua_getglobal(L, "unpack");
   lua_setfield(L, -2, "unpack");
 #endif
+  table_init_extensions(L);
   return 1;
 }
-
