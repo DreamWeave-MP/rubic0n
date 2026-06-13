@@ -25,8 +25,8 @@ function table.bininsert(t, value, comp) end
 ---With findall and a comparator, the returned range includes all
 ---comparator-equivalent values, where neither comp(a, b) nor comp(b, a) is
 ---true. Without a comparator, or when comp is false, default `<` only locates
----order-equivalent candidates; a match still requires `==`, and findall
----expands by raw equality.
+---order-equivalent candidates; actual matches and findall ranges require
+---rawequal(tbl[i], value).
 ---@generic V
 ---@param tbl V[]
 ---@param value V
@@ -67,7 +67,9 @@ function table.contains(t, value) end
 ---@param from table
 function table.copymissing(to, from) end
 
----Deep-copies a table, preserving metatables and repeated references.
+---Deep-copies a table, preserving accessible metatables and repeated
+---references. Tables with protected metatables are unsupported because the
+---real metatable is intentionally hidden from getmetatable.
 ---@generic T: table
 ---@param root T
 ---@param copies? table<table, table>
@@ -184,14 +186,15 @@ function table.keys(t, sortorsortfunc) end
 ---This protects `t.k = v` and `t[k] = v` on the proxy/converted tables, but it
 ---only guards normal assignment. It is not a sandbox boundary against rawset,
 ---debug-library metatable/upvalue access, or hostile privileged code.
----With copy=false, raw entries are rehomed behind backing storage; rawget,
----next, and raw serializers see different storage after conversion.
+---Omitting copy uses copy=false: table.makereadonly(t) converts t in place and
+---rehomes raw entries behind backing storage. rawget, next, and raw serializers
+---see different storage after conversion.
 ---Builds without LUAJIT_ENABLE_LUA52COMPAT do not make pairs, ipairs, or #
 ---reflect readonly proxy backing storage. Normal field reads and normal
 ---assignment guarding still work.
 ---@generic T: table
 ---@param intable T
----@param copy? boolean Copy instead of converting the original table in place.
+---@param copy? boolean Defaults to false. Copy instead of converting in place.
 ---@param strict? boolean Throw when reading missing keys.
 ---@param visited? table<table, table>
 ---@return table.ReadOnlyTable result
@@ -228,7 +231,7 @@ function table.mapfiltersort(array, scorefn) end
 ---@param indentlevel? integer
 function table.print(inputtable, maxdepth, indentstr, indentlevel) end
 
----Removes the first array element equal to value.
+---Removes the first sequence element equal to value.
 ---@generic V
 ---@param list V[]
 ---@param value V
@@ -263,8 +266,8 @@ function table.sortedpairs(tbl, comparator) end
 ---@return V? oldvalue
 function table.swap(t, key, value) end
 
----Traverses a tree depth-first, yielding each node.
----@param t table
+---Traverses an array/list of root nodes depth-first, yielding each node.
+---@param t table Array/list of root nodes.
 ---@param k? string Child array key. Defaults to "children".
 ---@return fun(): any iterator
 function table.traverse(t, k) end

@@ -41,6 +41,40 @@ local function assert_close(actual, expected, msg, eps)
   end
 end
 
+local function has_lua52_table_metamethods()
+  local marker = {}
+  local proxy = setmetatable({}, {
+    __pairs = function()
+      return next, { x = marker }, nil
+    end,
+    __ipairs = function()
+      local done = false
+      return function()
+        if done then return nil end
+        done = true
+        return 1, marker
+      end
+    end,
+    __len = function()
+      return 1
+    end,
+  })
+
+  local pairs_ok = false
+  for k, v in pairs(proxy) do
+    pairs_ok = k == 'x' and v == marker
+  end
+
+  local ipairs_ok = false
+  for i, v in ipairs(proxy) do
+    ipairs_ok = i == 1 and v == marker
+  end
+
+  return pairs_ok and ipairs_ok and #proxy == 1
+end
+
+local lua52_table_metamethods = has_lua52_table_metamethods()
+
 local math_added = {
   'approach', 'clamp', 'eerp', 'isclose', 'lerp', 'nextpoweroftwo',
   'normalizeangle', 'oscillate', 'remap', 'remapclamped', 'round',
@@ -107,7 +141,10 @@ local sorted = { 1, 2, 2, 2, 4 }
 local low, high = table.binsearch(sorted, 2, nil, true)
 assert_eq(low, 2, 'table.binsearch low')
 assert_eq(high, 4, 'table.binsearch high')
-local rank_mt = { __lt = function(a, b) return a.rank < b.rank end }
+local rank_mt = {
+  __lt = function(a, b) return a.rank < b.rank end,
+  __eq = function(a, b) return a.rank == b.rank end,
+}
 local rank1 = setmetatable({ rank = 1 }, rank_mt)
 local rank2a = setmetatable({ rank = 2 }, rank_mt)
 local rank2b = setmetatable({ rank = 2 }, rank_mt)
@@ -126,7 +163,7 @@ assert_eq(high, nil, 'table.binsearch comp=false findall raw inequality returns 
 local rank_run = { rank1, rank2a, rank2c, rank2d, rank2b, rank2b, rank2e, rank3 }
 low, high = table.binsearch(rank_run, rank2b, nil, false)
 assert_true(low ~= nil, 'table.binsearch comp=nil finds raw-equal entry inside equivalent run')
-assert_eq(rank_run[low], rank2b, 'table.binsearch comp=nil returns raw-equal entry')
+assert_true(rawequal(rank_run[low], rank2b), 'table.binsearch comp=nil returns raw-equal entry')
 assert_eq(high, low, 'table.binsearch comp=nil non-findall returns single index')
 low, high = table.binsearch(rank_run, rank2b, false, true)
 assert_eq(low, 5, 'table.binsearch comp=false raw equality low')
@@ -219,6 +256,10 @@ table.sort(shuffled)
 assert_eq(table.concat(shuffled, ','), '1,2,3', 'table.shuffle preserves values')
 assert_true(table.removevalue(shuffled, 2), 'table.removevalue removed')
 assert_eq(table.concat(shuffled, ','), '1,3', 'table.removevalue result')
+local metadata_only = { 1, 3, metadata = 2 }
+assert_false(table.removevalue(metadata_only, 2), 'table.removevalue ignores matching hash metadata')
+assert_eq(table.concat(metadata_only, ','), '1,3', 'table.removevalue metadata array unchanged')
+assert_eq(metadata_only.metadata, 2, 'table.removevalue metadata field unchanged')
 
 local sorted_pairs_seen = {}
 for k, v in table.sortedpairs({ b = 2, a = 1 }) do
@@ -262,23 +303,25 @@ assert_false(ok, 'table.makereadonly rejects nested existing-key write')
 assert_eq(ro.a, 1, 'table.makereadonly existing key unchanged')
 assert_eq(ro.nested.x, 2, 'table.makereadonly nested key unchanged')
 
-local ropairs = {}
-for k, v in pairs(ro) do
-  ropairs[k] = v
-end
-assert_eq(ropairs.a, 1, 'table.makereadonly pairs sees backing key')
-assert_eq(ropairs.nested.x, 2, 'table.makereadonly pairs sees nested proxy')
+if lua52_table_metamethods then
+  local ropairs = {}
+  for k, v in pairs(ro) do
+    ropairs[k] = v
+  end
+  assert_eq(ropairs.a, 1, 'table.makereadonly pairs sees backing key')
+  assert_eq(ropairs.nested.x, 2, 'table.makereadonly pairs sees nested proxy')
 
-local roipairs = {}
-for _, v in ipairs(ro) do
-  roipairs[#roipairs + 1] = v
-end
-assert_eq(table.concat(roipairs, ','), 'x,y', 'table.makereadonly ipairs sees backing array')
+  local roipairs = {}
+  for _, v in ipairs(ro) do
+    roipairs[#roipairs + 1] = v
+  end
+  assert_eq(table.concat(roipairs, ','), 'x,y', 'table.makereadonly ipairs sees backing array')
 
-local rochoice = table.makereadonly({ first = 'a', second = 'b' }, true)
-local choicevalue, choicekey = table.choice(rochoice)
-assert_true(choicevalue == 'a' or choicevalue == 'b', 'table.choice readonly value is present')
-assert_true(choicekey == 'first' or choicekey == 'second', 'table.choice readonly key is present')
+  local rochoice = table.makereadonly({ first = 'a', second = 'b' }, true)
+  local choicevalue, choicekey = table.choice(rochoice)
+  assert_true(choicevalue == 'a' or choicevalue == 'b', 'table.choice readonly value is present')
+  assert_true(choicekey == 'first' or choicekey == 'second', 'table.choice readonly key is present')
+end
 math.randomseed(24601)
 table.choice({ 'a', 'b', 'c', 'd', 'e' })
 local after_choice = math.random()

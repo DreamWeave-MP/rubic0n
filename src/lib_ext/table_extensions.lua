@@ -1,7 +1,7 @@
 local table = ...
 
 local concat, insert, remove, sort = table.concat, table.insert, table.remove, table.sort
-local pairs, ipairs, next = pairs, ipairs, next
+local pairs, ipairs, next, rawequal = pairs, ipairs, next, rawequal
 local FCompDefault = function(a, b) return a < b end
 
 local function readonlywriteerror(intable, key)
@@ -255,11 +255,11 @@ local function isequal(left, right)
 end
 
 local function removevalue(list, value)
-  local i = find(list, value)
-
-  if i ~= nil then
-    remove(list, i)
-    return true
+  for i = 1, #list do
+    if list[i] == value then
+      remove(list, i)
+      return true
+    end
   end
 
   return false
@@ -451,7 +451,7 @@ local function binsearch(tbl, value, comp, findall)
           highestmatch = highestmatch + 1
         end
       else
-        if tbl[midpt] ~= value then
+        if not rawequal(tbl[midpt], value) then
           while lowestmatch > 1 do
             local previous = tbl[lowestmatch - 1]
             if comp(value, previous) or comp(previous, value) then break end
@@ -465,7 +465,7 @@ local function binsearch(tbl, value, comp, findall)
 
           midpt = nil
           for i = lowestmatch, highestmatch do
-            if tbl[i] == value then
+            if rawequal(tbl[i], value) then
               midpt = i
               break
             end
@@ -476,10 +476,10 @@ local function binsearch(tbl, value, comp, findall)
         if not findall then return midpt, midpt end
 
         lowestmatch, highestmatch = midpt, midpt
-        while lowestmatch > 1 and value == tbl[lowestmatch - 1] do
+        while lowestmatch > 1 and rawequal(tbl[lowestmatch - 1], value) do
           lowestmatch = lowestmatch - 1
         end
-        while highestmatch < size and value == tbl[highestmatch + 1] do
+        while highestmatch < size and rawequal(tbl[highestmatch + 1], value) do
           highestmatch = highestmatch + 1
         end
       end
