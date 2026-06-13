@@ -227,22 +227,28 @@ local function contains(t, value)
 end
 
 local function isequalimpl(left, right, leftseen, rightseen)
-  if left == right then
-    return true
+  local lefttype = type(left)
+  local righttype = type(right)
+
+  if lefttype ~= 'table' or righttype ~= 'table' then
+    if lefttype == 'table' or righttype == 'table' then
+      return false
+    end
+    return left == right
   end
 
-  if type(left) ~= 'table' or type(right) ~= 'table' then
-    return false
+  if rawequal(left, right) then
+    return true
   end
 
   local mappedright = leftseen[left]
   if mappedright ~= nil then
-    return mappedright == right
+    return rawequal(mappedright, right)
   end
 
   local mappedleft = rightseen[right]
   if mappedleft ~= nil then
-    return mappedleft == left
+    return rawequal(mappedleft, left)
   end
 
   leftseen[left] = right
@@ -252,7 +258,7 @@ local function isequalimpl(left, right, leftseen, rightseen)
 
   for k, v1 in pairs(left) do
     local v2 = right[k]
-    if v1 ~= v2 and not isequalimpl(v1, v2, leftseen, rightseen) then
+    if not isequalimpl(v1, v2, leftseen, rightseen) then
       return false
     end
 

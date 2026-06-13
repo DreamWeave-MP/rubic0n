@@ -177,7 +177,11 @@ function table.isarray(t) end
 function table.isempty(t) end
 
 ---Recursively compares tables by key/value equality without recursing forever
----on cycles.
+---on cycles. Tables are structurally compared with raw table identity checks;
+---table __eq metamethods are not invoked for table identity or table values.
+---Non-table values use normal Lua equality. Traversal uses pairs, so __pairs
+---can affect the visited keys on builds that support it. Right-hand values are
+---read with normal indexing for each visited left-hand key.
 ---@param left any
 ---@param right any
 ---@return boolean result

@@ -241,6 +241,24 @@ unequal_cycle_left.self = unequal_cycle_left
 local unequal_cycle_right = { name = 'cycle', self = { name = 'cycle' } }
 unequal_cycle_right.self.self = unequal_cycle_right.self
 assert_false(table.isequal(unequal_cycle_left, unequal_cycle_right), 'table.isequal unequal cycles')
+local recursive_eq_calls = 0
+local recursive_eq_mt = {
+  __eq = function(a, b)
+    recursive_eq_calls = recursive_eq_calls + 1
+    return table.isequal(a, b)
+  end,
+}
+local recursive_eq_left = setmetatable({ name = 'cycle' }, recursive_eq_mt)
+recursive_eq_left.self = recursive_eq_left
+local recursive_eq_right = setmetatable({ name = 'cycle' }, recursive_eq_mt)
+recursive_eq_right.self = recursive_eq_right
+assert_true(table.isequal(recursive_eq_left, recursive_eq_right),
+  'table.isequal equal cycles with recursive __eq')
+assert_eq(recursive_eq_calls, 0, 'table.isequal does not call table __eq for equal cycles')
+recursive_eq_right.name = 'different'
+assert_false(table.isequal(recursive_eq_left, recursive_eq_right),
+  'table.isequal unequal cycles with recursive __eq')
+assert_eq(recursive_eq_calls, 0, 'table.isequal does not call table __eq for unequal cycles')
 assert_eq(table.get({ a = 1 }, 'b', 9), 9, 'table.get default')
 local got = { a = 1 }
 assert_eq(table.getorset(got, 'b', 2), 2, 'table.getorset default')
