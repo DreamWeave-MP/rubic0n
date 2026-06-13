@@ -1,11 +1,11 @@
 local math = ...
 
-local abs, ceil, floor, log, max, min, pow =
-  math.abs, math.ceil, math.floor, math.log, math.max, math.min, math.pow
+local abs, floor, max, min =
+  math.abs, math.floor, math.max, math.min
+local Huge = math.huge
 local pi = math.pi
 
 local Epsilon = 2.2204460492503e-16
-local Log2 = log(2)
 local TwoPi = 2 * pi
 
 math.epsilon = Epsilon
@@ -53,7 +53,19 @@ function math.isclose(a, b, absolutetolerance, relativetolerance)
 end
 
 function math.nextpoweroftwo(value)
-  return pow(2, ceil(log(value) / Log2))
+  if type(value) ~= 'number' or value ~= value or value < 1 or value == Huge then
+    error('nextpoweroftwo: value must be a finite number >= 1', 2)
+  end
+
+  local power = 1
+  while power < value do
+    local nextpower = power * 2
+    if nextpower == Huge then
+      error('nextpoweroftwo: result would overflow', 2)
+    end
+    power = nextpower
+  end
+  return power
 end
 
 function math.normalizeangle(angle)

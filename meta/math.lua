@@ -64,8 +64,10 @@ function math.round(value, digits) end
 ---@return boolean result
 function math.isclose(a, b, absolutetolerance, relativetolerance) end
 
----Returns the next power of two greater than or equal to value.
----@param value number
+---Returns the smallest power of two greater than or equal to value.
+---Value must be a finite number >= 1; fractional values are accepted. Raises
+---an error for non-numbers, NaN, infinity, values below 1, or overflow.
+---@param value number Finite number >= 1.
 ---@return integer result
 function math.nextpoweroftwo(value) end
 
