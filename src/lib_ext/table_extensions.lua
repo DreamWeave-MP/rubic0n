@@ -89,24 +89,44 @@ local function safeipairs(val)
   return pcall(ipairs, val)
 end
 
+local function preflightdeepcopy(root, seen)
+  if seen[root] then return end
+  seen[root] = true
+
+  local ok = pcall(setmetatable, root, getmetatable(root))
+  if not ok then
+    error('deepcopy: protected metatable in table graph', 3)
+  end
+
+  for k, v in next, root, nil do
+    if type(k) == 'table' then preflightdeepcopy(k, seen) end
+    if type(v) == 'table' then preflightdeepcopy(v, seen) end
+  end
+end
+
+local function deepcopyimpl(root, copies)
+  local copied = rawget(copies, root)
+  if copied then return copied end
+
+  local new = {}
+  rawset(copies, root, new)
+
+  for k, v in next, root, nil do
+    local key = type(k) == 'table' and deepcopyimpl(k, copies) or k
+    local val = type(v) == 'table' and deepcopyimpl(v, copies) or v
+    new[key] = val
+  end
+
+  return setmetatable(new, getmetatable(root))
+end
+
 local function deepcopy(root, copies)
   if type(root) ~= 'table' then
     error('Invalid table provided to deepcopy: ' .. tostring(root), 2)
   end
 
-  copies = copies or {}
-  if copies[root] then return copies[root] end
-
-  local new = {}
-  copies[root] = new
-
-  for k, v in pairs(root) do
-    local key = type(k) == 'table' and deepcopy(k, copies) or k
-    local val = type(v) == 'table' and deepcopy(v, copies) or v
-    new[key] = val
-  end
-
-  return setmetatable(new, getmetatable(root))
+  preflightdeepcopy(root, {})
+  return deepcopyimpl(root, copies or {})
 end
 
 local function deeptostring(val, level, prefix)

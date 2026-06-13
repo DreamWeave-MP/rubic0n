@@ -74,9 +74,10 @@ function table.contains(t, value) end
 ---@param from table
 function table.copymissing(to, from) end
 
----Deep-copies a table, preserving accessible metatables and repeated
----references. Tables with protected metatables are unsupported because the
----real metatable is intentionally hidden from getmetatable.
+---Deep-copies a table's raw entries, preserving accessible metatables,
+---repeated references, and cycles. Rejects protected metatables anywhere in
+---the raw table graph before cloning because the real metatable is
+---intentionally hidden from getmetatable.
 ---@generic T: table
 ---@param root T
 ---@param copies? table<table, table>

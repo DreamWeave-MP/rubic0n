@@ -211,6 +211,22 @@ local copied = table.deepcopy(original)
 assert_false(copied == original, 'table.deepcopy creates new root')
 assert_false(copied.child == original.child, 'table.deepcopy creates new child')
 assert_eq(getmetatable(copied), mt, 'table.deepcopy preserves metatable')
+local copy_cycle = { name = 'cycle' }
+copy_cycle.self = copy_cycle
+local copied_cycle = table.deepcopy(copy_cycle)
+assert_false(copied_cycle == copy_cycle, 'table.deepcopy cyclic copy creates new root')
+assert_eq(copied_cycle.self, copied_cycle, 'table.deepcopy cyclic copy preserves cycle')
+local protected_deepcopy_root = setmetatable({ a = 1 }, { __metatable = 'locked' })
+local copy_ok, copy_err = pcall(function() table.deepcopy(protected_deepcopy_root) end)
+assert_false(copy_ok, 'table.deepcopy rejects root protected metatable')
+assert_true(tostring(copy_err):find('protected metatable', 1, true) ~= nil,
+  'table.deepcopy root protected metatable error message')
+local protected_deepcopy_child = setmetatable({ secret = 7 }, { __metatable = 'locked' })
+local protected_deepcopy_parent = { root = 1, child = protected_deepcopy_child }
+copy_ok, copy_err = pcall(function() table.deepcopy(protected_deepcopy_parent) end)
+assert_false(copy_ok, 'table.deepcopy rejects nested protected metatable')
+assert_true(tostring(copy_err):find('protected metatable', 1, true) ~= nil,
+  'table.deepcopy nested protected metatable error message')
 
 assert_true(table.contains({ a = 'x' }, 'x'), 'table.contains')
 assert_eq(table.find({ a = 'x' }, 'x'), 'a', 'table.find')
