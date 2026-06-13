@@ -103,16 +103,34 @@ assert_eq(math.nextpoweroftwo(2), 2, 'math.nextpoweroftwo exact power')
 assert_eq(math.nextpoweroftwo(3), 4, 'math.nextpoweroftwo rounds up')
 assert_eq(math.nextpoweroftwo(1.5), 2, 'math.nextpoweroftwo fractional')
 assert_eq(math.nextpoweroftwo(2 ^ 29), 2 ^ 29, 'math.nextpoweroftwo large exact power')
+local p53 = 2 ^ 53
+local p60 = 2 ^ 60
+assert_eq(math.nextpoweroftwo(p53), p53, 'math.nextpoweroftwo 2^53 exact power')
+assert_eq(math.nextpoweroftwo(p60), p60, 'math.nextpoweroftwo 2^60 exact power')
+local above_p53 = p53 + 2
+assert_true(above_p53 > p53, '2^53 + 2 is representable above 2^53')
+assert_eq(math.nextpoweroftwo(above_p53), 2 ^ 54, 'math.nextpoweroftwo just above 2^53')
+local above_p60 = p60 + 2 ^ 8
+assert_true(above_p60 > p60, '2^60 + 2^8 is representable above 2^60')
+assert_eq(math.nextpoweroftwo(above_p60), 2 ^ 61, 'math.nextpoweroftwo just above 2^60')
 local np2_ok, np2_err = pcall(function() math.nextpoweroftwo(0) end)
 assert_false(np2_ok, 'math.nextpoweroftwo rejects zero')
 assert_true(tostring(np2_err):find('finite number >= 1', 1, true) ~= nil,
   'math.nextpoweroftwo zero error message')
+np2_ok = pcall(function() math.nextpoweroftwo('4') end)
+assert_false(np2_ok, 'math.nextpoweroftwo rejects non-number')
 np2_ok = pcall(function() math.nextpoweroftwo(-3) end)
 assert_false(np2_ok, 'math.nextpoweroftwo rejects negative')
 np2_ok = pcall(function() math.nextpoweroftwo(0 / 0) end)
 assert_false(np2_ok, 'math.nextpoweroftwo rejects NaN')
 np2_ok = pcall(function() math.nextpoweroftwo(math.huge) end)
 assert_false(np2_ok, 'math.nextpoweroftwo rejects infinity')
+local overflowish = (2 ^ 1023) * 1.5
+assert_true(overflowish < math.huge, 'overflow-ish nextpoweroftwo input is finite')
+np2_ok, np2_err = pcall(function() math.nextpoweroftwo(overflowish) end)
+assert_false(np2_ok, 'math.nextpoweroftwo rejects finite result overflow')
+assert_true(tostring(np2_err):find('result would overflow', 1, true) ~= nil,
+  'math.nextpoweroftwo overflow error message')
 assert_close(math.normalizeangle(3 * math.pi), -math.pi, 'math.normalizeangle')
 assert_close(math.eerp(2, 8, 0.5), 4, 'math.eerp')
 assert_eq(math.oscillate(7, 0, 5), 3, 'math.oscillate')
