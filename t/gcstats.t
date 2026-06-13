@@ -107,6 +107,11 @@ local direct_finalizer_fields = {
   "finalizer_direct_cfunc_fallbacks",
 }
 
+local nonresurrecting_finalizer_fields = {
+  "finalizer_nonresurrecting_cfunc_frees",
+  "finalizer_nonresurrecting_cfunc_fallbacks",
+}
+
 local function check_shape(t)
   assert(type(t) == "table")
   for _, name in ipairs(fields) do
@@ -127,6 +132,12 @@ local function check_shape(t)
   end
   if t.finalizer_direct_cfunc_calls ~= nil then
     for _, name in ipairs(direct_finalizer_fields) do
+      assert(type(t[name]) == "number", name)
+      assert(t[name] >= 0, name)
+    end
+  end
+  if t.finalizer_nonresurrecting_cfunc_frees ~= nil then
+    for _, name in ipairs(nonresurrecting_finalizer_fields) do
       assert(type(t[name]) == "number", name)
       assert(t[name] >= 0, name)
     end

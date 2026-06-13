@@ -231,6 +231,9 @@ static int jit_gcstats(lua_State *L)
 #if LJ_HAS_UNPROTECTED_C_FINALIZERS
   hsize += 3;
 #endif
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+  hsize += 2;
+#endif
   t = lj_tab_new_ah(L, 0, hsize);
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
@@ -304,6 +307,10 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_direct_cfunc_calls", s->finalizer_direct_cfunc_calls);
   gcstats_set(L, t, "finalizer_direct_cfunc_nonzero_results", s->finalizer_direct_cfunc_nonzero_results);
   gcstats_set(L, t, "finalizer_direct_cfunc_fallbacks", s->finalizer_direct_cfunc_fallbacks);
+#endif
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+  gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_frees", s->finalizer_nonresurrecting_cfunc_frees);
+  gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_fallbacks", s->finalizer_nonresurrecting_cfunc_fallbacks);
 #endif
   gcstats_set(L, t, "weak_tables", s->weak_tables);
   gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);

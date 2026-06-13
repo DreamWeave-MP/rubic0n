@@ -37,6 +37,7 @@ Table of Contents
         * [Improved allocation sinking](#improved-allocation-sinking)
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
         * [`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS`](#luajit_enable_unprotected_c_finalizers)
+        * [`LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS`](#luajit_enable_nonresurrecting_c_finalizers)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
         * [Updated `-bl` option](#updated--bl-option)
@@ -208,6 +209,9 @@ new_gcobj_calls        step_calls             cycle_count
 fullgc_calls           propagate_calls        propagate_bytes
 atomic_calls           sweep_string_steps     sweep_root_steps
 finalizer_scan_steps   finalizer_queued       finalizer_calls
+finalizer_cfunc_calls  finalizer_cfunc_nup0_calls
+finalizer_cfunc_upvalue_calls                 finalizer_lfunc_calls
+finalizer_ffunc_calls  finalizer_other_calls  finalizer_error_calls
 weak_tables            weak_slots_cleared
 barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
@@ -220,6 +224,12 @@ build scripts by design for native userdata workloads. In that mode, normal GC
 cycles discover userdata finalizers incrementally during the sweep phase instead
 of walking the userdata candidate list during atomic. These counters are
 contract-bound to this fork and are intended for validating that mode.
+
+Builds with `-DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` also expose
+`finalizer_direct_cfunc_*` counters. Builds that additionally enable
+`-DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS` expose
+`finalizer_nonresurrecting_cfunc_frees` and
+`finalizer_nonresurrecting_cfunc_fallbacks`.
 
 Counter groups include allocator calls and bytes (`alloc_*`, `free_*`,
 `realloc_*`), object allocation (`new_gcobj_calls`), incremental step and cycle
@@ -598,6 +608,48 @@ check finalizer telemetry on representative workloads. In particular, review
 `finalizer_lfunc_calls`, `finalizer_ffunc_calls`, and `finalizer_other_calls` to
 confirm that the finalizers expected to use the direct ABI are zero-upvalue C
 functions returning zero, and that other finalizer kinds are understood.
+
+[Back to TOC](#table-of-contents)
+
+### `LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS`
+
+`LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS` is an even narrower and more
+dangerous opt-in mode for embedders that can prove their native userdata
+finalizers never resurrect the userdata. It requires
+`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` and
+`LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`; enabling it without either prerequisite
+is a compile-time error. It is rejected with the stock atomic userdata-finalizer
+discovery path because that path can preserve weak-key entries whose finalized
+userdata keys would otherwise be freed immediately by this mode.
+
+This is not sweep-time immediate finalization. Userdata are still discovered,
+queued on `mmudata`, and finalized during the normal finalizer phase. The mode
+only changes normal GC `GCSfinalize` processing after sweep-time discovery and
+weak clearing. It is not used by the `lua_close()` finalizer drain. For an
+eligible full userdata selected from the normal GC queue, if its `__gc`
+metamethod is a zero-upvalue C function accepted by the direct C finalizer ABI,
+LuaJIT does not put the userdata back on the GC root list for possible
+resurrection. It calls the direct C finalizer and immediately frees the userdata
+with `lj_udata_free`.
+
+Pre-call eligibility is intentionally identical to the direct C finalizer ABI's
+shape checks: full userdata only and zero-upvalue C `__gc` only, called with the
+userdata at stack index 1. The finalizer is still required to return 0, not
+throw, not yield, not re-enter Lua, not depend on upvalues or environments, and
+not depend on protected error behavior. A nonzero return count is a contract
+violation that can only be observed after the unprotected call; it is reported by
+telemetry and does not safely turn the call into a fallback. Cdata finalizers,
+Lua finalizers, C closures with upvalues, fast functions, callable tables, and
+all other generic finalizers fall back to the normal protected/resurrection-
+capable path.
+
+Violating the no-resurrection contract can leave a live Lua reference to freed
+userdata and corrupt the runtime. Use this only when the embedder owns and audits
+every zero-upvalue C userdata finalizer covered by the mode. With
+`LUAJIT_ENABLE_GCSTATS`, validate `finalizer_nonresurrecting_cfunc_frees`,
+`finalizer_nonresurrecting_cfunc_fallbacks`,
+`finalizer_direct_cfunc_nonzero_results`, and the finalizer dispatch counters on
+representative workloads before considering this mode for production.
 
 [Back to TOC](#table-of-contents)
 

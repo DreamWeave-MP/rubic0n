@@ -102,6 +102,10 @@ XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
 # Enable sweep-time userdata finalizer discovery by default. Remove or comment
 # this define to use the stock atomic userdata finalizer discovery path.
 XCFLAGS+= -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
+# Dangerous opt-in native leaf finalizer modes. The no-resurrection mode requires
+# both unprotected C finalizers and sweep-time userdata finalizer discovery.
+#XCFLAGS+= -DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS
+#XCFLAGS+= -DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS
 #
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
 #XCFLAGS+= -DLUAJIT_DISABLE_JIT

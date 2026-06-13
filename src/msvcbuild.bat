@@ -67,6 +67,9 @@ if exist minilua.exe.manifest^
 :DA
 @rem Enabled by default; remove/comment to use stock atomic userdata finalizer discovery.
 @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
+@rem Dangerous opt-in native leaf finalizer modes. The no-resurrection mode requires
+@rem both unprotected C finalizers and sweep-time discovery; it is not enabled here.
+@rem @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS /DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS
 @rem Enabled by default in this fork, matching the Unix Makefile.
 @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_LUA52COMPAT
 @if "%1" neq "lua52compat" goto :NOLUA52COMPAT
