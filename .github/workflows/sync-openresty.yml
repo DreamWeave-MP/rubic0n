@@ -39,7 +39,7 @@ jobs:
           fi
 
       - name: Check out target branch
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: v2.1-agentzh
           fetch-depth: 0
@@ -224,7 +224,7 @@ jobs:
 
       - name: Create or update conflict issue
         if: steps.sync.outputs.result == 'conflict'
-        uses: actions/github-script@v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');
@@ -301,7 +301,7 @@ jobs:
 
       - name: Close resolved conflict issue
         if: steps.sync.outputs.result == 'pushed' || steps.sync.outputs.result == 'noop'
-        uses: actions/github-script@v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const title = process.env.CONFLICT_ISSUE_TITLE;

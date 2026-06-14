@@ -7,7 +7,7 @@ import shutil
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping
+from typing import Dict, Iterable, List, Mapping, NoReturn
 
 
 HEADERS = (
@@ -43,7 +43,7 @@ SHA256SUMS_ASSET = "SHA256SUMS.txt"
 VT_SUBMISSIONS_ASSET = "virustotal-submissions.tsv"
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     raise SystemExit(f"package-luajit: {message}")
 
 
@@ -349,7 +349,7 @@ def platform_notes(os_name: str, *, benchmarks_included: bool) -> List[str]:
         "Development releases are moving/mutable; tag releases are stable snapshots.",
         (
             "Release CI submits the exact GitHub release zip archives to VirusTotal "
-            "before uploading them; analysis may still be pending when a release appears."
+            "and waits for analysis completion before uploading them."
         ),
         (
             "NexusMods may run its own scanner/cache; compare SHA256 values against the "
@@ -420,8 +420,9 @@ def make_manifest(
                     "CI submits the exact GitHub release zip archives to VirusTotal before "
                     "uploading them as release assets."
                 ),
-                "pending_analysis_caveat": (
-                    "VirusTotal analysis may still be pending when the GitHub release appears."
+                "analysis_completion_policy": (
+                    "CI waits for VirusTotal analysis completion and fails the release job "
+                    "if the verdict exceeds the configured malicious/suspicious thresholds."
                 ),
                 "development_mutability": (
                     "Development release assets are mutable; SHA256 values and VirusTotal "
@@ -535,8 +536,10 @@ def write_artifact_readme(
         "",
         "- Release CI submits the exact GitHub release zip archives to VirusTotal before "
         "uploading them as release assets.",
-        "- VirusTotal analysis may still be pending when the release appears; check the "
-        f"release notes or `{VT_SUBMISSIONS_ASSET}` release asset for analysis links.",
+        "- Release CI waits for VirusTotal analysis completion and fails if the verdict "
+        "exceeds the configured malicious/suspicious thresholds.",
+        f"- Check the release notes or `{VT_SUBMISSIONS_ASSET}` release asset for "
+        "analysis links.",
         f"- `{SHA256SUMS_ASSET}` contains SHA256 hashes for the six release zips. The "
         "`development` release assets are mutable, so hashes and VirusTotal links change per run.",
         "- NexusMods may run its own scanner/cache; compare SHA256 values with the GitHub "

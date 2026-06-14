@@ -17,6 +17,7 @@ import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NoReturn
 
 
 SHA256SUMS_ASSET = "SHA256SUMS.txt"
@@ -123,7 +124,7 @@ EXPECTED_NAMES = {spec.name for spec in EXPECTED_ARCHIVES}
 VARIANTS = ("sandboxed", "unsandboxed")
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     raise SystemExit(f"prepare-luajit-release-assets: {message}")
 
 
@@ -149,7 +150,7 @@ def require_exact_archives(archive_dir: Path) -> dict[str, Path]:
         if extra:
             details.append(f"unexpected: {', '.join(extra)}")
         fail("expected exactly six release zip archives (" + "; ".join(details) + ")")
-    for name, path in archives.items():
+    for path in archives.values():
         if not path.is_file() or path.stat().st_size <= 0:
             fail(f"archive is empty or missing: {path}")
     return archives
@@ -344,8 +345,9 @@ def write_release_notes(
             "Each platform build submitted its final zip archive to VirusTotal before uploading "
             "that same path as a workflow artifact. This publisher downloaded those artifacts, "
             "recomputed SHA256, and compared the hashes against the per-platform VirusTotal TSV "
-            "metadata before uploading anything to the GitHub release. VirusTotal analysis may "
-            "still be pending when this release appears; follow the analysis link for current status.\n\n"
+            "metadata before uploading anything to the GitHub release. Each VirusTotal submit "
+            "job waited for analysis completion and failed if malicious/suspicious verdict "
+            "counts exceeded the configured thresholds; follow the analysis link for vendor details.\n\n"
         )
         handle.write(f"Checksums are uploaded as `{SHA256SUMS_ASSET}`; VirusTotal submission metadata is uploaded as `{VT_SUBMISSIONS_ASSET}`.\n\n")
         handle.write("| Archive | SHA256 | VirusTotal analysis |\n")
