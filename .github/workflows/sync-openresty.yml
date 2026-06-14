@@ -292,6 +292,13 @@ jobs:
               core.info(`Created conflict issue #${issue.data.number}.`);
             }
 
+      - name: Fail on upstream sync conflict
+        if: steps.sync.outputs.result == 'conflict'
+        shell: bash
+        run: |
+          printf '::error::OpenResty upstream sync conflict reported; failing workflow.\n'
+          exit 1
+
       - name: Close resolved conflict issue
         if: steps.sync.outputs.result == 'pushed' || steps.sync.outputs.result == 'noop'
         uses: actions/github-script@v9.0.0
