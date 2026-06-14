@@ -54,7 +54,7 @@ jobs:
             macos_deployment_target: '11.7'
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.3
 
       - name: Validate runner architecture
         shell: bash
@@ -197,21 +197,40 @@ jobs:
             otool -L "$library"
           done
 
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: bash
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python3 .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.virustotal.tsv
+
       - name: Upload release-shaped artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}
           path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
 
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
+
   build-windows-x64:
     name: Build Windows X64
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.3
 
-      - uses: TheMrMilchmann/setup-msvc-dev@v3
+      - uses: TheMrMilchmann/setup-msvc-dev@v4.0.0
         with:
           arch: x64
 
@@ -327,13 +346,32 @@ jobs:
           --variant-src unsandboxed=build-variants/unsandboxed/src
           --benchmarks-dir benchmarks-output
 
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: pwsh
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.virustotal.tsv
+
       - name: Upload release-shaped artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64
           path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
+
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
 
   build-android-arm64:
     name: Build Android ARM64 (AArch64) shared library
@@ -341,11 +379,11 @@ jobs:
     env:
       ANDROID_API_LEVEL: '21'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.3
 
       - name: Setup Android NDK
         id: setup_ndk
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.6.0
         with:
           ndk-version: r27c
 
@@ -441,13 +479,32 @@ jobs:
           --variant-src sandboxed=build-variants/sandboxed/src
           --variant-src unsandboxed=build-variants/unsandboxed/src
 
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: bash
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python3 .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.virustotal.tsv
+
       - name: Upload release-shaped artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64
           path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
+
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
 
   build-portmaster-arm64:
     name: Build PortMaster ARM64 (AArch64)
@@ -456,7 +513,7 @@ jobs:
     # ARMv7/armhf. If the toolchain stops being aarch64, fail closed below.
     container: ghcr.io/dreamweave-mp/stroggforge-portmaster-aarch64-almalinux8-builder:v39
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.3
 
       - name: Install PortMaster host build dependencies
         shell: bash
@@ -559,13 +616,32 @@ jobs:
           --variant-src sandboxed=build-variants/sandboxed/src
           --variant-src unsandboxed=build-variants/unsandboxed/src
 
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: bash
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python3 .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.virustotal.tsv
+
       - name: Upload release-shaped artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64
           path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
+
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
 
   publish-github-release:
     name: Publish GitHub Release
@@ -579,124 +655,26 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6.0.3
+
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           pattern: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-*
           path: release-downloads
           merge-multiple: true
 
-      - name: Verify release payload
-        shell: bash
-        run: |
-          set -euo pipefail
-          expected=(
-            LuaJIT-Windows-X64.zip
-            LuaJIT-Linux-X64.zip
-            LuaJIT-macOS-ARM64.zip
-            LuaJIT-macOS-X64.zip
-            LuaJIT-Android-ARM64.zip
-            LuaJIT-PortMaster-ARM64.zip
-          )
-          for archive in "${expected[@]}"; do
-            test -s "release-downloads/$archive"
-          done
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          from zipfile import ZipFile
-
-          expected = {
-              "LuaJIT-Windows-X64.zip": ("windows", {"lib/lua51.dll", "lib/lua51.lib"}, True),
-              "LuaJIT-Linux-X64.zip": ("linux", {"lib/libluajit-5.1.so.2"}, True),
-              "LuaJIT-macOS-ARM64.zip": ("macos", {"lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"}, True),
-              "LuaJIT-macOS-X64.zip": ("macos", {"lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"}, True),
-              "LuaJIT-Android-ARM64.zip": ("android", {"lib/libluajit.so"}, False),
-              "LuaJIT-PortMaster-ARM64.zip": ("portmaster", {"lib/libluajit.so"}, False),
-          }
-          variants = ("sandboxed", "unsandboxed")
-
-          def fail(message: str) -> None:
-              raise SystemExit(f"release payload validation failed: {message}")
-
-          for archive_name, (platform, required_names, benchmarks_expected) in expected.items():
-              archive_path = Path("release-downloads") / archive_name
-              with ZipFile(archive_path) as archive:
-                  names = set(archive.namelist())
-                  if "manifest.json" not in names:
-                      fail(f"{archive_name} is missing manifest.json")
-                  if "README-LuaJIT-artifact.md" not in names:
-                      fail(f"{archive_name} is missing README-LuaJIT-artifact.md")
-                  manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
-
-              nested_prefix = f"{archive_path.stem}/"
-              if any(name.startswith(nested_prefix) for name in names):
-                  fail(f"{archive_name} contains nested {archive_path.stem}/; expected variant dirs at zip root")
-              if manifest.get("platform") != platform:
-                  fail(f"{archive_name} manifest platform is {manifest.get('platform')!r}, expected {platform!r}")
-              if manifest.get("benchmarks_included") is not benchmarks_expected:
-                  fail(f"{archive_name} manifest has wrong benchmark inclusion state")
-              has_benchmarks = any(name.startswith("benchmarks/") for name in names)
-              if has_benchmarks is not benchmarks_expected:
-                  fail(f"{archive_name} benchmark payload presence is wrong")
-              if benchmarks_expected:
-                  for benchmark_file in (
-                      "benchmarks/README.md",
-                      "benchmarks/benchmark-summary.json",
-                      "benchmarks/benchmark-summary.csv",
-                      "benchmarks/benchmark-raw.csv",
-                      "benchmarks/benchmark-summary.svg",
-                  ):
-                      if benchmark_file not in names:
-                          fail(f"{archive_name} is missing {benchmark_file}")
-              if manifest.get("gcstats_enabled") is not False:
-                  fail(f"{archive_name} manifest must declare that GCStats is disabled")
-              if not manifest.get("package_path_root"):
-                  fail(f"{archive_name} manifest is missing package_path_root")
-              security = manifest.get("security")
-              if not isinstance(security, dict):
-                  fail(f"{archive_name} manifest is missing security")
-              if not isinstance(security.get("virustotal"), dict):
-                  fail(f"{archive_name} manifest is missing security.virustotal")
-              if security.get("sha256sums_asset") != "SHA256SUMS.txt":
-                  fail(f"{archive_name} manifest has wrong security.sha256sums_asset")
-              if not security.get("nexusmods_note"):
-                  fail(f"{archive_name} manifest is missing security.nexusmods_note")
-
-              for variant in variants:
-                  variant_prefix = f"{variant}/"
-                  jit_prefix = f"{variant_prefix}jit/"
-                  lib_prefix = f"{variant_prefix}lib/"
-
-                  if not any(name.startswith(variant_prefix) for name in names):
-                      fail(f"{archive_name} is missing {variant}/")
-                  if not any(name.startswith(jit_prefix) for name in names):
-                      fail(f"{archive_name} is missing {variant}/jit/")
-                  if f"{jit_prefix}vmdef.lua" not in names:
-                      fail(f"{archive_name} is missing {variant}/jit/vmdef.lua")
-                  if not any(name.startswith(lib_prefix) for name in names):
-                      fail(f"{archive_name} is missing {variant}/lib/")
-
-                  for required_name in required_names:
-                      archive_member = f"{variant_prefix}{required_name}"
-                      if archive_member not in names:
-                          fail(f"{archive_name} is missing {archive_member}")
-
-                  variant_manifest = manifest.get("variants", {}).get(variant)
-                  if not isinstance(variant_manifest, dict):
-                      fail(f"{archive_name} manifest is missing {variant}")
-                  expected_bypass = variant == "unsandboxed"
-                  if variant_manifest.get("sandbox_bypass_enabled") is not expected_bypass:
-                      fail(f"{archive_name} manifest has wrong sandbox bypass state for {variant}")
-                  if variant == "unsandboxed" and not variant_manifest.get("trusted_engine_dev_only"):
-                      fail(f"{archive_name} manifest lacks trusted/dev-only warning for unsandboxed")
-          PY
+      - name: Download VirusTotal metadata artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-*
+          path: release-vt-downloads
+          merge-multiple: true
 
       - name: Refresh and upload GitHub Release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VT_API_KEY: ${{ secrets.VT_API_KEY }}
           RELEASE_IS_TAG: ${{ startsWith(github.ref, 'refs/tags/') }}
           RELEASE_REF_NAME: ${{ github.ref_name }}
           RELEASE_TARGET: ${{ github.sha }}
@@ -746,99 +724,26 @@ jobs:
             release_exists=false
           fi
 
-          if [[ -z "${VT_API_KEY:-}" ]]; then
-            echo '::error::VT_API_KEY is required for non-PR release publishing runs.' >&2
-            exit 1
+          prepare_args=(
+            .github/scripts/prepare-luajit-release-assets.py
+            --archive-dir release-downloads
+            --vt-dir release-vt-downloads
+            --output-dir release-assets
+            --release-name "$release_name"
+            --repository "$RELEASE_REPOSITORY"
+            --workflow-run-id "$WORKFLOW_RUN_ID"
+            --target-sha "$RELEASE_TARGET"
+            --ref-name "$RELEASE_REF_NAME"
+          )
+          if [[ "$RELEASE_IS_TAG" == true ]]; then
+            prepare_args+=(--release-is-tag)
           fi
+          python3 "${prepare_args[@]}"
 
-          shopt -s nullglob
-          release_archives=(release-downloads/*.zip)
-          shopt -u nullglob
-          if [[ "${#release_archives[@]}" -ne 6 ]]; then
-            echo "::error::Expected 6 release zip archives for VirusTotal submission, found ${#release_archives[@]}." >&2
-            printf 'Found archive: %s\n' "${release_archives[@]}" >&2
-            exit 1
-          fi
-
-          sha256_sums='SHA256SUMS.txt'
-          vt_summary='virustotal-submissions.tsv'
-          : > "$sha256_sums"
-          printf 'archive\tsha256\tanalysis_id\tanalysis_url\n' > "$vt_summary"
-          for archive in "${release_archives[@]}"; do
-            archive_name="${archive##*/}"
-            sha256="$(sha256sum "$archive" | cut -d ' ' -f 1)"
-            printf '%s  %s\n' "$sha256" "$archive_name" >> "$sha256_sums"
-            response_file="$(mktemp)"
-            http_code="$(curl -sS -o "$response_file" -w '%{http_code}' \
-              --request POST 'https://www.virustotal.com/api/v3/files' \
-              --header "x-apikey: $VT_API_KEY" \
-              --form "file=@${archive}")"
-            if [[ "$http_code" != 2* ]]; then
-              echo "::error::VirusTotal submission failed for $archive with HTTP $http_code." >&2
-              cat "$response_file" >&2
-              rm -f "$response_file"
-              exit 1
-            fi
-            analysis_id="$(python3 - "$response_file" <<'PY'
-          import json
-          import sys
-
-          with open(sys.argv[1], encoding="utf-8") as handle:
-              payload = json.load(handle)
-          data = payload.get("data") or {}
-          print(data.get("id") or "")
-          PY
-            )"
-            if [[ -z "$analysis_id" ]]; then
-              echo "::error::VirusTotal response for $archive did not contain data.id." >&2
-              cat "$response_file" >&2
-              rm -f "$response_file"
-              exit 1
-            fi
-            analysis_url="https://www.virustotal.com/gui/file-analysis/$analysis_id"
-            printf '%s\t%s\t%s\t%s\n' "$archive_name" "$sha256" "$analysis_id" "$analysis_url" >> "$vt_summary"
-            echo "Submitted $archive_name to VirusTotal: sha256=$sha256 analysis_id=$analysis_id"
-            rm -f "$response_file"
-          done
-
-          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-            {
-              printf '### VirusTotal submissions\n\n'
-              printf '| Archive | SHA256 | Analysis |\n'
-              printf '| --- | --- | --- |\n'
-              while IFS=$'\t' read -r archive sha256 analysis_id analysis_url; do
-                [[ "$archive" == archive ]] && continue
-                printf "| \`%s\` | \`%s\` | [%s](%s) |\n" "$archive" "$sha256" "$analysis_id" "$analysis_url"
-              done < "$vt_summary"
-              printf '\n'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          notes_file="$(mktemp)"
-          {
-            printf 'CI Build for Dreamweave LuaJIT Fork\n\n'
-            printf 'Generated by workflow run: %s\n' "$WORKFLOW_RUN_ID"
-            printf '\nArtifacts contain two variant roots:\n'
-            printf -- '- sandboxed/: default build, no LUAJIT_ENABLE_SANDBOX_BYPASS, select("sandbox.bypass") unavailable.\n'
-            printf -- '- unsandboxed/: WARNING: trusted engine/dev use only; enables LUAJIT_ENABLE_SANDBOX_BYPASS and exposes select("sandbox.bypass").\n'
-            printf '\nEach zip includes README-LuaJIT-artifact.md and manifest.json. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n'
-            if [[ "$RELEASE_IS_TAG" == true ]]; then
-              printf 'This is a tag release stable snapshot; CI refuses to overwrite existing release assets.\n'
-            else
-              printf 'This is the moving development release; CI may move the development tag and clobber assets.\n'
-            fi
-
-            printf '\n## Security / chain of custody\n\n'
-            printf 'CI submitted the exact six GitHub release zip archives to VirusTotal before creating/updating release metadata, moving the development tag, or uploading assets. VirusTotal analysis may still be pending when this release appears; follow the analysis link for current status.\n\n'
-            printf "Checksums are uploaded as \`%s\`; VirusTotal submission metadata is uploaded as \`%s\`.\n\n" "$sha256_sums" "$vt_summary"
-            printf '| Archive | SHA256 | VirusTotal analysis |\n'
-            printf '| --- | --- | --- |\n'
-            while IFS=$'\t' read -r archive sha256 analysis_id analysis_url; do
-              [[ "$archive" == archive ]] && continue
-              printf "| \`%s\` | \`%s\` | [%s](%s) |\n" "$archive" "$sha256" "$analysis_id" "$analysis_url"
-            done < "$vt_summary"
-            printf '\nIf you obtained these files through NexusMods, compare SHA256 values with the GitHub release assets. NexusMods may run its own scanner/cache, which is a separate chain of custody.\n'
-          } > "$notes_file"
+          notes_file='release-assets/release-notes.md'
+          sha256_sums='release-assets/SHA256SUMS.txt'
+          vt_summary='release-assets/virustotal-submissions.tsv'
+          changelog='release-assets/CHANGELOG.md'
 
           if [[ "$RELEASE_IS_TAG" != true ]]; then
             tag_ref_error="$(mktemp)"
@@ -894,4 +799,179 @@ jobs:
             upload_args+=(--clobber)
           fi
 
-          gh release upload "$release_name" release-downloads/*.zip "$sha256_sums" "$vt_summary" "${upload_args[@]}"
+          gh release upload "$release_name" release-downloads/*.zip "$sha256_sums" "$vt_summary" "$changelog" "${upload_args[@]}"
+
+  publish-nexusmods:
+    name: Publish NexusMods development files
+    if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/v2.1-agentzh' }}
+    needs:
+      - build-native-posix
+      - build-windows-x64
+      - build-android-arm64
+      - build-portmaster-arm64
+      - publish-github-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.3
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-*
+          path: release-downloads
+          merge-multiple: true
+
+      - name: Download VirusTotal metadata artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-*
+          path: release-vt-downloads
+          merge-multiple: true
+
+      - name: Validate NexusMods secret
+        shell: bash
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUS_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NEXUS_API_KEY:-}" ]]; then
+            echo '::error::NEXUS_API_KEY is required for development NexusMods publishing.' >&2
+            exit 1
+          fi
+
+      - name: Verify archives and prepare NexusMods descriptions
+        shell: bash
+        env:
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          RELEASE_TARGET: ${{ github.sha }}
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+        run: >-
+          python3 .github/scripts/prepare-luajit-release-assets.py
+          --archive-dir release-downloads
+          --vt-dir release-vt-downloads
+          --output-dir nexus-assets
+          --release-name development
+          --repository "$RELEASE_REPOSITORY"
+          --workflow-run-id "$WORKFLOW_RUN_ID"
+          --target-sha "$RELEASE_TARGET"
+          --ref-name "$RELEASE_REF_NAME"
+          --nexus-description-dir nexus-descriptions
+
+      - name: Verify published GitHub development checksums
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          rm -rf github-release-verification
+          mkdir -p github-release-verification
+          gh release download development \
+            --repo "$RELEASE_REPOSITORY" \
+            --pattern SHA256SUMS.txt \
+            --dir github-release-verification \
+            --clobber
+          if ! cmp -s nexus-assets/SHA256SUMS.txt github-release-verification/SHA256SUMS.txt; then
+            echo '::error::Published GitHub development SHA256SUMS.txt does not match the local Nexus candidate checksums.' >&2
+            diff -u nexus-assets/SHA256SUMS.txt github-release-verification/SHA256SUMS.txt >&2 || true
+            exit 1
+          fi
+
+      - name: Read NexusMods descriptions
+        id: nexus_descriptions
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo 'windows_x64<<NEXUS_WINDOWS_X64_DESCRIPTION'
+            cat nexus-descriptions/windows_x64.bbcode
+            echo 'NEXUS_WINDOWS_X64_DESCRIPTION'
+            echo 'linux_x64<<NEXUS_LINUX_X64_DESCRIPTION'
+            cat nexus-descriptions/linux_x64.bbcode
+            echo 'NEXUS_LINUX_X64_DESCRIPTION'
+            echo 'macos_arm64<<NEXUS_MACOS_ARM64_DESCRIPTION'
+            cat nexus-descriptions/macos_arm64.bbcode
+            echo 'NEXUS_MACOS_ARM64_DESCRIPTION'
+            echo 'macos_x64<<NEXUS_MACOS_X64_DESCRIPTION'
+            cat nexus-descriptions/macos_x64.bbcode
+            echo 'NEXUS_MACOS_X64_DESCRIPTION'
+            echo 'android_arm64<<NEXUS_ANDROID_ARM64_DESCRIPTION'
+            cat nexus-descriptions/android_arm64.bbcode
+            echo 'NEXUS_ANDROID_ARM64_DESCRIPTION'
+            echo 'portmaster_arm64<<NEXUS_PORTMASTER_ARM64_DESCRIPTION'
+            cat nexus-descriptions/portmaster_arm64.bbcode
+            echo 'NEXUS_PORTMASTER_ARM64_DESCRIPTION'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload Windows X64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7252706'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
+          display_name: LuaJIT Windows X64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.windows_x64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload Linux X64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7252712'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Linux-X64.zip
+          display_name: LuaJIT Linux X64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.linux_x64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload macOS ARM64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7252718'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-ARM64.zip
+          display_name: LuaJIT macOS ARM64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.macos_arm64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload macOS X64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7536308'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-X64.zip
+          display_name: LuaJIT macOS Intel/X64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.macos_x64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload Android ARM64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7536302'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
+          display_name: LuaJIT Android ARM64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.android_arm64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload PortMaster ARM64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7536305'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
+          display_name: LuaJIT PortMaster ARM64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.portmaster_arm64 }}
+          archive_existing_file: 'true'
