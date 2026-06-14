@@ -40,6 +40,8 @@
 #include "lj_lib.h"
 #include "lj_cdata.h"
 
+#ifdef LUAJIT_ENABLE_SANDBOX_BYPASS
+
 /* -- Sandbox bypass hacks ------------------------------------------------ */
 
 // Special module for bypassing the sandbox. Use it via `select("sandbox.bypass")`.
@@ -134,6 +136,8 @@ static int _get_bypass_module(lua_State *L)
   lua_remove(L, -2);
   return 1;
 }
+
+#endif
 
 /* -- Base library: checks ------------------------------------------------ */
 
@@ -350,11 +354,13 @@ LJLIB_CF(unpack)		LJLIB_REC(.)
 LJLIB_CF(select)		LJLIB_REC(.)
 {
   int32_t n = (int32_t)(L->top - L->base);
+#ifdef LUAJIT_ENABLE_SANDBOX_BYPASS
   if (n == 1 && tvisstr(L->base)) {
     GCstr *name = strV(L->base);
     if (_gc_str_eq_lit(name, LUA_BYPASSMODNAME))
       return _get_bypass_module(L);
   }
+#endif
   if (n >= 1 && tvisstr(L->base) && *strVdata(L->base) == '#') {
     setintV(L->top-1, n-1);
     return 1;
