@@ -20,6 +20,10 @@ concurrency:
 
 env:
   LUAJIT_RELEASE_BINARY: LuaJIT
+  LUAJIT_UPSTREAM_REPO: https://github.com/LuaJIT/LuaJIT.git
+  # LuaJIT upstream does not publish frequent immutable release tags for 2.1.
+  # Resolve and record the SHA in each job so the benchmark input is explicit.
+  LUAJIT_UPSTREAM_REF: v2.1
 
 jobs:
   build-native-posix:
@@ -107,6 +111,7 @@ jobs:
           make clean
           make -j"$jobs" "${native_make_args[@]}"
           validate_native_variant sandboxed disabled
+          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant sandboxed --perl-subset
           stage_variant sandboxed
 
           make clean
@@ -114,7 +119,49 @@ jobs:
           # the fork's default feature flags. That would be a different build.
           make -j"$jobs" "${native_make_args[@]}" TARGET_CFLAGS="-DLUAJIT_ENABLE_SANDBOX_BYPASS"
           validate_native_variant unsandboxed enabled
+          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant unsandboxed --perl-subset
           stage_variant unsandboxed
+
+      - name: Build upstream LuaJIT and benchmark sandboxed variant
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_deployment_target }}
+        run: |
+          set -euo pipefail
+          jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)"
+          rm -rf upstream-luajit benchmarks-output
+          compiler_command="${CC:-cc}"
+          compiler_version="$($compiler_command --version 2>&1 || true)"
+          target_dylibpath=''
+          git clone --depth 1 --branch "$LUAJIT_UPSTREAM_REF" "$LUAJIT_UPSTREAM_REPO" upstream-luajit
+          upstream_sha="$(git -C upstream-luajit rev-parse HEAD)"
+          fork_make_args=()
+          upstream_make_args=()
+          if [[ "${{ matrix.os_name }}" == macOS ]]; then
+            target_dylibpath='@rpath/libluajit-5.1.2.dylib'
+            fork_make_args+=(TARGET_DYLIBPATH="$target_dylibpath")
+            upstream_make_args+=(TARGET_DYLIBPATH="$target_dylibpath")
+          fi
+          make -C upstream-luajit -j"$jobs" "${upstream_make_args[@]}"
+          python3 .github/scripts/benchmark-luajit.py \
+            --fork-luajit build-variants/sandboxed/src/luajit \
+            --upstream-luajit upstream-luajit/src/luajit \
+            --upstream-repo "$LUAJIT_UPSTREAM_REPO" \
+            --upstream-ref "$LUAJIT_UPSTREAM_REF" \
+            --upstream-sha "$upstream_sha" \
+            --platform '${{ matrix.os_name }}' \
+            --arch '${{ matrix.arch }}' \
+            --fork-build-description 'sandboxed release build from build-variants/sandboxed' \
+            --fork-build-command "make -j$jobs ${fork_make_args[*]}" \
+            --fork-compiler-command "$compiler_command" \
+            --fork-compiler-version "$compiler_version" \
+            --upstream-build-command "make -C upstream-luajit -j$jobs ${upstream_make_args[*]}" \
+            --upstream-compiler-command "$compiler_command" \
+            --upstream-compiler-version "$compiler_version" \
+            --env "TARGET_DYLIBPATH=$target_dylibpath" \
+            --env 'TARGET_CFLAGS=' \
+            --env "WORKFLOW_MAKE_JOBS=$jobs" \
+            --output-dir benchmarks-output
 
       - name: Package artifact
         shell: bash
@@ -124,6 +171,7 @@ jobs:
           --arch '${{ matrix.arch }}'
           --variant-src sandboxed=build-variants/sandboxed/src
           --variant-src unsandboxed=build-variants/unsandboxed/src
+          --benchmarks-dir benchmarks-output
 
       - name: Validate macOS packaged dylibs
         if: matrix.os_name == 'macOS'
@@ -214,6 +262,9 @@ jobs:
             .\src\luajit.exe -e "assert(jit.gcstats == nil)"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+            python .github/scripts/run-desktop-tests.py --luajit src/luajit.exe --variant $Variant
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
             $destination = "build-variants\$Variant"
             Remove-Item -Recurse -Force $destination -ErrorAction SilentlyContinue
             New-Item -ItemType Directory -Force $destination | Out-Null
@@ -227,6 +278,45 @@ jobs:
           Invoke-LuaJITVariantBuild unsandboxed '/DLUAJIT_ENABLE_SANDBOX_BYPASS' $true
           Set-CLForVariant ''
 
+      - name: Build upstream LuaJIT and benchmark sandboxed variant
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Remove-Item -Recurse -Force upstream-luajit, benchmarks-output -ErrorAction SilentlyContinue
+          $compilerCommand = 'cl (via msvcbuild.bat)'
+          $compilerVersion = (cmd /c "cl 2>&1") -join "`n"
+          git clone --depth 1 --branch $env:LUAJIT_UPSTREAM_REF $env:LUAJIT_UPSTREAM_REPO upstream-luajit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $upstreamSha = git -C upstream-luajit rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Push-Location upstream-luajit\src
+          try {
+            cmd /c msvcbuild.bat lua52compat
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
+          python .github/scripts/benchmark-luajit.py `
+            --fork-luajit build-variants/sandboxed/src/luajit.exe `
+            --upstream-luajit upstream-luajit/src/luajit.exe `
+            --upstream-repo $env:LUAJIT_UPSTREAM_REPO `
+            --upstream-ref $env:LUAJIT_UPSTREAM_REF `
+            --upstream-sha $upstreamSha `
+            --platform Windows `
+            --arch X64 `
+            --fork-build-description 'sandboxed release build from build-variants\sandboxed' `
+            --fork-build-command 'src\msvcbuild.bat lua52compat' `
+            --fork-compiler-command $compilerCommand `
+            --fork-compiler-version $compilerVersion `
+            --upstream-build-command 'upstream-luajit\src\msvcbuild.bat lua52compat' `
+            --upstream-compiler-command $compilerCommand `
+            --upstream-compiler-version $compilerVersion `
+            --env "CL=$env:CL" `
+            --env 'TARGET_CFLAGS=' `
+            --env 'TARGET_DYLIBPATH=' `
+            --output-dir benchmarks-output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Package artifact
         shell: pwsh
         run: >-
@@ -235,6 +325,7 @@ jobs:
           --arch X64
           --variant-src sandboxed=build-variants/sandboxed/src
           --variant-src unsandboxed=build-variants/unsandboxed/src
+          --benchmarks-dir benchmarks-output
 
       - name: Upload release-shaped artifact
         uses: actions/upload-artifact@v4
@@ -516,19 +607,19 @@ jobs:
           from zipfile import ZipFile
 
           expected = {
-              "LuaJIT-Windows-X64.zip": ("windows", {"lib/lua51.dll", "lib/lua51.lib"}),
-              "LuaJIT-Linux-X64.zip": ("linux", {"lib/libluajit-5.1.so.2"}),
-              "LuaJIT-macOS-ARM64.zip": ("macos", {"lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"}),
-              "LuaJIT-macOS-X64.zip": ("macos", {"lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"}),
-              "LuaJIT-Android-ARM64.zip": ("android", {"lib/libluajit.so"}),
-              "LuaJIT-PortMaster-ARM64.zip": ("portmaster", {"lib/libluajit.so"}),
+              "LuaJIT-Windows-X64.zip": ("windows", {"lib/lua51.dll", "lib/lua51.lib"}, True),
+              "LuaJIT-Linux-X64.zip": ("linux", {"lib/libluajit-5.1.so.2"}, True),
+              "LuaJIT-macOS-ARM64.zip": ("macos", {"lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"}, True),
+              "LuaJIT-macOS-X64.zip": ("macos", {"lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"}, True),
+              "LuaJIT-Android-ARM64.zip": ("android", {"lib/libluajit.so"}, False),
+              "LuaJIT-PortMaster-ARM64.zip": ("portmaster", {"lib/libluajit.so"}, False),
           }
           variants = ("sandboxed", "unsandboxed")
 
           def fail(message: str) -> None:
               raise SystemExit(f"release payload validation failed: {message}")
 
-          for archive_name, (platform, required_names) in expected.items():
+          for archive_name, (platform, required_names, benchmarks_expected) in expected.items():
               archive_path = Path("release-downloads") / archive_name
               with ZipFile(archive_path) as archive:
                   names = set(archive.namelist())
@@ -543,8 +634,21 @@ jobs:
                   fail(f"{archive_name} contains nested {archive_path.stem}/; expected variant dirs at zip root")
               if manifest.get("platform") != platform:
                   fail(f"{archive_name} manifest platform is {manifest.get('platform')!r}, expected {platform!r}")
-              if manifest.get("benchmarks_included") is not False:
-                  fail(f"{archive_name} manifest must declare that benchmarks are not included")
+              if manifest.get("benchmarks_included") is not benchmarks_expected:
+                  fail(f"{archive_name} manifest has wrong benchmark inclusion state")
+              has_benchmarks = any(name.startswith("benchmarks/") for name in names)
+              if has_benchmarks is not benchmarks_expected:
+                  fail(f"{archive_name} benchmark payload presence is wrong")
+              if benchmarks_expected:
+                  for benchmark_file in (
+                      "benchmarks/README.md",
+                      "benchmarks/benchmark-summary.json",
+                      "benchmarks/benchmark-summary.csv",
+                      "benchmarks/benchmark-raw.csv",
+                      "benchmarks/benchmark-summary.svg",
+                  ):
+                      if benchmark_file not in names:
+                          fail(f"{archive_name} is missing {benchmark_file}")
               if manifest.get("gcstats_enabled") is not False:
                   fail(f"{archive_name} manifest must declare that GCStats is disabled")
 
@@ -670,7 +774,7 @@ jobs:
             printf '\nArtifacts contain two variant roots:\n'
             printf -- '- sandboxed/: default build, no LUAJIT_ENABLE_SANDBOX_BYPASS, select("sandbox.bypass") unavailable.\n'
             printf -- '- unsandboxed/: WARNING: trusted engine/dev use only; enables LUAJIT_ENABLE_SANDBOX_BYPASS and exposes select("sandbox.bypass").\n'
-            printf '\nEach zip includes README-LuaJIT-artifact.md and manifest.json. No GCStats telemetry build and no benchmarks are included.\n'
+            printf '\nEach zip includes README-LuaJIT-artifact.md and manifest.json. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n'
             if [[ "$RELEASE_IS_TAG" == true ]]; then
               printf 'This is a tag release stable snapshot; CI refuses to overwrite existing release assets.\n'
             else

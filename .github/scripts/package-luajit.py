@@ -210,7 +210,7 @@ def validate_variant_package_layout(
             fail(f"required packaged file is missing: {path}")
 
 
-def validate_archive_layout(archive_path: Path, *, os_name: str) -> None:
+def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_included: bool) -> None:
     with zipfile.ZipFile(archive_path) as archive:
         names = set(archive.namelist())
         if ARTIFACT_MANIFEST in names:
@@ -236,8 +236,11 @@ def validate_archive_layout(archive_path: Path, *, os_name: str) -> None:
             f"archive manifest os_name mismatch: {manifest.get('os_name')!r}, "
             f"expected {os_name!r}"
         )
-    if manifest.get("benchmarks_included") is not False:
-        fail(f"archive manifest must say benchmarks are not included: {archive_path}")
+    if manifest.get("benchmarks_included") is not benchmarks_included:
+        fail(f"archive manifest benchmark inclusion state is wrong: {archive_path}")
+    has_benchmarks = any(name.startswith("benchmarks/") for name in names)
+    if has_benchmarks is not benchmarks_included:
+        fail(f"archive benchmark payload presence is wrong: {archive_path}")
     if manifest.get("gcstats_enabled") is not False:
         fail(f"archive manifest must say GCStats is disabled: {archive_path}")
     manifest_variants = manifest.get("variants")
@@ -320,11 +323,16 @@ def platform_description(os_name: str, arch: str) -> str:
     return f"{os_name} {arch}"
 
 
-def platform_notes(os_name: str) -> list[str]:
+def platform_notes(os_name: str, *, benchmarks_included: bool) -> list[str]:
     key = platform_key(os_name)
     notes = [
         "No GCStats telemetry build is included.",
-        "No benchmarks are included yet.",
+        (
+            "Desktop CI benchmark payload is included under benchmarks/. Timings from "
+            "hosted CI runners are noisy and not authoritative."
+            if benchmarks_included
+            else "Benchmarks are desktop-only and are omitted for cross-target artifacts."
+        ),
         "Development releases are moving/mutable; tag releases are stable snapshots.",
     ]
     if key == "android":
@@ -340,7 +348,9 @@ def platform_notes(os_name: str) -> list[str]:
     return notes
 
 
-def make_manifest(package_dir: Path, *, binary_name: str, os_name: str, arch: str) -> dict:
+def make_manifest(
+    package_dir: Path, *, binary_name: str, os_name: str, arch: str, benchmarks_included: bool
+) -> dict:
     key = platform_key(os_name)
     variants = {}
     for variant_name in VARIANTS:
@@ -374,10 +384,17 @@ def make_manifest(package_dir: Path, *, binary_name: str, os_name: str, arch: st
             "equivalent) so jit/*.lua resolves; do not add only the jit/ directory."
         ),
         "gcstats_enabled": False,
-        "benchmarks_included": False,
+        "benchmarks_included": benchmarks_included,
+        "benchmark_files": [f"benchmarks/{name}" for name in files_under(package_dir / "benchmarks")],
+        "benchmark_policy": (
+            "Desktop-only comparison of this fork's sandboxed build against upstream LuaJIT; "
+            "CI-hosted runner timings are noisy and not authoritative."
+            if benchmarks_included
+            else "Benchmarks are run only for desktop CI jobs and omitted for cross-target artifacts."
+        ),
         "development_release_policy": "development is moving/mutable and may be replaced by CI",
         "tag_release_policy": "tag releases are stable snapshots and existing assets are not overwritten",
-        "notes": platform_notes(os_name),
+        "notes": platform_notes(os_name, benchmarks_included=benchmarks_included),
         "variants": variants,
     }
     if key == "macos":
@@ -385,14 +402,24 @@ def make_manifest(package_dir: Path, *, binary_name: str, os_name: str, arch: st
     return manifest
 
 
-def write_manifest(package_dir: Path, *, binary_name: str, os_name: str, arch: str) -> None:
-    manifest = make_manifest(package_dir, binary_name=binary_name, os_name=os_name, arch=arch)
+def write_manifest(
+    package_dir: Path, *, binary_name: str, os_name: str, arch: str, benchmarks_included: bool
+) -> None:
+    manifest = make_manifest(
+        package_dir,
+        binary_name=binary_name,
+        os_name=os_name,
+        arch=arch,
+        benchmarks_included=benchmarks_included,
+    )
     with (package_dir / ARTIFACT_MANIFEST).open("w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2, sort_keys=True)
         handle.write("\n")
 
 
-def write_artifact_readme(package_dir: Path, *, binary_name: str, os_name: str, arch: str) -> None:
+def write_artifact_readme(
+    package_dir: Path, *, binary_name: str, os_name: str, arch: str, benchmarks_included: bool
+) -> None:
     primary = ", ".join(f"`{library}`" for library in primary_runtime_libraries(os_name))
     lines = [
         f"# {binary_name} {os_name} {arch} artifact",
@@ -437,7 +464,13 @@ def write_artifact_readme(package_dir: Path, *, binary_name: str, os_name: str, 
         "- PortMaster is AArch64/arm64 Linux. It is not Android and not ARMv7/armhf.",
         f"- macOS dylibs use install id `{MACOS_INSTALL_ID}`.",
         "- No GCStats telemetry build is included.",
-        "- No benchmarks are included yet.",
+        (
+            "- Desktop benchmark payload is included under `benchmarks/`. It compares the "
+            "sandboxed build against upstream LuaJIT only. CI-hosted runner timings are noisy "
+            "and not authoritative."
+            if benchmarks_included
+            else "- Benchmarks are desktop-only and omitted for Android/PortMaster cross-target artifacts."
+        ),
         "- The `development` release is moving/mutable. Tag releases are stable snapshots.",
         "",
         f"See `{ARTIFACT_MANIFEST}` for the same contract in machine-readable form.",
@@ -512,6 +545,18 @@ def copy_common_payload(
             fail(f"internal error: missing source for {variant_name}")
 
 
+def copy_benchmarks_payload(source: Path, package_dir: Path) -> bool:
+    if not source.is_dir():
+        fail(f"benchmark payload directory is missing: {source}")
+    destination = package_dir / "benchmarks"
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(source, destination)
+    if not files_under(destination):
+        fail(f"benchmark payload directory is empty: {source}")
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary-name", default="LuaJIT")
@@ -526,6 +571,11 @@ def main() -> int:
         help="build output root for a variant; required for sandboxed and unsandboxed",
     )
     parser.add_argument("--output-dir", default="release-artifact")
+    parser.add_argument(
+        "--benchmarks-dir",
+        default="",
+        help="optional desktop benchmark payload to copy to benchmarks/ at artifact root",
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -553,23 +603,31 @@ def main() -> int:
         source_dir=variant_sources["sandboxed"],
         variant_sources=variant_sources,
     )
+    benchmarks_included = False
+    if args.benchmarks_dir:
+        benchmarks_dir = Path(args.benchmarks_dir)
+        if not benchmarks_dir.is_absolute():
+            benchmarks_dir = root / benchmarks_dir
+        benchmarks_included = copy_benchmarks_payload(benchmarks_dir.resolve(), package_dir)
     write_artifact_readme(
         package_dir,
         binary_name=args.binary_name,
         os_name=args.os_name,
         arch=args.arch,
+        benchmarks_included=benchmarks_included,
     )
     write_manifest(
         package_dir,
         binary_name=args.binary_name,
         os_name=args.os_name,
         arch=args.arch,
+        benchmarks_included=benchmarks_included,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     archive_path = output_dir / f"{archive_stem}.zip"
     write_zip(package_dir, archive_path)
-    validate_archive_layout(archive_path, os_name=args.os_name)
+    validate_archive_layout(archive_path, os_name=args.os_name, benchmarks_included=benchmarks_included)
     print(archive_path.relative_to(root).as_posix())
     return 0
 
