@@ -13,6 +13,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import sys
 import zipfile
 from dataclasses import dataclass
@@ -25,6 +26,8 @@ VT_SUBMISSIONS_ASSET = "virustotal-submissions.tsv"
 CHANGELOG_ASSET = "CHANGELOG.md"
 RELEASE_NOTES = "release-notes.md"
 VT_HEADER = ("archive", "sha256", "analysis_id", "analysis_url")
+NEXUS_NAME_PATTERN_TEXT = r"^[a-zA-Z0-9 _'().-]+$"
+NEXUS_NAME_PATTERN = re.compile(NEXUS_NAME_PATTERN_TEXT)
 
 
 @dataclass(frozen=True)
@@ -88,7 +91,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         required_names=("lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"),
         benchmarks_expected=True,
         nexus_output="macos_x64",
-        nexus_title="LuaJIT macOS Intel/X64 development",
+        nexus_title="LuaJIT macOS Intel X64 development",
         nexus_platform_meaning="macOS Intel x86_64 build.",
         nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.2.dylib[/code]; [code]lib/libluajit-5.1.dylib[/code] is also included as an alias.",
         nexus_caveats=("This is separate from the macOS ARM64 / Apple Silicon download; do not use it for arm64-only macOS runtimes.",),
@@ -126,6 +129,22 @@ VARIANTS = ("sandboxed", "unsandboxed")
 
 def fail(message: str) -> NoReturn:
     raise SystemExit(f"prepare-luajit-release-assets: {message}")
+
+
+def sanitize_nexus_name(name: str) -> str:
+    # Nexus validates upload/version names with ^[a-zA-Z0-9 _'().-]+$.
+    # Human platform labels tend to grow slash-separated synonyms; turn those
+    # into spaces, then fail if anything else still violates the API contract.
+    return " ".join(name.replace("/", " ").split())
+
+
+def nexus_display_name(spec: ArchiveSpec) -> str:
+    name = sanitize_nexus_name(spec.nexus_title)
+    if not name:
+        fail(f"{spec.name} has an empty Nexus display name")
+    if NEXUS_NAME_PATTERN.fullmatch(name) is None:
+        fail(f"{spec.name} Nexus display name {name!r} does not match {NEXUS_NAME_PATTERN_TEXT}")
+    return name
 
 
 def sha256_file(path: Path) -> str:
@@ -396,8 +415,8 @@ def bbcode_url(url: str, text: str) -> str:
     return f"[URL={url}]{text}[/URL]"
 
 
-def write_nexus_descriptions(
-    description_dir: Path,
+def write_nexus_metadata(
+    metadata_dir: Path,
     *,
     release_name: str,
     repository: str,
@@ -406,16 +425,20 @@ def write_nexus_descriptions(
     hashes: dict[str, str],
     vt_rows: dict[str, dict[str, str]],
 ) -> None:
-    description_dir.mkdir(parents=True, exist_ok=True)
+    metadata_dir.mkdir(parents=True, exist_ok=True)
     github_release = release_url(repository, release_name)
     github_changelog = changelog_url(repository, release_name)
     github_run = workflow_url(repository, workflow_run_id)
     github_commit = commit_url(repository, target_sha)
     for spec in EXPECTED_ARCHIVES:
+        display_name = nexus_display_name(spec)
         row = vt_rows[spec.name]
-        path = description_dir / f"{spec.nexus_output}.bbcode"
+        name_path = metadata_dir / f"{spec.nexus_output}.name"
+        name_path.write_text(f"{display_name}\n", encoding="utf-8")
+
+        path = metadata_dir / f"{spec.nexus_output}.bbcode"
         with path.open("w", encoding="utf-8") as handle:
-            handle.write(f"[b]{spec.nexus_title}[/b]\n\n")
+            handle.write(f"[b]{display_name}[/b]\n\n")
             handle.write("Moving development build of the Dreamweave LuaJIT fork. Tag releases are not uploaded to NexusMods; stable archives live on GitHub.\n\n")
             handle.write("[b]Platform / runtime payload[/b]\n")
             handle.write(f"Platform meaning: {spec.nexus_platform_meaning}\n")
@@ -458,7 +481,8 @@ def main() -> int:
     parser.add_argument("--workflow-run-id", required=True)
     parser.add_argument("--target-sha", required=True)
     parser.add_argument("--ref-name", required=True)
-    parser.add_argument("--nexus-description-dir", type=Path)
+    parser.add_argument("--nexus-metadata-dir", type=Path)
+    parser.add_argument("--nexus-description-dir", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     archive_dir = args.archive_dir.resolve()
@@ -496,9 +520,15 @@ def main() -> int:
         vt_rows=vt_rows,
     )
 
+    nexus_metadata_dir = args.nexus_metadata_dir
     if args.nexus_description_dir is not None:
-        write_nexus_descriptions(
-            args.nexus_description_dir.resolve(),
+        if nexus_metadata_dir is not None and args.nexus_description_dir != nexus_metadata_dir:
+            fail("--nexus-description-dir and --nexus-metadata-dir must not point to different directories")
+        nexus_metadata_dir = args.nexus_description_dir
+
+    if nexus_metadata_dir is not None:
+        write_nexus_metadata(
+            nexus_metadata_dir.resolve(),
             release_name=args.release_name,
             repository=args.repository,
             workflow_run_id=args.workflow_run_id,
