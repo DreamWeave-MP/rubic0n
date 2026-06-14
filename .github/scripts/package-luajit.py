@@ -39,6 +39,8 @@ VARIANTS = ("sandboxed", "unsandboxed")
 
 ARTIFACT_README = "README-LuaJIT-artifact.md"
 ARTIFACT_MANIFEST = "manifest.json"
+SHA256SUMS_ASSET = "SHA256SUMS.txt"
+VT_SUBMISSIONS_ASSET = "virustotal-submissions.tsv"
 
 
 def fail(message: str) -> None:
@@ -243,6 +245,17 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
         fail(f"archive benchmark payload presence is wrong: {archive_path}")
     if manifest.get("gcstats_enabled") is not False:
         fail(f"archive manifest must say GCStats is disabled: {archive_path}")
+    if not manifest.get("package_path_root"):
+        fail(f"archive manifest package_path_root field is missing: {archive_path}")
+    security = manifest.get("security")
+    if not isinstance(security, dict):
+        fail(f"archive manifest security field is missing or invalid: {archive_path}")
+    if not isinstance(security.get("virustotal"), dict):
+        fail(f"archive manifest security.virustotal field is missing or invalid: {archive_path}")
+    if security.get("sha256sums_asset") != SHA256SUMS_ASSET:
+        fail(f"archive manifest security.sha256sums_asset field is wrong: {archive_path}")
+    if not security.get("nexusmods_note"):
+        fail(f"archive manifest security.nexusmods_note field is missing: {archive_path}")
     manifest_variants = manifest.get("variants")
     if not isinstance(manifest_variants, dict):
         fail(f"archive manifest variants field is missing or invalid: {archive_path}")
@@ -334,6 +347,14 @@ def platform_notes(os_name: str, *, benchmarks_included: bool) -> list[str]:
             else "Benchmarks are desktop-only and are omitted for cross-target artifacts."
         ),
         "Development releases are moving/mutable; tag releases are stable snapshots.",
+        (
+            "Release CI submits the exact GitHub release zip archives to VirusTotal "
+            "before uploading them; analysis may still be pending when a release appears."
+        ),
+        (
+            "NexusMods may run its own scanner/cache; compare SHA256 values against the "
+            "GitHub release assets."
+        ),
     ]
     if key == "android":
         notes.append("Android is a raw ARM64 libluajit.so payload, not an APK.")
@@ -358,6 +379,7 @@ def make_manifest(
         bypass_enabled = variant_name == "unsandboxed"
         variants[variant_name] = {
             "root": f"{variant_name}/",
+            "package_path_root": f"{variant_name}/",
             "sandbox_bypass_enabled": bypass_enabled,
             "trusted_engine_dev_only": bypass_enabled,
             "warning": (
@@ -378,11 +400,41 @@ def make_manifest(
         "platform": key,
         "platform_description": platform_description(os_name, arch),
         "artifact_layout": "sandboxed/ and unsandboxed/ variant roots at zip root",
+        "package_path_root": (
+            "Use exactly one selected variant root (sandboxed/ or unsandboxed/) as the "
+            "package.path root, or an equivalent parent directory containing jit/. Do "
+            "not use the jit/ directory itself as the root."
+        ),
+        "copy_policy": (
+            "Copy exactly one selected variant root, or at minimum that same variant's "
+            "matching lib/ payload plus jit/ directory. Do not mix payloads between variants."
+        ),
         "primary_runtime_libraries": primary_runtime_libraries(os_name),
         "jit_module_path_requirement": (
             "Add the selected variant root itself to package.path (or the embedding "
             "equivalent) so jit/*.lua resolves; do not add only the jit/ directory."
         ),
+        "security": {
+            "virustotal": {
+                "release_archive_policy": (
+                    "CI submits the exact GitHub release zip archives to VirusTotal before "
+                    "uploading them as release assets."
+                ),
+                "pending_analysis_caveat": (
+                    "VirusTotal analysis may still be pending when the GitHub release appears."
+                ),
+                "development_mutability": (
+                    "Development release assets are mutable; SHA256 values and VirusTotal "
+                    "analysis links change per publishing run."
+                ),
+            },
+            "sha256sums_asset": SHA256SUMS_ASSET,
+            "virustotal_submissions_asset": VT_SUBMISSIONS_ASSET,
+            "nexusmods_note": (
+                "NexusMods may run its own scanner/cache; compare SHA256 values with the "
+                "GitHub release assets."
+            ),
+        },
         "gcstats_enabled": False,
         "benchmarks_included": benchmarks_included,
         "benchmark_files": [f"benchmarks/{name}" for name in files_under(package_dir / "benchmarks")],
@@ -434,7 +486,10 @@ def write_artifact_readme(
         "with `LUAJIT_ENABLE_SANDBOX_BYPASS` and exposes "
         "`select(\"sandbox.bypass\")`, which is a deliberate sandbox escape hatch.",
         "",
-        "Choose exactly one variant root and keep its `jit/` modules with its library.",
+        "Choose exactly one variant root (`sandboxed/` or `unsandboxed/`) and keep its "
+        "`jit/` modules with its library. If your packaging layout cannot preserve the "
+        "root verbatim, copy at minimum that same variant's matching `lib/` payload plus "
+        "its `jit/` directory. Do not mix payloads between variants.",
         "",
         "## Library to copy",
         "",
@@ -442,21 +497,24 @@ def write_artifact_readme(
         "",
         "Platform table:",
         "",
-        "| Artifact | Runtime library to copy |",
-        "| --- | --- |",
-        "| Windows X64 | `lib/lua51.dll` (`lib/lua51.lib` is the import library) |",
-        "| Linux X64 | `lib/libluajit-5.1.so.2` |",
+        "| Artifact | Runtime library to copy | Example destination / loader contract |",
+        "| --- | --- | --- |",
+        "| Windows X64 | `lib/lua51.dll` (`lib/lua51.lib` is the import library) | Application binary directory or another DLL search path. |",
+        "| Linux X64 | `lib/libluajit-5.1.so.2` | A directory resolved by `rpath`, `runpath`, `ldconfig`, or `LD_LIBRARY_PATH`. |",
         f"| macOS ARM64/X64 | `lib/{MACOS_DYLIB_NAME}` "
-        f"(install id `{MACOS_INSTALL_ID}`; also includes `lib/{MACOS_DYLIB_ALIAS}`) |",
-        "| Android ARM64 | `lib/libluajit.so` |",
-        "| PortMaster ARM64 | `lib/libluajit.so` |",
+        f"(install id `{MACOS_INSTALL_ID}`; also includes `lib/{MACOS_DYLIB_ALIAS}`) "
+        "| App bundle `Contents/Frameworks` or equivalent, with rpath resolving "
+        f"`{MACOS_INSTALL_ID}`. |",
+        "| Android ARM64 | `lib/libluajit.so` | `app/src/main/jniLibs/arm64-v8a/libluajit.so` or equivalent native-lib ABI location. |",
+        "| PortMaster ARM64 | `lib/libluajit.so` | Place `libluajit.so` where the launcher/runtime `LD_LIBRARY_PATH` can find it. |",
         "",
         "## JIT module path",
         "",
-        "Consumers need the selected variant root on `package.path` (or the embedding "
-        "equivalent), not just the `jit/` directory. For example, use "
-        "`/path/to/sandboxed/?.lua`; using `/path/to/sandboxed/jit/?.lua` makes "
-        "`require(\"jit.vmdef\")` look in the wrong place.",
+        "Consumers need the selected variant root on `package.path` (or an equivalent "
+        "parent directory of `jit/` in the embedding), not the `jit/` directory itself. "
+        "For example, use `/path/to/sandboxed/?.lua`; using "
+        "`/path/to/sandboxed/jit/?.lua` makes `require(\"jit.vmdef\")` look in "
+        "the wrong place.",
         "",
         "## Platform notes",
         "",
@@ -472,6 +530,17 @@ def write_artifact_readme(
             else "- Benchmarks are desktop-only and omitted for Android/PortMaster cross-target artifacts."
         ),
         "- The `development` release is moving/mutable. Tag releases are stable snapshots.",
+        "",
+        "## Security / VirusTotal / NexusMods",
+        "",
+        "- Release CI submits the exact GitHub release zip archives to VirusTotal before "
+        "uploading them as release assets.",
+        "- VirusTotal analysis may still be pending when the release appears; check the "
+        f"release notes or `{VT_SUBMISSIONS_ASSET}` release asset for analysis links.",
+        f"- `{SHA256SUMS_ASSET}` contains SHA256 hashes for the six release zips. The "
+        "`development` release assets are mutable, so hashes and VirusTotal links change per run.",
+        "- NexusMods may run its own scanner/cache; compare SHA256 values with the GitHub "
+        "release assets if you fetch the files from there.",
         "",
         f"See `{ARTIFACT_MANIFEST}` for the same contract in machine-readable form.",
         "",
