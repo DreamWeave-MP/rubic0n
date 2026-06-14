@@ -506,9 +506,10 @@ static void gc_preserve_now(global_State *g, GCobj *o)
 ** finalizer discovery. It is for static, leaf/native userdata finalizers: late
 ** mutation of metatables or __gc is unsupported after the candidate is scanned,
 ** and Lua closure dependency graphs are not recursively preserved here. For a
-** dead finalizable userdata, only the userdata, its metatable, and the immediate
-** __gc callable are made current-white so root/table sweeping cannot free them
-** before GCSfinalize resolves and calls the finalizer.
+** dead finalizable userdata, the userdata is always made current-white. Its
+** metatable and immediate __gc callable are made current-white only if they are
+** still dead in this post-atomic sweep-udata window, so root/table sweeping
+** cannot free required dead objects before GCSfinalize resolves the finalizer.
 */
 static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
 				    GCSize *queued)
@@ -539,11 +540,29 @@ static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
 		 "sweep of unlive userdata");
       setgcrefr(*p, o->gch.nextgc);
       if (mo) {
+	GCobj *mto;
 	*queued += sizeudata(ud);
 	markfinalized(o);
 	gc_preserve_now(g, o);
-	gc_preserve_now(g, obj2gco(mt));
-	if (tvisgcv(mo)) gc_preserve_now(g, gcV(mo));
+	lj_gc_stats_inc(g, sweep_udata_preserve_udata);
+	mto = obj2gco(mt);
+	if (isdead(g, mto)) {
+	  gc_preserve_now(g, mto);
+	  lj_gc_stats_inc(g, sweep_udata_preserve_mt_dead);
+	} else {
+	  lj_gc_stats_inc(g, sweep_udata_preserve_mt_alive_skip);
+	}
+	if (tvisgcv(mo)) {
+	  GCobj *mmo = gcV(mo);
+	  if (isdead(g, mmo)) {
+	    gc_preserve_now(g, mmo);
+	    lj_gc_stats_inc(g, sweep_udata_preserve_callable_dead);
+	  } else {
+	    lj_gc_stats_inc(g, sweep_udata_preserve_callable_alive_skip);
+	  }
+	} else {
+	  lj_gc_stats_inc(g, sweep_udata_preserve_callable_nongc);
+	}
 	lj_gc_queuefinalizer(g, o);
 	lj_gc_stats_inc(g, sweep_udata_queued);
       } else {

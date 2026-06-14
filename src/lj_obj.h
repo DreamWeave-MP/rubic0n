@@ -644,6 +644,12 @@ typedef struct GCStats {
   uint64_t sweep_udata_freed;
   uint64_t sweep_udata_parked;
   uint64_t sweep_udata_preserved;
+  uint64_t sweep_udata_preserve_udata;
+  uint64_t sweep_udata_preserve_mt_dead;
+  uint64_t sweep_udata_preserve_mt_alive_skip;
+  uint64_t sweep_udata_preserve_callable_dead;
+  uint64_t sweep_udata_preserve_callable_alive_skip;
+  uint64_t sweep_udata_preserve_callable_nongc;
 #endif
   uint64_t sweep_string_steps;
   uint64_t sweep_root_steps;

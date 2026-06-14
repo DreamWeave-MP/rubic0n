@@ -93,6 +93,12 @@ local sweep_udata_fields = {
   "sweep_udata_freed",
   "sweep_udata_parked",
   "sweep_udata_preserved",
+  "sweep_udata_preserve_udata",
+  "sweep_udata_preserve_mt_dead",
+  "sweep_udata_preserve_mt_alive_skip",
+  "sweep_udata_preserve_callable_dead",
+  "sweep_udata_preserve_callable_alive_skip",
+  "sweep_udata_preserve_callable_nongc",
 }
 
 local cdata_fields = {

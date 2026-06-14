@@ -226,7 +226,7 @@ static int jit_gcstats(lua_State *L)
   hsize += 3;
 #endif
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
-  hsize += 5;
+  hsize += 11;
 #endif
 #if LJ_HAS_UNPROTECTED_C_FINALIZERS
   hsize += 3;
@@ -290,6 +290,12 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "sweep_udata_freed", s->sweep_udata_freed);
   gcstats_set(L, t, "sweep_udata_parked", s->sweep_udata_parked);
   gcstats_set(L, t, "sweep_udata_preserved", s->sweep_udata_preserved);
+  gcstats_set(L, t, "sweep_udata_preserve_udata", s->sweep_udata_preserve_udata);
+  gcstats_set(L, t, "sweep_udata_preserve_mt_dead", s->sweep_udata_preserve_mt_dead);
+  gcstats_set(L, t, "sweep_udata_preserve_mt_alive_skip", s->sweep_udata_preserve_mt_alive_skip);
+  gcstats_set(L, t, "sweep_udata_preserve_callable_dead", s->sweep_udata_preserve_callable_dead);
+  gcstats_set(L, t, "sweep_udata_preserve_callable_alive_skip", s->sweep_udata_preserve_callable_alive_skip);
+  gcstats_set(L, t, "sweep_udata_preserve_callable_nongc", s->sweep_udata_preserve_callable_nongc);
 #endif
   gcstats_set(L, t, "sweep_string_steps", s->sweep_string_steps);
   gcstats_set(L, t, "sweep_root_steps", s->sweep_root_steps);

@@ -224,6 +224,16 @@ build scripts by design for native userdata workloads. In that mode, normal GC
 cycles discover userdata finalizers incrementally during the sweep phase instead
 of walking the userdata candidate list during atomic. These counters are
 contract-bound to this fork and are intended for validating that mode.
+`sweep_udata_preserved` counts actual current-white preservation operations. The
+userdata itself is still preserved unconditionally before queueing. Metatables
+and collectable immediate `__gc` values are preserved only when runtime liveness
+shows they are still dead in the post-atomic sweep-udata window; already-live
+objects are counted as alive skips, and non-collectable `__gc` values are counted
+as no-preserve cases. The detailed fields are
+`sweep_udata_preserve_udata`, `sweep_udata_preserve_mt_dead`,
+`sweep_udata_preserve_mt_alive_skip`, `sweep_udata_preserve_callable_dead`,
+`sweep_udata_preserve_callable_alive_skip`, and
+`sweep_udata_preserve_callable_nongc`.
 
 Builds with `-DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` also expose
 `finalizer_direct_cfunc_*` counters. Builds that additionally enable
@@ -563,10 +573,12 @@ instead process the candidate segment incrementally before string/root sweeping.
 This mode is only for static, native/leaf userdata finalizers. Late mutation of
 userdata metatables or `__gc` after a candidate has been scanned is still
 unsupported, including changes through `debug`, FFI, sandbox bypass access, or
-similar privileged mechanisms. Dead finalizable userdata preserve only the
-userdata, its metatable, and the immediate `__gc` callable until finalization;
-arbitrary Lua closure dependency graphs are outside the contract. Shutdown may
-still use the traditional close-time separation path.
+similar privileged mechanisms. Dead finalizable userdata themselves are always
+preserved until finalization. Their metatable and collectable immediate `__gc`
+value are preserved only if they are still dead when the post-atomic
+sweep-udata step queues the userdata; if they are already live, no additional
+preservation is needed. Arbitrary Lua closure dependency graphs are outside the
+contract. Shutdown may still use the traditional close-time separation path.
 
 This changes an observable weak-key edge case from stock LuaJIT. Weak-key
 associations whose keys are dying finalizable userdata may be cleared before the

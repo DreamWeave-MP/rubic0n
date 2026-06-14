@@ -190,8 +190,21 @@ also contains sweep-time userdata finalizer discovery counters:
 </p>
 <pre class="code">
 sweep_udata_steps      sweep_udata_queued     sweep_udata_freed
-sweep_udata_parked     sweep_udata_preserved
+sweep_udata_parked     sweep_udata_preserved  sweep_udata_preserve_udata
+sweep_udata_preserve_mt_dead
+sweep_udata_preserve_mt_alive_skip
+sweep_udata_preserve_callable_dead
+sweep_udata_preserve_callable_alive_skip
+sweep_udata_preserve_callable_nongc
 </pre>
+<p>
+<tt>sweep_udata_preserved</tt> counts actual current-white preservation
+operations. The userdata itself is preserved unconditionally before queueing.
+Metatables and collectable immediate <tt>__gc</tt> values are preserved only
+when runtime liveness shows they are still dead in the post-atomic sweep-udata
+window; already-live objects are counted as alive skips, and non-collectable
+<tt>__gc</tt> values are counted as no-preserve cases.
+</p>
 <p>
 This OpenMW-oriented fork enables sweep-time userdata finalizer discovery by
 default in its Unix and MSVC build scripts for static/native/leaf userdata
