@@ -1,0 +1,334 @@
+name: OpenResty upstream sync
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: openresty-sync-${{ github.repository }}-v2.1-agentzh
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Merge OpenResty upstream
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    env:
+      UPSTREAM_REPO: https://github.com/openresty/luajit2.git
+      UPSTREAM_BRANCH: v2.1-agentzh
+      TARGET_BRANCH: v2.1-agentzh
+      CONFLICT_ISSUE_TITLE: "OpenResty upstream sync conflict: v2.1-agentzh"
+      DIAGNOSTICS_PATH: openresty-sync-diagnostics.md
+      MERGE_OUTPUT_PATH: openresty-sync-merge-output.txt
+    steps:
+      - name: Require DW_BOT_TOKEN
+        shell: bash
+        env:
+          DW_BOT_TOKEN: ${{ secrets.DW_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DW_BOT_TOKEN:-}" ]]; then
+            printf '::error::DW_BOT_TOKEN secret is required for checkout and push. Refusing to fall back to GITHUB_TOKEN because those pushes do not trigger downstream workflows.\n'
+            exit 1
+          fi
+
+      - name: Check out target branch
+        uses: actions/checkout@v6.0.3
+        with:
+          ref: v2.1-agentzh
+          fetch-depth: 0
+          persist-credentials: true
+          # DW_BOT_TOKEN must be a PAT or GitHub App token. Do not use
+          # GITHUB_TOKEN here: GitHub suppresses downstream workflow runs for
+          # commits pushed with it.
+          token: ${{ secrets.DW_BOT_TOKEN }}
+
+      - name: Merge upstream
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          workflow_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          code_tick="$(printf '\140')"
+
+          print_code_fence() {
+            local language="${1:-}"
+            printf '\140\140\140%s\n' "$language"
+          }
+
+          validate_branch_name() {
+            local name="$1"
+            local label="$2"
+
+            if [[ -z "$name" || "$name" == -* || "$name" == refs/* ]]; then
+              printf '::error::Invalid %s branch name: %s\n' "$label" "$name"
+              exit 1
+            fi
+
+            if ! git check-ref-format --branch "$name" >/dev/null; then
+              printf '::error::Invalid %s branch name: %s\n' "$label" "$name"
+              exit 1
+            fi
+          }
+
+          append_command_output() {
+            local heading="$1"
+            shift
+
+            {
+              printf '### %s\n\n' "$heading"
+              print_code_fence text
+              "$@" || true
+              print_code_fence
+              printf '\n'
+            } >> "$DIAGNOSTICS_PATH"
+          }
+
+          append_file_output() {
+            local heading="$1"
+            local path="$2"
+
+            {
+              printf '### %s\n\n' "$heading"
+              print_code_fence text
+              if [[ -s "$path" ]]; then
+                sed -e 's/\r$//' "$path" || true
+              else
+                printf '(no output)\n'
+              fi
+              print_code_fence
+              printf '\n'
+            } >> "$DIAGNOSTICS_PATH"
+          }
+
+          write_output() {
+            local key="$1"
+            local value="$2"
+            printf '%s=%s\n' "$key" "$value" >> "$GITHUB_OUTPUT"
+          }
+
+          require_exact_value() {
+            local label="$1"
+            local actual="$2"
+            local expected="$3"
+
+            if [[ "$actual" != "$expected" ]]; then
+              printf '::error::Unsupported %s: %s (expected exactly %s)\n' \
+                "$label" "$actual" "$expected"
+              exit 1
+            fi
+          }
+
+          require_exact_value 'upstream repository' "$UPSTREAM_REPO" 'https://github.com/openresty/luajit2.git'
+          require_exact_value 'upstream branch' "$UPSTREAM_BRANCH" 'v2.1-agentzh'
+          require_exact_value 'target branch' "$TARGET_BRANCH" 'v2.1-agentzh'
+
+          validate_branch_name "$TARGET_BRANCH" target
+          validate_branch_name "$UPSTREAM_BRANCH" upstream
+
+          : > "$DIAGNOSTICS_PATH"
+          : > "$MERGE_OUTPUT_PATH"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git fetch --no-tags origin "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
+          git checkout -B "$TARGET_BRANCH" "refs/remotes/origin/${TARGET_BRANCH}"
+
+          git remote remove openresty >/dev/null 2>&1 || true
+          git remote add openresty "$UPSTREAM_REPO"
+          git fetch --no-tags openresty "+refs/heads/${UPSTREAM_BRANCH}:refs/remotes/openresty/${UPSTREAM_BRANCH}"
+
+          upstream_ref="refs/remotes/openresty/${UPSTREAM_BRANCH}"
+          target_sha="$(git rev-parse HEAD)"
+          upstream_sha="$(git rev-parse "$upstream_ref")"
+          merge_base="$(git merge-base HEAD "$upstream_ref")"
+
+          write_output target_sha "$target_sha"
+          write_output upstream_sha "$upstream_sha"
+          write_output merge_base "$merge_base"
+
+          if [[ "$upstream_sha" == "$merge_base" ]]; then
+            printf 'No new OpenResty commits to merge; %s already contains %s.\n' \
+              "$TARGET_BRANCH" "$upstream_sha"
+            write_output result noop
+            exit 0
+          fi
+
+          set +e
+          git merge --no-ff --no-commit "$upstream_ref" > "$MERGE_OUTPUT_PATH" 2>&1
+          merge_status="$?"
+          set -e
+
+          if [[ "$merge_status" -eq 0 ]]; then
+            git commit \
+              -m "Merge OpenResty LuaJIT ${UPSTREAM_BRANCH}" \
+              -m "Upstream: ${UPSTREAM_REPO}" \
+              -m "Upstream commit: ${upstream_sha}" \
+              -m "Target branch: ${TARGET_BRANCH}"
+            merge_commit_sha="$(git rev-parse HEAD)"
+            git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
+
+            printf 'Pushed OpenResty sync merge %s to %s.\n' "$merge_commit_sha" "$TARGET_BRANCH"
+            write_output result pushed
+            write_output merge_commit_sha "$merge_commit_sha"
+            exit 0
+          fi
+
+          {
+            printf '# OpenResty upstream sync conflict\n\n'
+            printf 'The scheduled OpenResty sync could not cleanly merge upstream into %s%s%s.\n\n' \
+              "$code_tick" "$TARGET_BRANCH" "$code_tick"
+            printf '| Field | Value |\n'
+            printf '| --- | --- |\n'
+            printf '| Target branch | %s%s%s |\n' "$code_tick" "$TARGET_BRANCH" "$code_tick"
+            printf '| Target SHA | %s%s%s |\n' "$code_tick" "$target_sha" "$code_tick"
+            printf '| Upstream repository | %s%s%s |\n' "$code_tick" "$UPSTREAM_REPO" "$code_tick"
+            printf '| Upstream branch | %s%s%s |\n' "$code_tick" "$UPSTREAM_BRANCH" "$code_tick"
+            printf '| Upstream SHA | %s%s%s |\n' "$code_tick" "$upstream_sha" "$code_tick"
+            printf '| Merge base | %s%s%s |\n' "$code_tick" "$merge_base" "$code_tick"
+            printf '| Merge exit status | %s%s%s |\n' "$code_tick" "$merge_status" "$code_tick"
+            printf '| Workflow run | %s |\n\n' "$workflow_url"
+            printf '## Reproduce locally\n\n'
+            print_code_fence sh
+            printf 'git checkout %q\n' "$TARGET_BRANCH"
+            printf 'git remote set-url openresty %q || git remote add openresty %q\n' \
+              "$UPSTREAM_REPO" "$UPSTREAM_REPO"
+            printf 'git fetch openresty %q\n' "$UPSTREAM_BRANCH"
+            printf 'git merge --no-ff FETCH_HEAD\n'
+            print_code_fence
+            printf '\n'
+          } > "$DIAGNOSTICS_PATH"
+
+          append_file_output 'Merge command output' "$MERGE_OUTPUT_PATH"
+          append_command_output 'Conflict files' git diff --name-only --diff-filter=U
+          append_command_output 'Status after failed merge' git status --short
+          append_command_output 'Upstream commits since merge-base' \
+            git log --oneline --decorate --max-count=200 "${merge_base}..${upstream_ref}"
+          append_command_output 'Upstream diffstat since merge-base' \
+            git diff --stat "$merge_base" "$upstream_ref"
+
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            cat "$DIAGNOSTICS_PATH" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          git merge --abort || true
+          write_output result conflict
+
+      - name: Create or update conflict issue
+        if: steps.sync.outputs.result == 'conflict'
+        uses: actions/github-script@v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+
+            const title = process.env.CONFLICT_ISSUE_TITLE;
+            const diagnosticsPath = process.env.DIAGNOSTICS_PATH;
+            const maxBodyLength = 60000;
+            const { owner, repo } = context.repo;
+
+            function trimIssueBody(body) {
+              if (body.length <= maxBodyLength) {
+                return body;
+              }
+              return `${body.slice(0, maxBodyLength)}\n\n_Trimmed by the sync workflow; see the linked workflow run for the full log._`;
+            }
+
+            const diagnostics = trimIssueBody(fs.readFileSync(diagnosticsPath, 'utf8'));
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => !issue.pull_request && issue.title === title);
+
+            let labels = [];
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: 'upstream-sync' });
+              labels = ['upstream-sync'];
+            } catch (error) {
+              if (error.status === 404) {
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name: 'upstream-sync',
+                    color: '5319e7',
+                    description: 'Automated upstream synchronization reports',
+                  });
+                  labels = ['upstream-sync'];
+                } catch (createError) {
+                  core.warning(`Could not create upstream-sync label: ${createError.message}`);
+                }
+              } else {
+                core.warning(`Could not inspect upstream-sync label: ${error.message}`);
+              }
+            }
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: `Another OpenResty sync attempt hit the same conflict.\n\n${diagnostics}`,
+              });
+              core.info(`Updated existing conflict issue #${existing.number}.`);
+            } else {
+              const issue = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body: diagnostics,
+                labels,
+              });
+              core.info(`Created conflict issue #${issue.data.number}.`);
+            }
+
+      - name: Close resolved conflict issue
+        if: steps.sync.outputs.result == 'pushed' || steps.sync.outputs.result == 'noop'
+        uses: actions/github-script@v9.0.0
+        with:
+          script: |
+            const title = process.env.CONFLICT_ISSUE_TITLE;
+            const { owner, repo } = context.repo;
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => !issue.pull_request && issue.title === title);
+
+            if (!existing) {
+              core.info('No open conflict issue to close.');
+              return;
+            }
+
+            const result = '${{ steps.sync.outputs.result }}';
+            const mergeCommitSha = '${{ steps.sync.outputs.merge_commit_sha }}';
+            const workflowUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const resolution = result === 'pushed'
+              ? `Resolved by upstream sync merge ${mergeCommitSha}.`
+              : 'Resolved: the target branch now already contains the upstream tip.';
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: existing.number,
+              body: `${resolution}\n\nWorkflow run: ${workflowUrl}`,
+            });
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number: existing.number,
+              state: 'closed',
+            });
+            core.info(`Closed resolved conflict issue #${existing.number}.`);
