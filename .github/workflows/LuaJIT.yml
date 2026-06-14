@@ -1,71 +1,981 @@
-name: LuaJIT-Main
+name: LuaJIT CI
 
 on:
   workflow_dispatch:
   push:
     branches:
       - v2.1-agentzh
+    tags:
+      - '*'
   pull_request:
-    branches: [ v2.1-agentzh ]
+    branches:
+      - v2.1-agentzh
 
+permissions:
+  contents: read
+
+concurrency:
+  group: luajit-ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LUAJIT_RELEASE_BINARY: LuaJIT
+  LUAJIT_UPSTREAM_REPO: https://github.com/LuaJIT/LuaJIT.git
+  # LuaJIT upstream does not publish frequent immutable release tags for 2.1.
+  # Resolve and record the SHA in each job so the benchmark input is explicit.
+  LUAJIT_UPSTREAM_REF: v2.1
 
 jobs:
-  Build-Release:
+  build-native-posix:
+    name: Build ${{ matrix.os_name }} ${{ matrix.arch }}
     strategy:
+      fail-fast: false
       matrix:
-        target_system: [ ubuntu-latest, windows-latest, macos-latest ]
-    runs-on: ${{ matrix.target_system }}
-    env:
-      BUILD_EXT_BIN: ${{ matrix.target_system == 'windows-latest' && '.exe' || '' }}
-      BUILD_EXT_DYN: ${{ matrix.target_system == 'windows-latest' && '.dll' || '.so' }}
-      BUILD_EXT_STAT: ${{ matrix.target_system == 'windows-latest' && '.lib' || '.a' }}
-      BUILD_PREFIX: ${{ matrix.target_system != 'windows-latest' && 'lib' || ''}}
-      LIB_NAME: ${{ matrix.target_system == 'windows-latest' && 'lua51' || 'luajit' }}
-
+        include:
+          - os_name: Linux
+            arch: X64
+            runner: ubuntu-22.04
+            expected_uname: x86_64
+            expected_jit_arch: x64
+          # This mirrors StroggForge's current hosted-runner split: macos-latest
+          # is treated as ARM64, while macos-15-intel is the x64 runner. The
+          # validation step below fails closed if GitHub changes that under us.
+          - os_name: macOS
+            arch: ARM64
+            runner: macos-latest
+            expected_uname: arm64
+            expected_jit_arch: arm64
+            macos_deployment_target: '11.7'
+          - os_name: macOS
+            arch: X64
+            runner: macos-15-intel
+            expected_uname: x86_64
+            expected_jit_arch: x64
+            macos_deployment_target: '11.7'
+    runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      - uses: TheMrMilchmann/setup-msvc-dev@v3
-        if: runner.os == 'Windows'
+      - name: Validate runner architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_uname="$(uname -m)"
+          if [[ "$actual_uname" != "${{ matrix.expected_uname }}" ]]; then
+            echo "::error::${{ matrix.os_name }} ${{ matrix.arch }} must not be built on $actual_uname."
+            exit 1
+          fi
+
+      - name: Build and validate LuaJIT variants
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_deployment_target }}
+        run: |
+          set -euo pipefail
+          jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)"
+          native_make_args=()
+          if [[ "${{ matrix.os_name }}" == macOS ]]; then
+            # src/Makefile still emits libluajit.so on Darwin, but this gives
+            # the dynamic library the deployable install id used by packaging.
+            native_make_args+=(TARGET_DYLIBPATH="@rpath/libluajit-5.1.2.dylib")
+          fi
+
+          stage_variant() {
+            local variant="$1"
+            rm -rf "build-variants/$variant"
+            mkdir -p "build-variants/$variant"
+            cp -a src "build-variants/$variant/src"
+          }
+
+          validate_native_variant() {
+            local variant="$1"
+            local bypass_state="$2"
+
+            src/luajit -e 'assert(jit.version_num >= 20100); print(jit.version, jit.os, jit.arch)'
+            actual_jit_arch="$(src/luajit -e 'io.write(jit.arch)')"
+            if [[ "$actual_jit_arch" != "${{ matrix.expected_jit_arch }}" ]]; then
+              echo "::error::$variant LuaJIT reported $actual_jit_arch, expected ${{ matrix.expected_jit_arch }}."
+              exit 1
+            fi
+
+            if [[ "$bypass_state" == enabled ]]; then
+              src/luajit -e 'local bypass = select("sandbox.bypass"); assert(type(bypass) == "table"); assert(type(bypass.require) == "function")'
+            else
+              src/luajit -e 'local ok = pcall(select, "sandbox.bypass"); assert(not ok)'
+            fi
+            src/luajit -e 'assert(jit.gcstats == nil)'
+          }
+
+          rm -rf build-variants
+
+          make clean
+          make -j"$jobs" "${native_make_args[@]}"
+          validate_native_variant sandboxed disabled
+          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant sandboxed --perl-subset --test-platform '${{ matrix.os_name }}'
+          stage_variant sandboxed
+
+          make clean
+          # TARGET_CFLAGS is appended by src/Makefile; XCFLAGS= would replace
+          # the fork's default feature flags. That would be a different build.
+          make -j"$jobs" "${native_make_args[@]}" TARGET_CFLAGS="-DLUAJIT_ENABLE_SANDBOX_BYPASS"
+          validate_native_variant unsandboxed enabled
+          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant unsandboxed --perl-subset --test-platform '${{ matrix.os_name }}'
+          stage_variant unsandboxed
+
+      - name: Build upstream LuaJIT and benchmark sandboxed variant
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_deployment_target }}
+        run: |
+          set -euo pipefail
+          jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 2)"
+          rm -rf upstream-luajit benchmarks-output
+          compiler_command="${CC:-cc}"
+          compiler_version="$($compiler_command --version 2>&1 || true)"
+          target_dylibpath=''
+          git clone --depth 1 --branch "$LUAJIT_UPSTREAM_REF" "$LUAJIT_UPSTREAM_REPO" upstream-luajit
+          upstream_sha="$(git -C upstream-luajit rev-parse HEAD)"
+          fork_make_args=()
+          upstream_make_args=()
+          if [[ "${{ matrix.os_name }}" == macOS ]]; then
+            target_dylibpath='@rpath/libluajit-5.1.2.dylib'
+            fork_make_args+=(TARGET_DYLIBPATH="$target_dylibpath")
+            upstream_make_args+=(TARGET_DYLIBPATH="$target_dylibpath")
+          fi
+          make -C upstream-luajit -j"$jobs" "${upstream_make_args[@]}"
+          python3 .github/scripts/benchmark-luajit.py \
+            --fork-luajit build-variants/sandboxed/src/luajit \
+            --upstream-luajit upstream-luajit/src/luajit \
+            --upstream-repo "$LUAJIT_UPSTREAM_REPO" \
+            --upstream-ref "$LUAJIT_UPSTREAM_REF" \
+            --upstream-sha "$upstream_sha" \
+            --platform '${{ matrix.os_name }}' \
+            --arch '${{ matrix.arch }}' \
+            --fork-build-description 'sandboxed release build from build-variants/sandboxed' \
+            --fork-build-command "make -j$jobs ${fork_make_args[*]}" \
+            --fork-compiler-command "$compiler_command" \
+            --fork-compiler-version "$compiler_version" \
+            --upstream-build-command "make -C upstream-luajit -j$jobs ${upstream_make_args[*]}" \
+            --upstream-compiler-command "$compiler_command" \
+            --upstream-compiler-version "$compiler_version" \
+            --env "TARGET_DYLIBPATH=$target_dylibpath" \
+            --env 'TARGET_CFLAGS=' \
+            --env "WORKFLOW_MAKE_JOBS=$jobs" \
+            --output-dir benchmarks-output
+
+      - name: Package artifact
+        shell: bash
+        run: >-
+          python3 .github/scripts/package-luajit.py
+          --os-name '${{ matrix.os_name }}'
+          --arch '${{ matrix.arch }}'
+          --variant-src sandboxed=build-variants/sandboxed/src
+          --variant-src unsandboxed=build-variants/unsandboxed/src
+          --benchmarks-dir benchmarks-output
+
+      - name: Validate macOS packaged dylibs
+        if: matrix.os_name == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_id='@rpath/libluajit-5.1.2.dylib'
+          package_root='dist/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}'
+
+          if ! command -v otool >/dev/null 2>&1; then
+            echo 'otool is not available; skipping macOS install-id validation.'
+            exit 0
+          fi
+
+          for variant in sandboxed unsandboxed; do
+            library="$package_root/$variant/lib/libluajit-5.1.2.dylib"
+            test -s "$library"
+            actual_id="$(otool -D "$library" | awk 'NR == 2 { print $1 }')"
+            if [[ "$actual_id" != "$expected_id" ]]; then
+              echo "::error::$library has install id $actual_id, expected $expected_id."
+              exit 1
+            fi
+            otool -L "$library"
+          done
+
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: bash
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python3 .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.virustotal.tsv
+
+      - name: Upload release-shaped artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}
+          path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
+
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
+
+  build-windows-x64:
+    name: Build Windows X64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: TheMrMilchmann/setup-msvc-dev@79dac248aac9d0059f86eae9d8b5bfab4e95e97c # v4.0.0
         with:
           arch: x64
 
-      - name: Build
+      - name: Build and validate LuaJIT variants
+        shell: pwsh
         run: |
-          ${{ runner.os == 'macOS' && 'export MACOSX_DEPLOYMENT_TARGET="11.7" && make' || runner.os == 'Linux' && 'make' || 'cd src && ./msvcbuild.bat lua52compat && cd ..'}}
+          $ErrorActionPreference = 'Stop'
+          $script:OriginalCL = [Environment]::GetEnvironmentVariable('CL', 'Process')
 
-      - name: Make Archive
+          function Set-CLForVariant([string]$ExtraFlags) {
+            if ([string]::IsNullOrWhiteSpace($ExtraFlags)) {
+              if ($null -eq $script:OriginalCL) {
+                Remove-Item Env:\CL -ErrorAction SilentlyContinue
+              } else {
+                $env:CL = $script:OriginalCL
+              }
+            } elseif ([string]::IsNullOrWhiteSpace($script:OriginalCL)) {
+              $env:CL = $ExtraFlags
+            } else {
+              $env:CL = "$($script:OriginalCL) $ExtraFlags"
+            }
+          }
+
+          function Invoke-LuaJITVariantBuild([string]$Variant, [string]$ExtraFlags, [bool]$BypassEnabled) {
+            git clean -xffd src
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            Set-CLForVariant $ExtraFlags
+
+            Push-Location src
+            try {
+              cmd /c msvcbuild.bat lua52compat
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            } finally {
+              Pop-Location
+            }
+
+            .\src\luajit.exe -e "assert(jit.version_num >= 20100); assert(jit.os == 'Windows'); assert(jit.arch == 'x64'); print(jit.version, jit.os, jit.arch)"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            if ($BypassEnabled) {
+              .\src\luajit.exe -e "local bypass = select('sandbox.bypass'); assert(type(bypass) == 'table'); assert(type(bypass.require) == 'function')"
+            } else {
+              .\src\luajit.exe -e "local ok = pcall(select, 'sandbox.bypass'); assert(not ok)"
+            }
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            .\src\luajit.exe -e "assert(jit.gcstats == nil)"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            python .github/scripts/run-desktop-tests.py --luajit src/luajit.exe --variant $Variant
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            $destination = "build-variants\$Variant"
+            Remove-Item -Recurse -Force $destination -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Force $destination | Out-Null
+            Copy-Item -Path src -Destination $destination -Recurse -Force
+          }
+
+          Remove-Item -Recurse -Force build-variants -ErrorAction SilentlyContinue
+          Invoke-LuaJITVariantBuild sandboxed '' $false
+          # CL is MSVC's additive compiler-flag environment hook; msvcbuild.bat
+          # still supplies its normal release/Lua 5.2/sweep-finalizer flags.
+          Invoke-LuaJITVariantBuild unsandboxed '/DLUAJIT_ENABLE_SANDBOX_BYPASS' $true
+          Set-CLForVariant ''
+
+      - name: Build upstream LuaJIT and benchmark sandboxed variant
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Remove-Item -Recurse -Force upstream-luajit, benchmarks-output -ErrorAction SilentlyContinue
+          $compilerCommand = 'cl (via msvcbuild.bat)'
+          $compilerVersion = (cmd /c "cl 2>&1") -join "`n"
+          git clone --depth 1 --branch $env:LUAJIT_UPSTREAM_REF $env:LUAJIT_UPSTREAM_REPO upstream-luajit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $upstreamSha = git -C upstream-luajit rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Push-Location upstream-luajit\src
+          try {
+            cmd /c msvcbuild.bat lua52compat
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
+          python .github/scripts/benchmark-luajit.py `
+            --fork-luajit build-variants/sandboxed/src/luajit.exe `
+            --upstream-luajit upstream-luajit/src/luajit.exe `
+            --upstream-repo $env:LUAJIT_UPSTREAM_REPO `
+            --upstream-ref $env:LUAJIT_UPSTREAM_REF `
+            --upstream-sha $upstreamSha `
+            --platform Windows `
+            --arch X64 `
+            --fork-build-description 'sandboxed release build from build-variants\sandboxed' `
+            --fork-build-command 'src\msvcbuild.bat lua52compat' `
+            --fork-compiler-command $compilerCommand `
+            --fork-compiler-version $compilerVersion `
+            --upstream-build-command 'upstream-luajit\src\msvcbuild.bat lua52compat' `
+            --upstream-compiler-command $compilerCommand `
+            --upstream-compiler-version $compilerVersion `
+            --env "CL=$env:CL" `
+            --env 'TARGET_CFLAGS=' `
+            --env 'TARGET_DYLIBPATH=' `
+            --output-dir benchmarks-output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package artifact
+        shell: pwsh
+        run: >-
+          python .github/scripts/package-luajit.py
+          --os-name Windows
+          --arch X64
+          --variant-src sandboxed=build-variants/sandboxed/src
+          --variant-src unsandboxed=build-variants/unsandboxed/src
+          --benchmarks-dir benchmarks-output
+
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: pwsh
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.virustotal.tsv
+
+      - name: Upload release-shaped artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64
+          path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
+
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
+
+  build-android-arm64:
+    name: Build Android ARM64 (AArch64) shared library
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_API_LEVEL: '21'
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup Android NDK
+        id: setup_ndk
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
+        with:
+          ndk-version: r27c
+
+      - name: Build LuaJIT shared library variants
+        shell: bash
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup_ndk.outputs.ndk-path }}
+        run: |
+          set -euo pipefail
+          toolchain="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          android_cc="$toolchain/aarch64-linux-android${ANDROID_API_LEVEL}-clang"
+          "$android_cc" -v
+          "$android_cc" -dumpmachine | grep -q 'aarch64.*linux-android'
+
+          common_make_args=(
+            HOST_CC="gcc"
+            STATIC_CC="$android_cc"
+            DYNAMIC_CC="$android_cc -fPIC"
+            TARGET_LD="$android_cc"
+            TARGET_AR="$toolchain/llvm-ar rcus"
+            TARGET_STRIP="$toolchain/llvm-strip"
+            TARGET_SYS=Linux
+            TARGET_SONAME=libluajit.so
+          )
+
+          build_variant() {
+            local variant="$1"
+            shift
+
+            make -C src clean
+            # The bare libluajit.so goal links lj_init_dyn.o without causing
+            # the lj_init.o rule that produces it as a side effect to run.
+            # Build the normal LuaJIT mixed-mode target instead, and keep this
+            # serial unless src/Makefile grows an explicit lj_init_dyn.o edge.
+            make -C src all "${common_make_args[@]}" "$@"
+
+            rm -rf "build-variants/$variant"
+            mkdir -p "build-variants/$variant"
+            cp -a src "build-variants/$variant/src"
+          }
+
+          rm -rf build-variants
+          build_variant sandboxed
+          # TARGET_CFLAGS is additive; do not replace the Makefile XCFLAGS.
+          build_variant unsandboxed TARGET_CFLAGS="-DLUAJIT_ENABLE_SANDBOX_BYPASS"
+
+      - name: Validate Android ELF
+        shell: bash
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup_ndk.outputs.ndk-path }}
+        run: |
+          set -euo pipefail
+          readelf="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          strings_tool="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strings"
+          test -x "$strings_tool"
+
+          validate_variant() {
+            local variant="$1"
+            local bypass_state="$2"
+            local library="build-variants/$variant/src/libluajit.so"
+            local strings_output
+            strings_output="$(mktemp)"
+            trap 'rm -f "$strings_output"' RETURN
+
+            file "$library"
+            "$readelf" -h "$library"
+            "$readelf" -h "$library" | grep -q 'Machine:.*AArch64'
+            "$readelf" -d "$library" | grep -q 'SONAME.*libluajit.so'
+
+            "$strings_tool" "$library" > "$strings_output"
+            if grep -Fq 'gcstats' "$strings_output"; then
+              echo "::error::$variant Android library unexpectedly contains GCStats strings."
+              exit 1
+            fi
+            if [[ "$bypass_state" == enabled ]]; then
+              if ! grep -Fq 'sandbox.bypass' "$strings_output"; then
+                echo "::error::$variant Android library is missing sandbox.bypass string."
+                exit 1
+              fi
+            elif grep -Fq 'sandbox.bypass' "$strings_output"; then
+              echo "::error::$variant Android library unexpectedly contains sandbox.bypass string."
+              exit 1
+            fi
+            rm -f "$strings_output"
+            trap - RETURN
+          }
+
+          validate_variant sandboxed disabled
+          validate_variant unsandboxed enabled
+
+      - name: Package artifact
+        shell: bash
+        run: >-
+          python3 .github/scripts/package-luajit.py
+          --os-name Android
+          --arch ARM64
+          --variant-src sandboxed=build-variants/sandboxed/src
+          --variant-src unsandboxed=build-variants/unsandboxed/src
+
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: bash
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python3 .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.virustotal.tsv
+
+      - name: Upload release-shaped artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64
+          path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
+
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
+
+  build-portmaster-arm64:
+    name: Build PortMaster ARM64 (AArch64)
+    runs-on: ubuntu-latest
+    # PortMaster handhelds targeted by this artifact are AArch64/arm64, not
+    # ARMv7/armhf. If the toolchain stops being aarch64, fail closed below.
+    container: ghcr.io/dreamweave-mp/stroggforge-portmaster-aarch64-almalinux8-builder@sha256:9f1515e25b9b41b329dc8f4b077b05b24bc834ebd15092a526c023d038485ed0 # v39
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install PortMaster host build dependencies
         shell: bash
         run: |
-          mkdir bin include lib lua
-          cd src
-          mv jit ../bin
-          mv luajit${{ env.BUILD_EXT_BIN }} ../bin
-          mv ${{ env.BUILD_PREFIX }}${{ env.LIB_NAME }}${{ env.BUILD_EXT_DYN }} ../bin
-          mv ${{ env.BUILD_PREFIX }}${{ env.LIB_NAME }}${{ env.BUILD_EXT_STAT }} ../lib
-          mv lauxlib.h lua.h lua.hpp luaconf.h luajit.h lualib.h ../include
-          cd ..
-          7z a -t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on LuaJIT-${{ runner.os }}.7z COPYRIGHT bin include lib lua README
+          set -euo pipefail
+          dnf install -y gcc glibc-devel file binutils
 
+      - name: Validate PortMaster AArch64 cross toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          aarch64-linux-gnu-gcc --version
+          aarch64-linux-gnu-gcc -dumpmachine | grep -q '^aarch64-linux-gnu'
+          test -d /usr/aarch64-linux-gnu/sys-root
 
-      - name: Upload Release
-        if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
+      - name: Build LuaJIT variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          common_make_args=(
+            HOST_CC="gcc"
+            CROSS=aarch64-linux-gnu-
+            TARGET_SYS=Linux
+            TARGET_SONAME=libluajit.so
+            TARGET_FLAGS="--sysroot=/usr/aarch64-linux-gnu/sys-root"
+          )
+
+          build_variant() {
+            local variant="$1"
+            shift
+
+            make -C src clean
+            make -C src "${common_make_args[@]}" "$@"
+
+            rm -rf "build-variants/$variant"
+            mkdir -p "build-variants/$variant"
+            cp -a src "build-variants/$variant/src"
+          }
+
+          rm -rf build-variants
+          build_variant sandboxed
+          # TARGET_CFLAGS is additive; do not replace the Makefile XCFLAGS.
+          build_variant unsandboxed TARGET_CFLAGS="-DLUAJIT_ENABLE_SANDBOX_BYPASS"
+
+      - name: Validate PortMaster AArch64 ELF
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v aarch64-linux-gnu-strings >/dev/null 2>&1; then
+            strings_tool='aarch64-linux-gnu-strings'
+          elif command -v strings >/dev/null 2>&1; then
+            strings_tool='strings'
+          else
+            echo '::error::No strings tool available for PortMaster static validation.'
+            exit 1
+          fi
+
+          validate_variant() {
+            local variant="$1"
+            local bypass_state="$2"
+            local root="build-variants/$variant/src"
+            local library="$root/libluajit.so"
+            local strings_output
+            strings_output="$(mktemp)"
+            trap 'rm -f "$strings_output"' RETURN
+
+            file "$library" "$root/luajit"
+            aarch64-linux-gnu-readelf -h "$library"
+            aarch64-linux-gnu-readelf -h "$library" | grep -q 'Machine:.*AArch64'
+            aarch64-linux-gnu-readelf -h "$root/luajit" | grep -q 'Machine:.*AArch64'
+            aarch64-linux-gnu-readelf -d "$library" | grep -q 'SONAME.*libluajit.so'
+
+            "$strings_tool" "$library" > "$strings_output"
+            if grep -Fq 'gcstats' "$strings_output"; then
+              echo "::error::$variant PortMaster library unexpectedly contains GCStats strings."
+              exit 1
+            fi
+            if [[ "$bypass_state" == enabled ]]; then
+              if ! grep -Fq 'sandbox.bypass' "$strings_output"; then
+                echo "::error::$variant PortMaster library is missing sandbox.bypass string."
+                exit 1
+              fi
+            elif grep -Fq 'sandbox.bypass' "$strings_output"; then
+              echo "::error::$variant PortMaster library unexpectedly contains sandbox.bypass string."
+              exit 1
+            fi
+            rm -f "$strings_output"
+            trap - RETURN
+          }
+
+          validate_variant sandboxed disabled
+          validate_variant unsandboxed enabled
+
+      - name: Package artifact
+        shell: bash
+        run: >-
+          python3 .github/scripts/package-luajit.py
+          --os-name PortMaster
+          --arch ARM64
+          --variant-src sandboxed=build-variants/sandboxed/src
+          --variant-src unsandboxed=build-variants/unsandboxed/src
+
+      - name: Submit release archive to VirusTotal
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        shell: bash
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
+        run: >-
+          python3 .github/scripts/submit-virustotal.py
+          --archive release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
+          --output release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.virustotal.tsv
+
+      - name: Upload release-shaped artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          tag_name: Stable-CI
-          files: LuaJIT-${{ runner.os }}.7z
-          body: |
-            CI Build for Dreamweave LuaJIT Fork
+          name: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64
+          path: release-artifact/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
 
-      - name: Upload Artifact
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+      - name: Upload VirusTotal metadata artifact
+        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          path: |
-            COPYRIGHT
-            bin
-            include
-            lib
-            lua
-            README
-          name: LuaJIT-${{ runner.os }}
+          name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64
+          path: release-artifact-vt/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.virustotal.tsv
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-github-release:
+    name: Publish GitHub Release
+    if: ${{ github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/v2.1-agentzh') }}
+    needs:
+      - build-native-posix
+      - build-windows-x64
+      - build-android-arm64
+      - build-portmaster-arm64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-*
+          path: release-downloads
+          merge-multiple: true
+
+      - name: Download VirusTotal metadata artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-*
+          path: release-vt-downloads
+          merge-multiple: true
+
+      - name: Refresh and upload GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_IS_TAG: ${{ startsWith(github.ref, 'refs/tags/') }}
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          RELEASE_TARGET: ${{ github.sha }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$RELEASE_IS_TAG" == true ]]; then
+            release_name="$RELEASE_REF_NAME"
+            release_create_args=()
+            release_edit_args=()
+
+            # Stable tag releases are immutable once assets exist. Check this
+            # before creating notes, editing release metadata, or uploading
+            # anything; otherwise a rerun can make the body point at a new run
+            # while the assets are still the old ones. That is not a release,
+            # it is a small lie with a download button.
+            release_exists=false
+            release_view_error="$(mktemp)"
+            if asset_count="$(gh release view "$release_name" \
+              --repo "$RELEASE_REPOSITORY" \
+              --json assets \
+              --jq '.assets | length' 2>"$release_view_error")"; then
+              release_exists=true
+              if [[ "$asset_count" != 0 ]]; then
+                echo "::error::Stable tag release $release_name already has assets; refusing to edit release metadata or overwrite assets." >&2
+                gh release view "$release_name" \
+                  --repo "$RELEASE_REPOSITORY" \
+                  --json assets \
+                  --jq '.assets[].name' >&2
+                rm -f "$release_view_error"
+                exit 1
+              fi
+            elif grep -qiE 'not found|could not resolve to a Release|HTTP 404' "$release_view_error"; then
+              release_exists=false
+            else
+              cat "$release_view_error" >&2
+              rm -f "$release_view_error"
+              exit 1
+            fi
+            rm -f "$release_view_error"
+          else
+            release_name=development
+            release_create_args=(--prerelease)
+            release_edit_args=(--prerelease)
+            release_exists=false
+          fi
+
+          prepare_args=(
+            .github/scripts/prepare-luajit-release-assets.py
+            --archive-dir release-downloads
+            --vt-dir release-vt-downloads
+            --output-dir release-assets
+            --release-name "$release_name"
+            --repository "$RELEASE_REPOSITORY"
+            --workflow-run-id "$WORKFLOW_RUN_ID"
+            --target-sha "$RELEASE_TARGET"
+            --ref-name "$RELEASE_REF_NAME"
+          )
+          if [[ "$RELEASE_IS_TAG" == true ]]; then
+            prepare_args+=(--release-is-tag)
+          fi
+          python3 "${prepare_args[@]}"
+
+          notes_file='release-assets/release-notes.md'
+          sha256_sums='release-assets/SHA256SUMS.txt'
+          vt_summary='release-assets/virustotal-submissions.tsv'
+          changelog='release-assets/CHANGELOG.md'
+
+          if [[ "$RELEASE_IS_TAG" != true ]]; then
+            tag_ref_error="$(mktemp)"
+            if gh api "repos/${RELEASE_REPOSITORY}/git/ref/tags/${release_name}" >/dev/null 2>"$tag_ref_error"; then
+              rm -f "$tag_ref_error"
+              gh api -X PATCH "repos/${RELEASE_REPOSITORY}/git/refs/tags/${release_name}" \
+                -f "sha=${RELEASE_TARGET}" \
+                -F force=true \
+                >/dev/null
+            elif grep -q 'Not Found' "$tag_ref_error"; then
+              rm -f "$tag_ref_error"
+              gh api -X POST "repos/${RELEASE_REPOSITORY}/git/refs" \
+                -f "ref=refs/tags/${release_name}" \
+                -f "sha=${RELEASE_TARGET}" \
+                >/dev/null
+            else
+              cat "$tag_ref_error" >&2
+              rm -f "$tag_ref_error"
+              exit 1
+            fi
+
+            release_view_error="$(mktemp)"
+            if gh release view "$release_name" --repo "$RELEASE_REPOSITORY" >/dev/null 2>"$release_view_error"; then
+              release_exists=true
+            elif grep -qiE 'not found|could not resolve to a Release|HTTP 404' "$release_view_error"; then
+              release_exists=false
+            else
+              cat "$release_view_error" >&2
+              rm -f "$release_view_error"
+              exit 1
+            fi
+            rm -f "$release_view_error"
+          fi
+
+          if [[ "$release_exists" == true ]]; then
+            gh release edit "$release_name" \
+              "${release_edit_args[@]}" \
+              --repo "$RELEASE_REPOSITORY" \
+              --title "$release_name" \
+              --notes-file "$notes_file"
+          else
+            gh release create "$release_name" \
+              "${release_create_args[@]}" \
+              --repo "$RELEASE_REPOSITORY" \
+              --title "$release_name" \
+              --notes-file "$notes_file"
+          fi
+
+          upload_args=(--repo "$RELEASE_REPOSITORY")
+          if [[ "$RELEASE_IS_TAG" != true ]]; then
+            # The development release is intentionally mutable: it tracks the
+            # latest non-PR CI result for this branch.
+            upload_args+=(--clobber)
+          fi
+
+          gh release upload "$release_name" release-downloads/*.zip "$sha256_sums" "$vt_summary" "$changelog" "${upload_args[@]}"
+
+  publish-nexusmods:
+    name: Publish NexusMods development files
+    if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/v2.1-agentzh' }}
+    needs:
+      - build-native-posix
+      - build-windows-x64
+      - build-android-arm64
+      - build-portmaster-arm64
+      - publish-github-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: github-release-${{ env.LUAJIT_RELEASE_BINARY }}-*
+          path: release-downloads
+          merge-multiple: true
+
+      - name: Download VirusTotal metadata artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-*
+          path: release-vt-downloads
+          merge-multiple: true
+
+      - name: Validate NexusMods secret
+        shell: bash
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUS_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NEXUS_API_KEY:-}" ]]; then
+            echo '::error::NEXUS_API_KEY is required for development NexusMods publishing.' >&2
+            exit 1
+          fi
+
+      - name: Verify archives and prepare NexusMods descriptions
+        shell: bash
+        env:
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          RELEASE_TARGET: ${{ github.sha }}
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+        run: >-
+          python3 .github/scripts/prepare-luajit-release-assets.py
+          --archive-dir release-downloads
+          --vt-dir release-vt-downloads
+          --output-dir nexus-assets
+          --release-name development
+          --repository "$RELEASE_REPOSITORY"
+          --workflow-run-id "$WORKFLOW_RUN_ID"
+          --target-sha "$RELEASE_TARGET"
+          --ref-name "$RELEASE_REF_NAME"
+          --nexus-description-dir nexus-descriptions
+
+      - name: Verify published GitHub development checksums
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          rm -rf github-release-verification
+          mkdir -p github-release-verification
+          gh release download development \
+            --repo "$RELEASE_REPOSITORY" \
+            --pattern SHA256SUMS.txt \
+            --dir github-release-verification \
+            --clobber
+          if ! cmp -s nexus-assets/SHA256SUMS.txt github-release-verification/SHA256SUMS.txt; then
+            echo '::error::Published GitHub development SHA256SUMS.txt does not match the local Nexus candidate checksums.' >&2
+            diff -u nexus-assets/SHA256SUMS.txt github-release-verification/SHA256SUMS.txt >&2 || true
+            exit 1
+          fi
+
+      - name: Read NexusMods descriptions
+        id: nexus_descriptions
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo 'windows_x64<<NEXUS_WINDOWS_X64_DESCRIPTION'
+            cat nexus-descriptions/windows_x64.bbcode
+            echo 'NEXUS_WINDOWS_X64_DESCRIPTION'
+            echo 'linux_x64<<NEXUS_LINUX_X64_DESCRIPTION'
+            cat nexus-descriptions/linux_x64.bbcode
+            echo 'NEXUS_LINUX_X64_DESCRIPTION'
+            echo 'macos_arm64<<NEXUS_MACOS_ARM64_DESCRIPTION'
+            cat nexus-descriptions/macos_arm64.bbcode
+            echo 'NEXUS_MACOS_ARM64_DESCRIPTION'
+            echo 'macos_x64<<NEXUS_MACOS_X64_DESCRIPTION'
+            cat nexus-descriptions/macos_x64.bbcode
+            echo 'NEXUS_MACOS_X64_DESCRIPTION'
+            echo 'android_arm64<<NEXUS_ANDROID_ARM64_DESCRIPTION'
+            cat nexus-descriptions/android_arm64.bbcode
+            echo 'NEXUS_ANDROID_ARM64_DESCRIPTION'
+            echo 'portmaster_arm64<<NEXUS_PORTMASTER_ARM64_DESCRIPTION'
+            cat nexus-descriptions/portmaster_arm64.bbcode
+            echo 'NEXUS_PORTMASTER_ARM64_DESCRIPTION'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload Windows X64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7252706'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
+          display_name: LuaJIT Windows X64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.windows_x64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload Linux X64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7252712'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Linux-X64.zip
+          display_name: LuaJIT Linux X64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.linux_x64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload macOS ARM64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7252718'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-ARM64.zip
+          display_name: LuaJIT macOS ARM64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.macos_arm64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload macOS X64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7536308'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-X64.zip
+          display_name: LuaJIT macOS Intel/X64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.macos_x64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload Android ARM64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7536302'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
+          display_name: LuaJIT Android ARM64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.android_arm64 }}
+          archive_existing_file: 'true'
+
+      - name: Upload PortMaster ARM64 to NexusMods
+        # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
+        uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_group_id: '7536305'
+          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
+          display_name: LuaJIT PortMaster ARM64 development
+          version: development
+          description: ${{ steps.nexus_descriptions.outputs.portmaster_arm64 }}
+          archive_existing_file: 'true'
