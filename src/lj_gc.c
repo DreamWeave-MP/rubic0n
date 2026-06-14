@@ -159,6 +159,16 @@ void lj_gc_queuefinalizer(global_State *g, GCobj *o)
   }
 }
 
+static void gc_unqueuefinalizer(global_State *g, GCobj *o)
+{
+  GCobj *tail = gcref(g->gc.mmudata);
+  lj_assertG(tail != NULL && gcnext(tail) == o, "bad finalizer queue unlink");
+  if (o == tail)
+    setgcrefnull(g->gc.mmudata);
+  else
+    setgcrefr(tail->gch.nextgc, o->gch.nextgc);
+}
+
 /*
 ** Separate userdata objects to be finalized to mmudata list. Userdata without
 ** a __gc metamethod are parked back on the normal root list and swept there.
@@ -496,9 +506,10 @@ static void gc_preserve_now(global_State *g, GCobj *o)
 ** finalizer discovery. It is for static, leaf/native userdata finalizers: late
 ** mutation of metatables or __gc is unsupported after the candidate is scanned,
 ** and Lua closure dependency graphs are not recursively preserved here. For a
-** dead finalizable userdata, only the userdata, its metatable, and the immediate
-** __gc callable are made current-white so root/table sweeping cannot free them
-** before GCSfinalize resolves and calls the finalizer.
+** dead finalizable userdata, the userdata is always made current-white. Its
+** metatable and immediate __gc callable are made current-white only if they are
+** still dead in this post-atomic sweep-udata window, so root/table sweeping
+** cannot free required dead objects before GCSfinalize resolves the finalizer.
 */
 static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
 				    GCSize *queued)
@@ -529,11 +540,29 @@ static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
 		 "sweep of unlive userdata");
       setgcrefr(*p, o->gch.nextgc);
       if (mo) {
+	GCobj *mto;
 	*queued += sizeudata(ud);
 	markfinalized(o);
 	gc_preserve_now(g, o);
-	gc_preserve_now(g, obj2gco(mt));
-	if (tvisgcv(mo)) gc_preserve_now(g, gcV(mo));
+	lj_gc_stats_inc(g, sweep_udata_preserve_udata);
+	mto = obj2gco(mt);
+	if (isdead(g, mto)) {
+	  gc_preserve_now(g, mto);
+	  lj_gc_stats_inc(g, sweep_udata_preserve_mt_dead);
+	} else {
+	  lj_gc_stats_inc(g, sweep_udata_preserve_mt_alive_skip);
+	}
+	if (tvisgcv(mo)) {
+	  GCobj *mmo = gcV(mo);
+	  if (isdead(g, mmo)) {
+	    gc_preserve_now(g, mmo);
+	    lj_gc_stats_inc(g, sweep_udata_preserve_callable_dead);
+	  } else {
+	    lj_gc_stats_inc(g, sweep_udata_preserve_callable_alive_skip);
+	  }
+	} else {
+	  lj_gc_stats_inc(g, sweep_udata_preserve_callable_nongc);
+	}
 	lj_gc_queuefinalizer(g, o);
 	lj_gc_stats_inc(g, sweep_udata_queued);
       } else {
@@ -597,20 +626,52 @@ static void gc_clearweak(global_State *g, GCobj *o)
   }
 }
 
+#ifdef LUAJIT_ENABLE_GCSTATS
+static void gc_count_finalizer_kind(global_State *g, cTValue *mo)
+{
+  if (tvisfunc(mo)) {
+    GCfunc *fn = funcV(mo);
+    if (iscfunc(fn)) {
+      lj_gc_stats_inc(g, finalizer_cfunc_calls);
+      if (fn->c.nupvalues == 0)
+        lj_gc_stats_inc(g, finalizer_cfunc_nup0_calls);
+      else
+        lj_gc_stats_inc(g, finalizer_cfunc_upvalue_calls);
+    } else if (isluafunc(fn)) {
+      lj_gc_stats_inc(g, finalizer_lfunc_calls);
+    } else {
+      lj_assertG(isffunc(fn), "bad finalizer function type");
+      lj_gc_stats_inc(g, finalizer_ffunc_calls);
+    }
+  } else {
+    lj_gc_stats_inc(g, finalizer_other_calls);
+  }
+}
+#else
+#define gc_count_finalizer_kind(g, mo) \
+  ((void)0)
+#endif
+
 #if LJ_HAS_UNPROTECTED_C_FINALIZERS
+static GCfunc *gc_unprotected_c_finalizer_func(cTValue *mo, GCobj *o)
+{
+  GCfunc *fn;
+  if (o->gch.gct != ~LJ_TUDATA || !tvisfunc(mo))
+    return NULL;
+  fn = funcV(mo);
+  if (!iscfunc(fn) || fn->c.nupvalues != 0)
+    return NULL;
+  return fn;
+}
+
 static int gc_unprotected_c_finalizer(global_State *g, lua_State *VL,
 				     cTValue *mo, GCobj *o)
 {
-  GCfunc *fn;
+  GCfunc *fn = gc_unprotected_c_finalizer_func(mo, o);
   TValue *oldbase, *oldtop, *top;
   int nres;
-  if (o->gch.gct != ~LJ_TUDATA || !tvisfunc(mo)) {
+  if (fn == NULL)
     return 0;
-  }
-  fn = funcV(mo);
-  if (!iscfunc(fn) || fn->c.nupvalues != 0) {
-    return 0;
-  }
   /*
   ** Experimental raw destructor ABI:
   ** LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS is only for zero-upvalue C
@@ -637,6 +698,31 @@ static int gc_unprotected_c_finalizer(global_State *g, lua_State *VL,
 }
 #endif
 
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+static void gc_call_nonresurrecting_c_finalizer(global_State *g, lua_State *L,
+						cTValue *mo, GCobj *o)
+{
+  lua_State *VL = vmthread(g);
+  uint8_t oldh = hook_save(g);
+  GCSize oldt = g->gc.threshold;
+  int ok;
+
+  lj_gc_stats_inc(g, finalizer_calls);
+  gc_count_finalizer_kind(g, mo);
+  lj_trace_abort(g);
+  hook_entergc(g);
+  if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
+  g->gc.threshold = LJ_MAX_MEM;
+  ok = gc_unprotected_c_finalizer(g, VL, mo, o);
+  lj_assertG(ok, "bad non-resurrecting finalizer eligibility");
+  UNUSED(ok);
+  setgcref(g->cur_L, obj2gco(L));
+  hook_restore(g, oldh);
+  if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
+  g->gc.threshold = oldt;
+}
+#endif
+
 /* Call a userdata or cdata finalizer. */
 static void gc_call_finalizer(global_State *g, lua_State *L,
 			      cTValue *mo, GCobj *o)
@@ -654,25 +740,7 @@ static void gc_call_finalizer(global_State *g, lua_State *L,
   oldh = hook_save(g);
   oldt = g->gc.threshold;
   lj_gc_stats_inc(g, finalizer_calls);
-#ifdef LUAJIT_ENABLE_GCSTATS
-  if (tvisfunc(mo)) {
-    GCfunc *fn = funcV(mo);
-    if (iscfunc(fn)) {
-      lj_gc_stats_inc(g, finalizer_cfunc_calls);
-      if (fn->c.nupvalues == 0)
-        lj_gc_stats_inc(g, finalizer_cfunc_nup0_calls);
-      else
-        lj_gc_stats_inc(g, finalizer_cfunc_upvalue_calls);
-    } else if (isluafunc(fn)) {
-      lj_gc_stats_inc(g, finalizer_lfunc_calls);
-    } else {
-      lj_assertG(isffunc(fn), "bad finalizer function type");
-      lj_gc_stats_inc(g, finalizer_ffunc_calls);
-    }
-  } else {
-    lj_gc_stats_inc(g, finalizer_other_calls);
-  }
-#endif
+  gc_count_finalizer_kind(g, mo);
   lj_trace_abort(g);
   hook_entergc(g);  /* Disable hooks and new traces during __gc. */
   if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
@@ -712,17 +780,41 @@ static void gc_call_finalizer(global_State *g, lua_State *L,
 }
 
 /* Finalize one userdata or cdata object from the mmudata list. */
-static void gc_finalize(lua_State *L)
+static void gc_finalize(lua_State *L, int allow_nores)
 {
   global_State *g = G(L);
   GCobj *o = gcnext(gcref(g->gc.mmudata));
   cTValue *mo;
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+  int nores_fallback = 0;
+#endif
   lj_assertG(tvref(g->jit_base) == NULL, "finalizer called on trace");
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+  if (allow_nores && o->gch.gct == ~LJ_TUDATA) {
+    mo = lj_meta_fastg(g, tabref(gco2ud(o)->metatable), MM_gc);
+    if (mo && gc_unprotected_c_finalizer_func(mo, o) != NULL) {
+      GCudata *ud = gco2ud(o);
+      GCSize sz = (GCSize)sizeudata(ud);
+      /* May throw while the queued userdata is still linked and reachable. */
+      lj_state_checkstack(vmthread(g), 1+LJ_FR2+LUA_MINSTACK);
+      gc_unqueuefinalizer(g, o);
+      gc_call_nonresurrecting_c_finalizer(g, L, mo, o);
+      if (g->gc.state == GCSfinalize)
+	g->gc.estimate += sz;  /* Queued finalizable size was pre-subtracted. */
+      lj_udata_free(g, ud);
+      lj_gc_stats_inc(g, finalizer_nonresurrecting_cfunc_frees);
+      return;
+    } else if (mo) {
+      nores_fallback = 1;
+    }
+  }
+#endif
   /* Unchain from list of userdata to be finalized. */
-  if (o == gcref(g->gc.mmudata))
-    setgcrefnull(g->gc.mmudata);
-  else
-    setgcrefr(gcref(g->gc.mmudata)->gch.nextgc, o->gch.nextgc);
+  gc_unqueuefinalizer(g, o);
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+  if (nores_fallback)
+    lj_gc_stats_inc(g, finalizer_nonresurrecting_cfunc_fallbacks);
+#endif
 #if LJ_HASFFI
   if (o->gch.gct == ~LJ_TCDATA) {
     TValue tmp, *tv;
@@ -756,7 +848,7 @@ static void gc_finalize(lua_State *L)
 void lj_gc_finalize_udata(lua_State *L)
 {
   while (gcref(G(L)->gc.mmudata) != NULL)
-    gc_finalize(L);
+    gc_finalize(L, 0);  /* lua_close() drain: keep resurrection-capable path. */
 }
 
 #if LJ_HASFFI
@@ -909,7 +1001,7 @@ static size_t gc_onestep(lua_State *L)
       GCSize old = g->gc.total;
       if (tvref(g->jit_base))  /* Don't call finalizers on trace. */
 	return LJ_MAX_MEM;
-      gc_finalize(L);  /* Finalize one userdata object. */
+      gc_finalize(L, 1);  /* Normal GC queue after sweep/weak clearing. */
       if (old >= g->gc.total && g->gc.estimate > old - g->gc.total)
 	g->gc.estimate -= old - g->gc.total;
       if (g->gc.estimate > GCFINALIZECOST)

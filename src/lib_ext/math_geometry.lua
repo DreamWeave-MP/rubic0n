@@ -1,7 +1,7 @@
 local math, loadffi = ...
 local sqrt, cos, sin, abs, floor = math.sqrt, math.cos, math.sin, math.abs, math.floor
 local asin, atan2 = math.asin, math.atan2
-local string_byte, string_find, string_match, string_sub = string.byte, string.find, string.match, string.sub
+local string_byte, string_find, string_match, string_sub
 local vector2_ctor, vector3_ctor, vector4_ctor
 local immutable_vector2_ctor, immutable_vector3_ctor, immutable_vector4_ctor
 local box_ctor
@@ -9,6 +9,14 @@ local color_rgba_ctor, color_rgb_ctor, color_hex_ctor, color_comma_string_ctor
 local transform_move_ctor, transform_scale_ctor, transform_rotate_ctor
 local transform_rotatex_ctor, transform_rotatey_ctor, transform_rotatez_ctor
 local transform_identity_value
+
+local function string_helpers_ready() end
+
+local function init_string_helpers()
+  local string_lib = string
+  string_byte, string_find, string_match, string_sub = string_lib.byte, string_lib.find, string_lib.match, string_lib.sub
+  init_string_helpers = string_helpers_ready
+end
 
 local function badarg(n, name)
   error('bad argument #'..n..' to '..name..' (number expected)', 3)
@@ -100,6 +108,7 @@ local function build_geometry(ffi)
   local function decode_swizzle(v, key, component, immutable)
     local n = #key
     if n < 1 or n > 4 then return nil end
+    init_string_helpers()
     local a = component(v, string_byte(key, 1))
     if a == nil then return nil end
     if n == 1 then return a end
@@ -1465,7 +1474,11 @@ local function build_geometry(ffi)
   end
 
   local function color_hex_constructor(hex)
-    if #hex ~= 6 or not string_find(hex, '^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$') then
+    if #hex ~= 6 then
+      error('Invalid hex color: '..hex, 3)
+    end
+    init_string_helpers()
+    if not string_find(hex, '^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$') then
       error('Invalid hex color: '..hex, 3)
     end
     return color(
@@ -1476,6 +1489,7 @@ local function build_geometry(ffi)
   end
 
   local function color_comma_string_constructor(str)
+    init_string_helpers()
     if string_find(str, '[^0-9, ]') then
       error('Invalid comma-separated color: '..str, 3)
     end

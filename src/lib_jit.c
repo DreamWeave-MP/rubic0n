@@ -226,10 +226,13 @@ static int jit_gcstats(lua_State *L)
   hsize += 3;
 #endif
 #if LJ_HAS_SWEEP_UDATA_FINALIZERS
-  hsize += 5;
+  hsize += 11;
 #endif
 #if LJ_HAS_UNPROTECTED_C_FINALIZERS
   hsize += 3;
+#endif
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+  hsize += 2;
 #endif
   t = lj_tab_new_ah(L, 0, hsize);
 
@@ -287,6 +290,12 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "sweep_udata_freed", s->sweep_udata_freed);
   gcstats_set(L, t, "sweep_udata_parked", s->sweep_udata_parked);
   gcstats_set(L, t, "sweep_udata_preserved", s->sweep_udata_preserved);
+  gcstats_set(L, t, "sweep_udata_preserve_udata", s->sweep_udata_preserve_udata);
+  gcstats_set(L, t, "sweep_udata_preserve_mt_dead", s->sweep_udata_preserve_mt_dead);
+  gcstats_set(L, t, "sweep_udata_preserve_mt_alive_skip", s->sweep_udata_preserve_mt_alive_skip);
+  gcstats_set(L, t, "sweep_udata_preserve_callable_dead", s->sweep_udata_preserve_callable_dead);
+  gcstats_set(L, t, "sweep_udata_preserve_callable_alive_skip", s->sweep_udata_preserve_callable_alive_skip);
+  gcstats_set(L, t, "sweep_udata_preserve_callable_nongc", s->sweep_udata_preserve_callable_nongc);
 #endif
   gcstats_set(L, t, "sweep_string_steps", s->sweep_string_steps);
   gcstats_set(L, t, "sweep_root_steps", s->sweep_root_steps);
@@ -304,6 +313,10 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_direct_cfunc_calls", s->finalizer_direct_cfunc_calls);
   gcstats_set(L, t, "finalizer_direct_cfunc_nonzero_results", s->finalizer_direct_cfunc_nonzero_results);
   gcstats_set(L, t, "finalizer_direct_cfunc_fallbacks", s->finalizer_direct_cfunc_fallbacks);
+#endif
+#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+  gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_frees", s->finalizer_nonresurrecting_cfunc_frees);
+  gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_fallbacks", s->finalizer_nonresurrecting_cfunc_fallbacks);
 #endif
   gcstats_set(L, t, "weak_tables", s->weak_tables);
   gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);

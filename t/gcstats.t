@@ -93,6 +93,12 @@ local sweep_udata_fields = {
   "sweep_udata_freed",
   "sweep_udata_parked",
   "sweep_udata_preserved",
+  "sweep_udata_preserve_udata",
+  "sweep_udata_preserve_mt_dead",
+  "sweep_udata_preserve_mt_alive_skip",
+  "sweep_udata_preserve_callable_dead",
+  "sweep_udata_preserve_callable_alive_skip",
+  "sweep_udata_preserve_callable_nongc",
 }
 
 local cdata_fields = {
@@ -105,6 +111,11 @@ local direct_finalizer_fields = {
   "finalizer_direct_cfunc_calls",
   "finalizer_direct_cfunc_nonzero_results",
   "finalizer_direct_cfunc_fallbacks",
+}
+
+local nonresurrecting_finalizer_fields = {
+  "finalizer_nonresurrecting_cfunc_frees",
+  "finalizer_nonresurrecting_cfunc_fallbacks",
 }
 
 local function check_shape(t)
@@ -127,6 +138,12 @@ local function check_shape(t)
   end
   if t.finalizer_direct_cfunc_calls ~= nil then
     for _, name in ipairs(direct_finalizer_fields) do
+      assert(type(t[name]) == "number", name)
+      assert(t[name] >= 0, name)
+    end
+  end
+  if t.finalizer_nonresurrecting_cfunc_frees ~= nil then
+    for _, name in ipairs(nonresurrecting_finalizer_fields) do
       assert(type(t[name]) == "number", name)
       assert(t[name] >= 0, name)
     end
