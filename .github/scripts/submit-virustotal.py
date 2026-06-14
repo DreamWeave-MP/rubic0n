@@ -7,8 +7,6 @@ Recompressing after scanner submission would make the scanner result decorative,
 which is not a useful security property.
 """
 
-from __future__ import annotations
-
 import argparse
 import hashlib
 import json
@@ -18,6 +16,7 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+from typing import Tuple
 
 
 VT_FILES_URL = "https://www.virustotal.com/api/v3/files"
@@ -36,7 +35,7 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def multipart_file_body(path: Path) -> tuple[bytes, str]:
+def multipart_file_body(path: Path) -> Tuple[bytes, str]:
     # The LuaJIT release zips are small. Keeping this standard-library-only is
     # more useful than adding per-shell curl fragments that then disagree on
     # quoting rules for Windows paths. Delightful though those are.

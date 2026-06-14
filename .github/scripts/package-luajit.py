@@ -7,7 +7,7 @@ import shutil
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, Iterable, Mapping
+from typing import Dict, Iterable, List, Mapping
 
 
 HEADERS = (
@@ -300,7 +300,7 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
             )
 
 
-def files_under(directory: Path) -> list[str]:
+def files_under(directory: Path) -> List[str]:
     if not directory.is_dir():
         return []
     return sorted(path.relative_to(directory).as_posix() for path in directory.rglob("*") if path.is_file())
@@ -314,7 +314,7 @@ def platform_key(os_name: str) -> str:
     return os_name.lower()
 
 
-def primary_runtime_libraries(os_name: str) -> list[str]:
+def primary_runtime_libraries(os_name: str) -> List[str]:
     key = platform_key(os_name)
     if key == "windows":
         return ["lib/lua51.dll"]
@@ -336,7 +336,7 @@ def platform_description(os_name: str, arch: str) -> str:
     return f"{os_name} {arch}"
 
 
-def platform_notes(os_name: str, *, benchmarks_included: bool) -> list[str]:
+def platform_notes(os_name: str, *, benchmarks_included: bool) -> List[str]:
     key = platform_key(os_name)
     notes = [
         "No GCStats telemetry build is included.",

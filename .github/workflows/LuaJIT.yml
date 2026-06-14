@@ -111,7 +111,7 @@ jobs:
           make clean
           make -j"$jobs" "${native_make_args[@]}"
           validate_native_variant sandboxed disabled
-          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant sandboxed --perl-subset
+          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant sandboxed --perl-subset --test-platform '${{ matrix.os_name }}'
           stage_variant sandboxed
 
           make clean
@@ -119,7 +119,7 @@ jobs:
           # the fork's default feature flags. That would be a different build.
           make -j"$jobs" "${native_make_args[@]}" TARGET_CFLAGS="-DLUAJIT_ENABLE_SANDBOX_BYPASS"
           validate_native_variant unsandboxed enabled
-          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant unsandboxed --perl-subset
+          python3 .github/scripts/run-desktop-tests.py --luajit src/luajit --variant unsandboxed --perl-subset --test-platform '${{ matrix.os_name }}'
           stage_variant unsandboxed
 
       - name: Build upstream LuaJIT and benchmark sandboxed variant
@@ -414,7 +414,11 @@ jobs:
             shift
 
             make -C src clean
-            make -C src libluajit.so jit/vmdef.lua "${common_make_args[@]}" "$@"
+            # The bare libluajit.so goal links lj_init_dyn.o without causing
+            # the lj_init.o rule that produces it as a side effect to run.
+            # Build the normal LuaJIT mixed-mode target instead, and keep this
+            # serial unless src/Makefile grows an explicit lj_init_dyn.o edge.
+            make -C src all "${common_make_args[@]}" "$@"
 
             rm -rf "build-variants/$variant"
             mkdir -p "build-variants/$variant"

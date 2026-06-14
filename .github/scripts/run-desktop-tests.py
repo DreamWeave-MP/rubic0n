@@ -6,17 +6,16 @@ The optional Perl subset is intentionally tied to the repository build at
 arbitrary staged ``--luajit`` there would be a lie with a command-line flag.
 """
 
-from __future__ import annotations
-
 import argparse
 import os
 import platform
 import subprocess
 import sys
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 
-LUA_TESTS: tuple[tuple[str, str], ...] = (
+LUA_TESTS: Tuple[Tuple[str, str], ...] = (
     (
         "core-language",
         r"""
@@ -57,7 +56,7 @@ print('ok ffi-smoke')
 )
 
 
-COMMON_PERL_SUBSET_TESTS: tuple[str, ...] = (
+COMMON_PERL_SUBSET_TESTS: Tuple[str, ...] = (
     "t/sandbox-bypass.t",
     "t/math-table-extensions.t",
     "t/math-color.t",
@@ -67,7 +66,7 @@ COMMON_PERL_SUBSET_TESTS: tuple[str, ...] = (
     "t/gc-stepsize.t",
 )
 
-LINUX_PERL_SUBSET_TESTS: tuple[str, ...] = COMMON_PERL_SUBSET_TESTS + (
+LINUX_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS + (
     "t/weak-finalizer-torture.t",
 )
 
@@ -76,19 +75,19 @@ LINUX_PERL_SUBSET_TESTS: tuple[str, ...] = COMMON_PERL_SUBSET_TESTS + (
 # of the focused Perl gate intact on macOS and leave the torture coverage on
 # Linux until the VM/runtime crash is fixed properly; this is a quarantine, not
 # a pass-producing skip inside the Perl test.
-DARWIN_PERL_SUBSET_TESTS: tuple[str, ...] = COMMON_PERL_SUBSET_TESTS
+DARWIN_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS
 
 # Windows CI does not request --perl-subset; keep that behavior explicit rather
 # than growing a second Perl gate by accident.
-WINDOWS_PERL_SUBSET_TESTS: tuple[str, ...] = ()
+WINDOWS_PERL_SUBSET_TESTS: Tuple[str, ...] = ()
 
 
-def run(command: list[str], *, env: dict[str, str] | None = None) -> None:
+def run(command: List[str], *, env: Optional[Dict[str, str]] = None) -> None:
     print("+", " ".join(command), flush=True)
     subprocess.run(command, check=True, env=env)
 
 
-def lua_eval(luajit: Path, code: str, *, env: dict[str, str] | None = None) -> None:
+def lua_eval(luajit: Path, code: str, *, env: Optional[Dict[str, str]] = None) -> None:
     run([str(luajit), "-e", code], env=env)
 
 
@@ -108,7 +107,26 @@ def expected_repo_luajit(root: Path) -> Path:
     return (root / "src" / executable).resolve()
 
 
-def perl_subset_tests_for_platform(system_name: str) -> tuple[str, ...]:
+def normalize_system_name(system_name: str) -> str:
+    value = system_name.strip()
+    if not value:
+        value = platform.system()
+
+    lowered = value.lower()
+    if lowered in {"darwin", "mac", "macos", "mac os", "mac os x", "osx"}:
+        return "Darwin"
+    if lowered in {"linux", "linux2"}:
+        return "Linux"
+    if lowered in {"windows", "win32", "cygwin", "msys"}:
+        return "Windows"
+    return value
+
+
+def resolve_system_name(override: str) -> str:
+    return normalize_system_name(override or platform.system())
+
+
+def perl_subset_tests_for_platform(system_name: str) -> Tuple[str, ...]:
     if system_name == "Linux":
         return LINUX_PERL_SUBSET_TESTS
     if system_name == "Darwin":
@@ -118,7 +136,30 @@ def perl_subset_tests_for_platform(system_name: str) -> tuple[str, ...]:
     return COMMON_PERL_SUBSET_TESTS
 
 
-def run_perl_subset(root: Path, luajit: Path, variant: str) -> None:
+def describe_perl_subset(root: Path, system_name: str, tests: Tuple[str, ...]) -> List[str]:
+    print(f"Perl focused subset platform: {system_name}", flush=True)
+    if not tests:
+        print(f"Perl focused subset is not configured for {system_name}; skipped", flush=True)
+        return []
+
+    existing = []
+    missing = []
+    print("Perl focused subset selected tests:", flush=True)
+    for test in tests:
+        if (root / test).is_file():
+            existing.append(test)
+            status = "present"
+        else:
+            missing.append(test)
+            status = "missing"
+        print(f"  {test} ({status})", flush=True)
+
+    if missing:
+        print(f"Perl focused subset missing tests: {', '.join(missing)}", flush=True)
+    return existing
+
+
+def run_perl_subset(root: Path, luajit: Path, variant: str, system_name: str) -> None:
     expected_luajit = expected_repo_luajit(root)
     if luajit != expected_luajit:
         raise SystemExit(
@@ -126,10 +167,9 @@ def run_perl_subset(root: Path, luajit: Path, variant: str) -> None:
             f"{expected_luajit}, not arbitrary --luajit {luajit}"
         )
 
-    system_name = platform.system()
     tests = perl_subset_tests_for_platform(system_name)
-    if not tests:
-        print(f"Perl focused subset is not configured for {system_name}; skipped", flush=True)
+    existing = describe_perl_subset(root, system_name, tests)
+    if not existing:
         return
 
     prove = shutil_which("prove")
@@ -141,11 +181,10 @@ def run_perl_subset(root: Path, luajit: Path, variant: str) -> None:
         env["LUAJIT_TEST_SANDBOX_BYPASS"] = "1"
     else:
         env.pop("LUAJIT_TEST_SANDBOX_BYPASS", None)
-    existing = [test for test in tests if (root / test).is_file()]
     run([prove, "-I.", *existing], env=env)
 
 
-def shutil_which(name: str) -> str | None:
+def shutil_which(name: str) -> Optional[str]:
     from shutil import which
 
     return which(name)
@@ -153,11 +192,33 @@ def shutil_which(name: str) -> str | None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--luajit", required=True, type=Path)
-    parser.add_argument("--variant", required=True, choices=("sandboxed", "unsandboxed"))
+    parser.add_argument("--luajit", type=Path)
+    parser.add_argument("--variant", choices=("sandboxed", "unsandboxed"))
     parser.add_argument("--root", default=".", type=Path)
     parser.add_argument("--perl-subset", action="store_true")
+    parser.add_argument(
+        "--test-platform",
+        default="",
+        help="override platform selection for the focused Perl subset (e.g. Linux, macOS, Darwin, Windows)",
+    )
+    parser.add_argument(
+        "--list-tests",
+        action="store_true",
+        help="print the focused Perl subset selected for --test-platform and exit",
+    )
     args = parser.parse_args()
+
+    root = args.root.resolve()
+    system_name = resolve_system_name(args.test_platform)
+
+    if args.list_tests:
+        describe_perl_subset(root, system_name, perl_subset_tests_for_platform(system_name))
+        return 0
+
+    if args.luajit is None:
+        parser.error("--luajit is required unless --list-tests is used")
+    if args.variant is None:
+        parser.error("--variant is required unless --list-tests is used")
 
     luajit = args.luajit.resolve()
     if not luajit.is_file():
@@ -165,7 +226,7 @@ def main() -> int:
 
     run_lua_smokes(luajit, expect_bypass=args.variant == "unsandboxed")
     if args.perl_subset:
-        run_perl_subset(args.root.resolve(), luajit, args.variant)
+        run_perl_subset(root, luajit, args.variant, system_name)
     return 0
 
 
