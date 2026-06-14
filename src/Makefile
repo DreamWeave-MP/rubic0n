@@ -107,6 +107,9 @@ XCFLAGS+= -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
 #XCFLAGS+= -DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS
 #XCFLAGS+= -DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS
 #
+# Dangerous opt-in sandbox escape hook for select("sandbox.bypass").
+#XCFLAGS+= -DLUAJIT_ENABLE_SANDBOX_BYPASS
+#
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
 #XCFLAGS+= -DLUAJIT_DISABLE_JIT
 #
