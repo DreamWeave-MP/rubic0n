@@ -843,7 +843,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify archives and prepare NexusMods descriptions
+      - name: Verify archives and prepare NexusMods metadata
         shell: bash
         env:
           RELEASE_REPOSITORY: ${{ github.repository }}
@@ -860,7 +860,7 @@ jobs:
           --workflow-run-id "$WORKFLOW_RUN_ID"
           --target-sha "$RELEASE_TARGET"
           --ref-name "$RELEASE_REF_NAME"
-          --nexus-description-dir nexus-descriptions
+          --nexus-metadata-dir nexus-metadata
 
       - name: Verify published GitHub development checksums
         shell: bash
@@ -882,30 +882,35 @@ jobs:
             exit 1
           fi
 
-      - name: Read NexusMods descriptions
-        id: nexus_descriptions
+      - name: Read NexusMods metadata
+        id: nexus_metadata
         shell: bash
         run: |
           set -euo pipefail
+
+          append_description_output() {
+            local output_name="$1"
+            local delimiter="$2"
+            local file_path="$3"
+
+            printf '%s<<%s\n' "$output_name" "$delimiter"
+            cat "$file_path"
+            printf '%s\n' "$delimiter"
+          }
+
           {
-            echo 'windows_x64<<NEXUS_WINDOWS_X64_DESCRIPTION'
-            cat nexus-descriptions/windows_x64.bbcode
-            echo 'NEXUS_WINDOWS_X64_DESCRIPTION'
-            echo 'linux_x64<<NEXUS_LINUX_X64_DESCRIPTION'
-            cat nexus-descriptions/linux_x64.bbcode
-            echo 'NEXUS_LINUX_X64_DESCRIPTION'
-            echo 'macos_arm64<<NEXUS_MACOS_ARM64_DESCRIPTION'
-            cat nexus-descriptions/macos_arm64.bbcode
-            echo 'NEXUS_MACOS_ARM64_DESCRIPTION'
-            echo 'macos_x64<<NEXUS_MACOS_X64_DESCRIPTION'
-            cat nexus-descriptions/macos_x64.bbcode
-            echo 'NEXUS_MACOS_X64_DESCRIPTION'
-            echo 'android_arm64<<NEXUS_ANDROID_ARM64_DESCRIPTION'
-            cat nexus-descriptions/android_arm64.bbcode
-            echo 'NEXUS_ANDROID_ARM64_DESCRIPTION'
-            echo 'portmaster_arm64<<NEXUS_PORTMASTER_ARM64_DESCRIPTION'
-            cat nexus-descriptions/portmaster_arm64.bbcode
-            echo 'NEXUS_PORTMASTER_ARM64_DESCRIPTION'
+            printf 'windows_x64_display_name=%s\n' "$(< nexus-metadata/windows_x64.name)"
+            append_description_output windows_x64 NEXUS_WINDOWS_X64_DESCRIPTION nexus-metadata/windows_x64.bbcode
+            printf 'linux_x64_display_name=%s\n' "$(< nexus-metadata/linux_x64.name)"
+            append_description_output linux_x64 NEXUS_LINUX_X64_DESCRIPTION nexus-metadata/linux_x64.bbcode
+            printf 'macos_arm64_display_name=%s\n' "$(< nexus-metadata/macos_arm64.name)"
+            append_description_output macos_arm64 NEXUS_MACOS_ARM64_DESCRIPTION nexus-metadata/macos_arm64.bbcode
+            printf 'macos_x64_display_name=%s\n' "$(< nexus-metadata/macos_x64.name)"
+            append_description_output macos_x64 NEXUS_MACOS_X64_DESCRIPTION nexus-metadata/macos_x64.bbcode
+            printf 'android_arm64_display_name=%s\n' "$(< nexus-metadata/android_arm64.name)"
+            append_description_output android_arm64 NEXUS_ANDROID_ARM64_DESCRIPTION nexus-metadata/android_arm64.bbcode
+            printf 'portmaster_arm64_display_name=%s\n' "$(< nexus-metadata/portmaster_arm64.name)"
+            append_description_output portmaster_arm64 NEXUS_PORTMASTER_ARM64_DESCRIPTION nexus-metadata/portmaster_arm64.bbcode
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload Windows X64 to NexusMods
@@ -915,9 +920,9 @@ jobs:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7252706'
           filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
-          display_name: LuaJIT Windows X64 development
+          display_name: ${{ steps.nexus_metadata.outputs.windows_x64_display_name }}
           version: development
-          description: ${{ steps.nexus_descriptions.outputs.windows_x64 }}
+          description: ${{ steps.nexus_metadata.outputs.windows_x64 }}
           archive_existing_file: 'true'
 
       - name: Upload Linux X64 to NexusMods
@@ -927,9 +932,9 @@ jobs:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7252712'
           filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Linux-X64.zip
-          display_name: LuaJIT Linux X64 development
+          display_name: ${{ steps.nexus_metadata.outputs.linux_x64_display_name }}
           version: development
-          description: ${{ steps.nexus_descriptions.outputs.linux_x64 }}
+          description: ${{ steps.nexus_metadata.outputs.linux_x64 }}
           archive_existing_file: 'true'
 
       - name: Upload macOS ARM64 to NexusMods
@@ -939,9 +944,9 @@ jobs:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7252718'
           filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-ARM64.zip
-          display_name: LuaJIT macOS ARM64 development
+          display_name: ${{ steps.nexus_metadata.outputs.macos_arm64_display_name }}
           version: development
-          description: ${{ steps.nexus_descriptions.outputs.macos_arm64 }}
+          description: ${{ steps.nexus_metadata.outputs.macos_arm64 }}
           archive_existing_file: 'true'
 
       - name: Upload macOS X64 to NexusMods
@@ -951,9 +956,9 @@ jobs:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7536308'
           filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-X64.zip
-          display_name: LuaJIT macOS Intel/X64 development
+          display_name: ${{ steps.nexus_metadata.outputs.macos_x64_display_name }}
           version: development
-          description: ${{ steps.nexus_descriptions.outputs.macos_x64 }}
+          description: ${{ steps.nexus_metadata.outputs.macos_x64 }}
           archive_existing_file: 'true'
 
       - name: Upload Android ARM64 to NexusMods
@@ -963,9 +968,9 @@ jobs:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7536302'
           filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
-          display_name: LuaJIT Android ARM64 development
+          display_name: ${{ steps.nexus_metadata.outputs.android_arm64_display_name }}
           version: development
-          description: ${{ steps.nexus_descriptions.outputs.android_arm64 }}
+          description: ${{ steps.nexus_metadata.outputs.android_arm64 }}
           archive_existing_file: 'true'
 
       - name: Upload PortMaster ARM64 to NexusMods
@@ -975,7 +980,7 @@ jobs:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7536305'
           filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
-          display_name: LuaJIT PortMaster ARM64 development
+          display_name: ${{ steps.nexus_metadata.outputs.portmaster_arm64_display_name }}
           version: development
-          description: ${{ steps.nexus_descriptions.outputs.portmaster_arm64 }}
+          description: ${{ steps.nexus_metadata.outputs.portmaster_arm64 }}
           archive_existing_file: 'true'
