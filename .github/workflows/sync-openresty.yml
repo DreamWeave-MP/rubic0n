@@ -26,15 +26,15 @@ jobs:
       DIAGNOSTICS_PATH: openresty-sync-diagnostics.md
       MERGE_OUTPUT_PATH: openresty-sync-merge-output.txt
     steps:
-      - name: Require DW_BOT_TOKEN
+      - name: Require DW_BOT_PAT
         shell: bash
         env:
-          DW_BOT_TOKEN: ${{ secrets.DW_BOT_TOKEN }}
+          DW_BOT_PAT: ${{ secrets.DW_BOT_TOKEN }}
         run: |
           set -euo pipefail
 
-          if [[ -z "${DW_BOT_TOKEN:-}" ]]; then
-            printf '::error::DW_BOT_TOKEN secret is required for checkout and push. Refusing to fall back to GITHUB_TOKEN because those pushes do not trigger downstream workflows.\n'
+          if [[ -z "${DW_BOT_PAT:-}" ]]; then
+            printf '::error::DW_BOT_PAT secret is required for checkout and push. Refusing to fall back to GITHUB_TOKEN because those pushes do not trigger downstream workflows.\n'
             exit 1
           fi
 
@@ -44,10 +44,10 @@ jobs:
           ref: v2.1-agentzh
           fetch-depth: 0
           persist-credentials: true
-          # DW_BOT_TOKEN must be a PAT or GitHub App token. Do not use
+          # DW_BOT_PAT must be a PAT or GitHub App token. Do not use
           # GITHUB_TOKEN here: GitHub suppresses downstream workflow runs for
           # commits pushed with it.
-          token: ${{ secrets.DW_BOT_TOKEN }}
+          token: ${{ secrets.DW_BOT_PAT }}
 
       - name: Merge upstream
         id: sync
