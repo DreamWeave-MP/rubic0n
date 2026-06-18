@@ -698,6 +698,17 @@ local function callmultipleeventhandlers(handlers, ...)
   return false
 end
 
+--- @param t table
+--- @return number result
+function table.size(t)
+  local tType = type(t)
+  if (tType == "table") then
+    return table.nkeys(t)
+  else
+    return #t
+  end
+end
+
 table.bininsert = bininsert
 table.binsearch = binsearch
 table.calleventhandlers = calleventhandlers
