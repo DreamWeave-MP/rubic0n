@@ -768,13 +768,6 @@ extern void *LJ_WIN_LOADLIBA(const char *path);
 #define LJ_HAS_SWEEP_UDATA_FINALIZERS	0
 #endif
 
-/* Experimental unprotected direct calls for plain C userdata finalizers. */
-#ifdef LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS
-#define LJ_HAS_UNPROTECTED_C_FINALIZERS	1
-#else
-#define LJ_HAS_UNPROTECTED_C_FINALIZERS	0
-#endif
-
 /* -- VM security --------------------------------------------------------- */
 
 /* Don't make any changes here. Instead build with:
