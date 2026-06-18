@@ -14,7 +14,12 @@ __DATA__
 jit.off()
 local new_tab = require "table.new"
 local assert = assert
-local nkeys = require "table.nkeys"
+local nkeys = table.nkeys
+local size = table.size
+assert(type(nkeys) == "function")
+assert(type(size) == "function")
+assert(nkeys == size)
+assert(nkeys({ cats = 4, dogs = 3 }) == size({ cats = 4, dogs = 3 }))
 print(nkeys(new_tab(0, 4)))
 print(nkeys({}))
 print(nkeys({ cats = 4 }))
@@ -38,7 +43,7 @@ jit.opt.start("minstitch=100000", "hotloop=2")
 
 local new_tab = require "table.new"
 local assert = assert
-local nkeys = require "table.nkeys"
+local nkeys = table.nkeys
 
 local list = {
   new_tab(0, 4),
@@ -73,7 +78,7 @@ end
 jit.off()
 local new_tab = require "table.new"
 local assert = assert
-local nkeys = require "table.nkeys"
+local nkeys = table.nkeys
 print(nkeys(new_tab(5, 0)))
 print(nkeys({}))
 print(nkeys({ "cats" }))
@@ -97,7 +102,7 @@ jit.opt.start("minstitch=100000", "hotloop=2")
 
 local new_tab = require "table.new"
 local assert = assert
-local nkeys = require "table.nkeys"
+local nkeys = table.nkeys
 
 local list = {
   new_tab(0, 4),
@@ -134,7 +139,7 @@ end
 jit.off()
 local new_tab = require "table.new"
 local assert = assert
-local nkeys = require "table.nkeys"
+local nkeys = table.nkeys
 print(nkeys({ cats = 4, 5, 6 }))
 print(nkeys({ nil, "foo", dogs = 3, cats = 4 }))
 --- jv
@@ -152,7 +157,7 @@ jit.opt.start("minstitch=100000", "hotloop=2")
 
 local new_tab = require "table.new"
 local assert = assert
-local nkeys = require "table.nkeys"
+local nkeys = table.nkeys
 
 local list = {
   { cats = 4, 5, 6 },

@@ -190,7 +190,7 @@ LJLIB_CF(table_isarray) LJLIB_REC(.)
   return 1;
 }
 
-LJLIB_CF(table_nkeys) LJLIB_REC(.)
+LJLIB_CF(table_size) LJLIB_REC(table_nkeys)
 {
   GCtab *src = lj_lib_checktab(L, 1);
 
@@ -359,6 +359,8 @@ static void table_init_extensions(lua_State *L)
 LUALIB_API int luaopen_table(lua_State *L)
 {
   LJ_LIB_REG(L, LUA_TABLIBNAME, table);
+  lua_getfield(L, -1, "size");
+  lua_setfield(L, -2, "nkeys");
 #if LJ_52
   lua_getglobal(L, "unpack");
   lua_setfield(L, -2, "unpack");
