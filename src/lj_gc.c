@@ -698,9 +698,9 @@ static int gc_unprotected_c_finalizer(global_State *g, lua_State *VL,
 }
 #endif
 
-#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS && LJ_HAS_SWEEP_UDATA_FINALIZERS
 static void gc_call_nonresurrecting_c_finalizer(global_State *g, lua_State *L,
-						cTValue *mo, GCobj *o)
+						     cTValue *mo, GCobj *o)
 {
   lua_State *VL = vmthread(g);
   uint8_t oldh = hook_save(g);
@@ -785,11 +785,11 @@ static void gc_finalize(lua_State *L, int allow_nores)
   global_State *g = G(L);
   GCobj *o = gcnext(gcref(g->gc.mmudata));
   cTValue *mo;
-#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS && LJ_HAS_SWEEP_UDATA_FINALIZERS
   int nores_fallback = 0;
 #endif
   lj_assertG(tvref(g->jit_base) == NULL, "finalizer called on trace");
-#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS && LJ_HAS_SWEEP_UDATA_FINALIZERS
   if (allow_nores && o->gch.gct == ~LJ_TUDATA) {
     mo = lj_meta_fastg(g, tabref(gco2ud(o)->metatable), MM_gc);
     if (mo && gc_unprotected_c_finalizer_func(mo, o) != NULL) {
@@ -811,7 +811,7 @@ static void gc_finalize(lua_State *L, int allow_nores)
 #endif
   /* Unchain from list of userdata to be finalized. */
   gc_unqueuefinalizer(g, o);
-#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS && LJ_HAS_SWEEP_UDATA_FINALIZERS
   if (nores_fallback)
     lj_gc_stats_inc(g, finalizer_nonresurrecting_cfunc_fallbacks);
 #endif

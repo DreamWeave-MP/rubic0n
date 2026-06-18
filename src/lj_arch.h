@@ -775,19 +775,6 @@ extern void *LJ_WIN_LOADLIBA(const char *path);
 #define LJ_HAS_UNPROTECTED_C_FINALIZERS	0
 #endif
 
-/* Experimental no-resurrection direct free for native leaf C finalizers. */
-#ifdef LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS
-#ifndef LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS
-#error "LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS requires LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS"
-#endif
-#ifndef LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
-#error "LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS requires LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS"
-#endif
-#define LJ_HAS_NONRESURRECTING_C_FINALIZERS	1
-#else
-#define LJ_HAS_NONRESURRECTING_C_FINALIZERS	0
-#endif
-
 /* -- VM security --------------------------------------------------------- */
 
 /* Don't make any changes here. Instead build with:

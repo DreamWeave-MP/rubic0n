@@ -231,7 +231,7 @@ static int jit_gcstats(lua_State *L)
 #if LJ_HAS_UNPROTECTED_C_FINALIZERS
   hsize += 3;
 #endif
-#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS && LJ_HAS_SWEEP_UDATA_FINALIZERS
   hsize += 2;
 #endif
   t = lj_tab_new_ah(L, 0, hsize);
@@ -314,7 +314,7 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_direct_cfunc_nonzero_results", s->finalizer_direct_cfunc_nonzero_results);
   gcstats_set(L, t, "finalizer_direct_cfunc_fallbacks", s->finalizer_direct_cfunc_fallbacks);
 #endif
-#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
+#if LJ_HAS_UNPROTECTED_C_FINALIZERS && LJ_HAS_SWEEP_UDATA_FINALIZERS
   gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_frees", s->finalizer_nonresurrecting_cfunc_frees);
   gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_fallbacks", s->finalizer_nonresurrecting_cfunc_fallbacks);
 #endif
