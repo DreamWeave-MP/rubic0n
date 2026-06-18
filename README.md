@@ -106,7 +106,7 @@ print(isarray{})  -- true
 
 ### table.nkeys
 
-**syntax:** *n = table.nkeys(tab)*
+**syntax:** *n = nkeys(tab)*
 
 Returns the total number of elements in a given Lua table (i.e. from both the
 array and hash parts combined).
@@ -116,7 +116,7 @@ This API can be JIT compiled.
 Usage:
 
 ```lua
-local nkeys = table.nkeys
+local nkeys = require "table.nkeys"
 
 print(nkeys({}))  -- 0
 print(nkeys({ "a", nil, "b" }))  -- 2
