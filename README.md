@@ -217,13 +217,12 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 ```
 
-Builds with sweep-time userdata finalizer discovery enabled with
-`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` also expose `sweep_udata_*` counters.
-This OpenMW-oriented fork enables that define by default in its Unix and MSVC
-build scripts by design for native userdata workloads. In that mode, normal GC
-cycles discover userdata finalizers incrementally during the sweep phase instead
-of walking the userdata candidate list during atomic. These counters are
-contract-bound to this fork and are intended for validating that mode.
+Builds in this fork expose `sweep_udata_*` counters when the sweep-time
+finalizer discovery path is active (enabled by default). In that mode,
+normal GC cycles discover userdata finalizers incrementally during the sweep
+phase instead of walking the userdata candidate list during atomic. These
+counters are contract-bound to this fork and are intended for validating that
+mode.
 `sweep_udata_preserved` counts actual current-white preservation operations. The
 userdata itself is still preserved unconditionally before queueing. Metatables
 and collectable immediate `__gc` values are preserved only when runtime liveness
@@ -263,26 +262,17 @@ Related local tools:
   compare deltas across builds/configurations, not as a standalone performance
   claim.
 
-To compare GC-stats behavior with and without sweep-time userdata finalizer
-discovery, rebuild and run the same focused benchmark filter under both
-configurations. Since the repository default build scripts enable sweep-time
-discovery, disable it by removing/commenting the build-script define or by using
-an explicit build path whose flags truly replace those defaults. Simply omitting
-the define from additive `XCFLAGS` is not enough if the build script still adds
-it later.
+To compare this fork's default sweep-time behavior against stock LuaJIT,
+rebuild and run the same focused benchmark filter with the same workload on each
+build.
 
 ```sh
 make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS'
 ./src/luajit bench/gcstats.lua --iterations 10000 --filter sweep-udata-
-
-make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS'
-./src/luajit bench/gcstats.lua --iterations 10000 --filter sweep-udata-
 ```
 
-Sweep-udata stats fields are shown as `n/a` by the benchmark when they are
-absent from a stock stats build, or from a stats build where
-`LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS` was explicitly omitted by replacing the
-default build flags.
+Sweep-udata stats fields are shown as `n/a` by the benchmark when they are absent
+from a build that does not use this fork's sweep-time finalizer contract.
 
 [Back to TOC](#table-of-contents)
 
@@ -560,13 +550,9 @@ finalized. It should not be treated as stock or general LuaJIT finalizer
 behavior.
 
 Sweep-phase userdata finalizer discovery is enabled in this OpenMW-oriented
-fork's default Unix and MSVC build scripts with
-`-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`. This is intentional for
+fork by default. This is intentional for
 static/native/leaf userdata finalizers common in OpenMW/native userdata
-workloads. To disable it, remove or comment that define in the build script, or
-use an explicit build path whose flags truly exclude the default Makefile/MSVC
-addition; merely omitting the define from additive `XCFLAGS` does not disable it
-if the default build script still appends it. The mode is contract-bound to this
+workloads. The mode is contract-bound to this
 fork. In this mode, normal GC cycles skip the atomic userdata candidate walk and
 instead process the candidate segment incrementally before string/root sweeping.
 
@@ -628,11 +614,10 @@ functions returning zero, and that other finalizer kinds are understood.
 `LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS` is an even narrower and more
 dangerous opt-in mode for embedders that can prove their native userdata
 finalizers never resurrect the userdata. It requires
-`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` and
-`LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS`; enabling it without either prerequisite
-is a compile-time error. It is rejected with the stock atomic userdata-finalizer
-discovery path because that path can preserve weak-key entries whose finalized
-userdata keys would otherwise be freed immediately by this mode.
+`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` and this fork's sweep-time
+finalizer-discovery contract. It is rejected with the stock atomic
+userdata-finalizer discovery path because that path can preserve weak-key entries
+whose finalized userdata keys would otherwise be freed immediately by this mode.
 
 This is not sweep-time immediate finalization. Userdata are still discovered,
 queued on `mmudata`, and finalized during the normal finalizer phase. The mode

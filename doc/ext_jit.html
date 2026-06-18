@@ -184,9 +184,8 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 </pre>
 <p>
-When both <tt>-DLUAJIT_ENABLE_GCSTATS</tt> and
-<tt>-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS</tt> are enabled, the returned table
-also contains sweep-time userdata finalizer discovery counters:
+When compiled with <tt>-DLUAJIT_ENABLE_GCSTATS</tt>, this fork's default
+sweep-time userdata finalizer discovery path adds these counters:
 </p>
 <pre class="code">
 sweep_udata_steps      sweep_udata_queued     sweep_udata_freed
@@ -206,14 +205,12 @@ window; already-live objects are counted as alive skips, and non-collectable
 <tt>__gc</tt> values are counted as no-preserve cases.
 </p>
 <p>
-This OpenMW-oriented fork enables sweep-time userdata finalizer discovery by
-default in its Unix and MSVC build scripts for static/native/leaf userdata
-finalizer workloads. This is a restricted semantic contract of this fork, not
-stock general LuaJIT finalizer behavior. Arbitrary Lua closure dependency graphs
-are outside the contract, and adding or changing <tt>__gc</tt> late through
-<tt>debug</tt>, FFI, sandbox bypass access, or similar privileged mechanisms is
-unsupported. Weak-key table entries whose keys are dying finalizable userdata may
-be cleared before <tt>__gc</tt> runs. This is intentional under the
+This is a restricted semantic contract of this fork, not stock general
+LuaJIT finalizer behavior. Arbitrary Lua closure dependency graphs are outside
+the contract, and adding or changing <tt>__gc</tt> late through <tt>debug</tt>,
+FFI, sandbox bypass access, or similar privileged mechanisms is unsupported.
+Weak-key table entries whose keys are dying finalizable userdata may be cleared
+before <tt>__gc</tt> runs. This is intentional under the
 static/native/leaf finalizer contract.
 </p>
 <p>

@@ -99,9 +99,7 @@ XCFLAGS=
 # code (e.g. __pairs or os.execute() return values) can be enabled here.
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
 XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
-# Enable sweep-time userdata finalizer discovery by default. Remove or comment
-# this define to use the stock atomic userdata finalizer discovery path.
-XCFLAGS+= -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
+
 # Dangerous opt-in native leaf finalizer modes. The no-resurrection mode requires
 # both unprotected C finalizers and sweep-time userdata finalizer discovery.
 #XCFLAGS+= -DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS

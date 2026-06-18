@@ -12,7 +12,7 @@ plan skip_all => "src/luajit is not built" unless defined $luajit && -x $luajit;
 
 system $luajit, '-e', 'local s = jit and jit.gcstats and jit.gcstats(); if not (s and s.sweep_udata_preserve_udata) then os.exit(77) end';
 
-plan skip_all => 'LuaJIT built without stats+LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS'
+plan skip_all => 'LuaJIT built without sweep_udata stats fields'
     if (($? >> 8) == 77);
 
 my $cc = $ENV{CC} || "cc";

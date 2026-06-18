@@ -13,7 +13,7 @@ my $luajit = abs_path("$Bin/../src/luajit");
 
 system $luajit, '-e', 'local s = jit and jit.gcstats and jit.gcstats(); if not (s and s.sweep_udata_steps) then os.exit(77) end';
 
-plan skip_all => 'LuaJIT built without stats+LUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS'
+plan skip_all => 'LuaJIT built without sweep_udata stats fields'
     if (($? >> 8) == 77);
 
 plan tests => 2;

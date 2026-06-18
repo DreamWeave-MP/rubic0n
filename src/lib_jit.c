@@ -225,13 +225,9 @@ static int jit_gcstats(lua_State *L)
 #if LJ_HASFFI
   hsize += 3;
 #endif
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
   hsize += 11;
-#endif
   hsize += 3;
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
   hsize += 2;
-#endif
   t = lj_tab_new_ah(L, 0, hsize);
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
@@ -282,7 +278,6 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "propagate_calls", s->propagate_calls);
   gcstats_set(L, t, "propagate_bytes", s->propagate_bytes);
   gcstats_set(L, t, "atomic_calls", s->atomic_calls);
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
   gcstats_set(L, t, "sweep_udata_steps", s->sweep_udata_steps);
   gcstats_set(L, t, "sweep_udata_queued", s->sweep_udata_queued);
   gcstats_set(L, t, "sweep_udata_freed", s->sweep_udata_freed);
@@ -294,7 +289,6 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "sweep_udata_preserve_callable_dead", s->sweep_udata_preserve_callable_dead);
   gcstats_set(L, t, "sweep_udata_preserve_callable_alive_skip", s->sweep_udata_preserve_callable_alive_skip);
   gcstats_set(L, t, "sweep_udata_preserve_callable_nongc", s->sweep_udata_preserve_callable_nongc);
-#endif
   gcstats_set(L, t, "sweep_string_steps", s->sweep_string_steps);
   gcstats_set(L, t, "sweep_root_steps", s->sweep_root_steps);
   gcstats_set(L, t, "finalizer_scan_steps", s->finalizer_scan_steps);
@@ -310,10 +304,8 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_direct_cfunc_calls", s->finalizer_direct_cfunc_calls);
   gcstats_set(L, t, "finalizer_direct_cfunc_nonzero_results", s->finalizer_direct_cfunc_nonzero_results);
   gcstats_set(L, t, "finalizer_direct_cfunc_fallbacks", s->finalizer_direct_cfunc_fallbacks);
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
   gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_frees", s->finalizer_nonresurrecting_cfunc_frees);
   gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_fallbacks", s->finalizer_nonresurrecting_cfunc_fallbacks);
-#endif
   gcstats_set(L, t, "weak_tables", s->weak_tables);
   gcstats_set(L, t, "weak_slots_cleared", s->weak_slots_cleared);
   gcstats_set(L, t, "barrier_forward", s->barrier_forward);
