@@ -709,6 +709,21 @@ function table.size(t)
   end
 end
 
+--- @param t table
+--- @param deepCheck? boolean
+--- @return boolean result
+local function empty(t, deepCheck)
+  if deepCheck then
+    for _, v in pairs(t) do
+      if type(v) ~= 'table' or not empty(v, true) then return false end
+    end
+  else
+    for _ in pairs(t) do return false end
+  end
+
+  return true
+end
+
 table.bininsert = bininsert
 table.binsearch = binsearch
 table.calleventhandlers = calleventhandlers
@@ -718,6 +733,7 @@ table.contains = contains
 table.copymissing = copymissing
 table.deepcopy = deepcopy
 table.deeptostring = deeptostring
+table.empty = empty
 table.filter = filter
 table.filterarray = filterarray
 table.find = find
