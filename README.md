@@ -36,8 +36,8 @@ Table of Contents
         * [Global environment specialization](#global-environment-specialization)
         * [Improved allocation sinking](#improved-allocation-sinking)
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
-        * [`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS`](#luajit_enable_unprotected_c_finalizers)
-        * [`LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS`](#luajit_enable_nonresurrecting_c_finalizers)
+        * [Direct zero-upvalue C finalizer ABI](#direct-zero-upvalue-c-finalizer-abi)
+        * [Non-resurrecting direct-free C finalizer ABI](#non-resurrecting-direct-free-c-finalizer-abi)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
         * [Updated `-bl` option](#updated--bl-option)
@@ -217,12 +217,11 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 ```
 
-Builds in this fork expose `sweep_udata_*` counters when the sweep-time
-finalizer discovery path is active (enabled by default). In that mode,
-normal GC cycles discover userdata finalizers incrementally during the sweep
-phase instead of walking the userdata candidate list during atomic. These
-counters are contract-bound to this fork and are intended for validating that
-mode.
+Stats-enabled builds in this fork expose `sweep_udata_*` counters for the
+mandatory sweep-time finalizer discovery path. Normal GC cycles discover
+userdata finalizers incrementally during the sweep phase instead of walking the
+userdata candidate list during atomic. These counters are contract-bound to this
+fork and are intended for validating that always-on mode.
 `sweep_udata_preserved` counts actual current-white preservation operations. The
 userdata itself is still preserved unconditionally before queueing. Metatables
 and collectable immediate `__gc` values are preserved only when runtime liveness
@@ -234,11 +233,11 @@ as no-preserve cases. The detailed fields are
 `sweep_udata_preserve_callable_alive_skip`, and
 `sweep_udata_preserve_callable_nongc`.
 
-Builds with `-DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` also expose
-`finalizer_direct_cfunc_*` counters. Builds that additionally enable
-`-DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS` expose
+Stats-enabled builds also expose `finalizer_direct_cfunc_*` counters for the
+mandatory direct zero-upvalue C finalizer ABI, plus
 `finalizer_nonresurrecting_cfunc_frees` and
-`finalizer_nonresurrecting_cfunc_fallbacks`.
+`finalizer_nonresurrecting_cfunc_fallbacks` for the mandatory non-resurrecting
+direct-free ABI.
 
 Counter groups include allocator calls and bytes (`alloc_*`, `free_*`,
 `realloc_*`), object allocation (`new_gcobj_calls`), incremental step and cycle
@@ -262,7 +261,7 @@ Related local tools:
   compare deltas across builds/configurations, not as a standalone performance
   claim.
 
-To compare this fork's default sweep-time behavior against stock LuaJIT,
+To compare this fork's mandatory sweep-time behavior against stock LuaJIT,
 rebuild and run the same focused benchmark filter with the same workload on each
 build.
 
@@ -271,8 +270,9 @@ make clean && make XCFLAGS='-DLUAJIT_ENABLE_LUA52COMPAT -DLUAJIT_ENABLE_GCSTATS'
 ./src/luajit bench/gcstats.lua --iterations 10000 --filter sweep-udata-
 ```
 
-Sweep-udata stats fields are shown as `n/a` by the benchmark when they are absent
-from a build that does not use this fork's sweep-time finalizer contract.
+Sweep-udata stats fields are shown as `n/a` by the benchmark only when comparing
+against another LuaJIT build that does not carry this fork's mandatory
+sweep-time finalizer contract.
 
 [Back to TOC](#table-of-contents)
 
@@ -549,12 +549,12 @@ avoid repeatedly scanning long-lived userdata that cannot currently be
 finalized. It should not be treated as stock or general LuaJIT finalizer
 behavior.
 
-Sweep-phase userdata finalizer discovery is enabled in this OpenMW-oriented
-fork by default. This is intentional for
-static/native/leaf userdata finalizers common in OpenMW/native userdata
-workloads. The mode is contract-bound to this
-fork. In this mode, normal GC cycles skip the atomic userdata candidate walk and
-instead process the candidate segment incrementally before string/root sweeping.
+Sweep-phase userdata finalizer discovery is mandatory in this OpenMW-oriented
+fork branch. This is intentional for static/native/leaf userdata finalizers
+common in OpenMW/native userdata workloads. The mode is contract-bound to this
+fork and is not stock LuaJIT behavior. In this mode, normal GC cycles skip the
+atomic userdata candidate walk and instead process the candidate segment
+incrementally before string/root sweeping.
 
 This mode is only for static, native/leaf userdata finalizers. Late mutation of
 userdata metatables or `__gc` after a candidate has been scanned is still
@@ -574,16 +574,16 @@ weak keys retaining dying finalizable userdata through finalizer execution.
 
 [Back to TOC](#table-of-contents)
 
-### `LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS`
+### Direct zero-upvalue C finalizer ABI
 
-`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` is a dangerous, opt-in ABI for embedders
-that own all userdata finalizers covered by it. It is not Lua-compatible generic
-finalizer behavior and must not be enabled for applications that allow arbitrary
-Lua code or third-party C modules to install `__gc` handlers.
+This fork branch always includes a dangerous direct zero-upvalue C finalizer ABI
+for embedders that own all userdata finalizers covered by it. It is not
+Lua-compatible generic finalizer behavior and is unsafe for applications that
+allow arbitrary Lua code or third-party C modules to install `__gc` handlers.
 
-When enabled, a full userdata whose `__gc` metamethod is a zero-upvalue C
-function may be called directly by the collector instead of through the normal
-protected finalizer path. The callable must obey this complete ABI contract:
+A full userdata whose `__gc` metamethod is a zero-upvalue C function may be
+called directly by the collector instead of through the normal protected
+finalizer path. The callable must obey this complete ABI contract:
 
 * the object is full userdata only;
 * the `__gc` callable is a zero-upvalue C function;
@@ -599,7 +599,7 @@ Violating this contract can crash or corrupt the runtime. Use it only when the
 embedder owns every such finalizer and has audited them as native leaf
 destructors with simple stack use.
 
-Before enabling this mode in production, build with `LUAJIT_ENABLE_GCSTATS` and
+Before relying on this ABI in production, build with `LUAJIT_ENABLE_GCSTATS` and
 check finalizer telemetry on representative workloads. In particular, review
 `finalizer_cfunc_nup0_calls`, `finalizer_direct_cfunc_calls`,
 `finalizer_direct_cfunc_nonzero_results`, `finalizer_cfunc_upvalue_calls`,
@@ -609,18 +609,18 @@ functions returning zero, and that other finalizer kinds are understood.
 
 [Back to TOC](#table-of-contents)
 
-### `LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS`
+### Non-resurrecting direct-free C finalizer ABI
 
-`LUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS` is an even narrower and more
-dangerous opt-in mode for embedders that can prove their native userdata
-finalizers never resurrect the userdata. It requires
-`LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS` and this fork's sweep-time
-finalizer-discovery contract. It is rejected with the stock atomic
+This fork branch always includes an even narrower and more dangerous
+non-resurrecting direct-free ABI for embedders that can prove their native
+userdata finalizers never resurrect the userdata. It builds on the mandatory
+direct zero-upvalue C finalizer ABI and this fork's mandatory sweep-time
+finalizer-discovery contract. It is not compatible with the stock atomic
 userdata-finalizer discovery path because that path can preserve weak-key entries
-whose finalized userdata keys would otherwise be freed immediately by this mode.
+whose finalized userdata keys would otherwise be freed immediately by this ABI.
 
 This is not sweep-time immediate finalization. Userdata are still discovered,
-queued on `mmudata`, and finalized during the normal finalizer phase. The mode
+queued on `mmudata`, and finalized during the normal finalizer phase. This ABI
 only changes normal GC `GCSfinalize` processing after sweep-time discovery and
 weak clearing. It is not used by the `lua_close()` finalizer drain. For an
 eligible full userdata selected from the normal GC queue, if its `__gc`
@@ -642,11 +642,11 @@ capable path.
 
 Violating the no-resurrection contract can leave a live Lua reference to freed
 userdata and corrupt the runtime. Use this only when the embedder owns and audits
-every zero-upvalue C userdata finalizer covered by the mode. With
+every zero-upvalue C userdata finalizer covered by the ABI. With
 `LUAJIT_ENABLE_GCSTATS`, validate `finalizer_nonresurrecting_cfunc_frees`,
 `finalizer_nonresurrecting_cfunc_fallbacks`,
 `finalizer_direct_cfunc_nonzero_results`, and the finalizer dispatch counters on
-representative workloads before considering this mode for production.
+representative workloads before relying on this ABI in production.
 
 [Back to TOC](#table-of-contents)
 

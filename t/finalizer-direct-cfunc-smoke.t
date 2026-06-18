@@ -95,8 +95,8 @@ $ENV{LUA_PATH} = "$Bin/../lua/?.lua;;";
 
 open my $lua, '>', 'test.lua' or die "Cannot open test.lua: $!";
 print $lua <<'LUA';
--- When built with LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS, this exercises the
--- direct path; otherwise it exercises the protected path.
+-- This fork branch always includes the narrow direct zero-upvalue C finalizer
+-- ABI. This smoke test also remains valid for stock-like protected paths.
 local m = require "findirectsmoke"
 local n = 2000
 

@@ -78,20 +78,20 @@ trap 'trap - INT TERM; exit 130' INT TERM
 
 info "Manual matrix legs not run locally: 32-bit builds and MSVC/Windows builds"
 
-# Default repository build and tests. The Unix/MSVC build scripts intentionally
-# enable sweep-time userdata finalizer discovery by default; gcstats.t should
-# still skip because statistics are not enabled in this leg.
+# Default repository build and tests. Sweep-time userdata finalizer discovery is
+# mandatory in this fork branch; gcstats.t should still skip because statistics
+# are not enabled in this leg.
 run_make_clean_build "Default repo build" ""
 run_focused_tests "Focused GC tests on default repo build"
 
-# GC statistics build. The fork's default sweep-time userdata finalizer mode is
-# enabled in this branch.
-run_make_clean_build "GC stats build (sweep-time mode)" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS")"
-run_focused_tests "Focused GC tests on GC stats build with sweep-time mode"
+# GC statistics build. GCStats is still a telemetry build flag; the sweep-time
+# userdata finalizer mode itself is mandatory in this branch.
+run_make_clean_build "GC stats build (mandatory sweep-time mode)" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS")"
+run_focused_tests "Focused GC tests on GC stats build with mandatory sweep-time mode"
 
-# Reuse the sweep-focused stats matrix for this repo's enabled mode.
-run_make_clean_build "Sweep-udata + stats leg" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS")"
-run_focused_tests "Focused GC tests on sweep-udata + stats leg" "$SWEEP_UDATA_STATS_TESTS"
+# Reuse the sweep-focused stats matrix for this repo's mandatory mode.
+run_make_clean_build "Mandatory sweep-udata + stats leg" "$(with_default_xcflags "-DLUAJIT_ENABLE_GCSTATS")"
+run_focused_tests "Focused GC tests on mandatory sweep-udata + stats leg" "$SWEEP_UDATA_STATS_TESTS"
 
 # Interpreter-only build. This Makefile documents LUAJIT_DISABLE_JIT, but it is
 # currently unsupported in this OpenResty/DW tree, so only this leg is optional.

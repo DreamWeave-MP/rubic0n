@@ -100,10 +100,9 @@ XCFLAGS=
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
 XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
 
-# Dangerous opt-in native leaf finalizer modes. The no-resurrection mode requires
-# both unprotected C finalizers and sweep-time userdata finalizer discovery.
-#XCFLAGS+= -DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS
-#XCFLAGS+= -DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS
+# This fork branch always includes the narrow direct zero-upvalue C finalizer ABI
+# and the narrower non-resurrecting direct-free ABI. They are dangerous native
+# leaf-finalizer contracts, not build options.
 #
 # Dangerous opt-in sandbox escape hook for select("sandbox.bypass").
 #XCFLAGS+= -DLUAJIT_ENABLE_SANDBOX_BYPASS

@@ -65,9 +65,8 @@ if exist minilua.exe.manifest^
 @set DASC=vm_x86.dasc
 @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_DISABLE_GC64
 :DA
-@rem Dangerous opt-in native leaf finalizer modes. The no-resurrection mode requires
-@rem both unprotected C finalizers and sweep-time discovery; it is not enabled here.
-@rem @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS /DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS
+@rem This fork branch always includes the dangerous direct zero-upvalue C finalizer
+@rem ABI and narrower non-resurrecting direct-free ABI; they are not build options.
 @rem Dangerous opt-in sandbox escape hook for select("sandbox.bypass"); not enabled here.
 @rem @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_SANDBOX_BYPASS
 @rem Enabled by default in this fork, matching the Unix Makefile.

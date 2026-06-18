@@ -184,7 +184,7 @@ barrier_forward        barrier_back           barrier_upvalue
 barrier_trace          jit_forced_exits
 </pre>
 <p>
-When compiled with <tt>-DLUAJIT_ENABLE_GCSTATS</tt>, this fork's default
+When compiled with <tt>-DLUAJIT_ENABLE_GCSTATS</tt>, this fork's mandatory
 sweep-time userdata finalizer discovery path adds these counters:
 </p>
 <pre class="code">
@@ -205,10 +205,11 @@ window; already-live objects are counted as alive skips, and non-collectable
 <tt>__gc</tt> values are counted as no-preserve cases.
 </p>
 <p>
-This is a restricted semantic contract of this fork, not stock general
-LuaJIT finalizer behavior. Arbitrary Lua closure dependency graphs are outside
-the contract, and adding or changing <tt>__gc</tt> late through <tt>debug</tt>,
-FFI, sandbox bypass access, or similar privileged mechanisms is unsupported.
+This always-on path is a restricted semantic contract of this fork, not stock
+general LuaJIT finalizer behavior. Arbitrary Lua closure dependency graphs are
+outside the contract, and adding or changing <tt>__gc</tt> late through
+<tt>debug</tt>, FFI, sandbox bypass access, or similar privileged mechanisms is
+unsupported.
 Weak-key table entries whose keys are dying finalizable userdata may be cleared
 before <tt>__gc</tt> runs. This is intentional under the
 static/native/leaf finalizer contract.
