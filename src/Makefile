@@ -99,13 +99,10 @@ XCFLAGS=
 # code (e.g. __pairs or os.execute() return values) can be enabled here.
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
 XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
-# Enable sweep-time userdata finalizer discovery by default. Remove or comment
-# this define to use the stock atomic userdata finalizer discovery path.
-XCFLAGS+= -DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS
-# Dangerous opt-in native leaf finalizer modes. The no-resurrection mode requires
-# both unprotected C finalizers and sweep-time userdata finalizer discovery.
-#XCFLAGS+= -DLUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS
-#XCFLAGS+= -DLUAJIT_ENABLE_NONRESURRECTING_C_FINALIZERS
+
+# This fork branch always includes the narrow direct zero-upvalue C finalizer ABI
+# and the narrower non-resurrecting direct-free ABI. They are dangerous native
+# leaf-finalizer contracts, not build options.
 #
 # Dangerous opt-in sandbox escape hook for select("sandbox.bypass").
 #XCFLAGS+= -DLUAJIT_ENABLE_SANDBOX_BYPASS

@@ -13,7 +13,7 @@ plan skip_all => "src/luajit is not built" unless defined $luajit && -x $luajit;
 system $luajit, '-e', 'if not (jit and jit.gcstats) then os.exit(77) end; local s = jit.gcstats(); if s.finalizer_direct_cfunc_calls == nil then os.exit(78) end';
 plan skip_all => 'LuaJIT built without LUAJIT_ENABLE_GCSTATS'
     if (($? >> 8) == 77);
-plan skip_all => 'LuaJIT built without LUAJIT_ENABLE_UNPROTECTED_C_FINALIZERS'
+plan skip_all => 'GCStats build does not expose direct C finalizer telemetry'
     if (($? >> 8) == 78);
 
 my $cc = $ENV{CC} || "cc";

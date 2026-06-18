@@ -124,11 +124,9 @@ local function check_shape(t)
     assert(type(t[name]) == "number", name)
     assert(t[name] >= 0, name)
   end
-  if t.sweep_udata_steps ~= nil then
-    for _, name in ipairs(sweep_udata_fields) do
-      assert(type(t[name]) == "number", name)
-      assert(t[name] >= 0, name)
-    end
+  for _, name in ipairs(sweep_udata_fields) do
+    assert(type(t[name]) == "number", name)
+    assert(t[name] >= 0, name)
   end
   if t.new_cdata_calls ~= nil then
     for _, name in ipairs(cdata_fields) do
@@ -136,17 +134,13 @@ local function check_shape(t)
       assert(t[name] >= 0, name)
     end
   end
-  if t.finalizer_direct_cfunc_calls ~= nil then
-    for _, name in ipairs(direct_finalizer_fields) do
-      assert(type(t[name]) == "number", name)
-      assert(t[name] >= 0, name)
-    end
+  for _, name in ipairs(direct_finalizer_fields) do
+    assert(type(t[name]) == "number", name)
+    assert(t[name] >= 0, name)
   end
-  if t.finalizer_nonresurrecting_cfunc_frees ~= nil then
-    for _, name in ipairs(nonresurrecting_finalizer_fields) do
-      assert(type(t[name]) == "number", name)
-      assert(t[name] >= 0, name)
-    end
+  for _, name in ipairs(nonresurrecting_finalizer_fields) do
+    assert(type(t[name]) == "number", name)
+    assert(t[name] >= 0, name)
   end
 end
 
@@ -165,7 +159,6 @@ local function udata_payload_bucket_calls(t)
 end
 
 check_shape(jit.gcstats(true))
-local has_sweep_udata = jit.gcstats().sweep_udata_steps ~= nil
 
 do
   jit.gcstats(true)
@@ -250,23 +243,12 @@ do
   for i = 1, 100 do weak[i] = {} end
 end
 
-if has_sweep_udata then
-  collectgarbage("stop")
-  for i = 1, 5 do
-    local u = newproxy(true)
-    getmetatable(u).__gc = tostring
-  end
-  collectgarbage("restart")
-else
-  local mt = { __gc = function() end }
-  for i = 1, 20 do newproxy(false) end
-  collectgarbage("stop")
-  for i = 1, 5 do
-    local u = newproxy(true)
-    getmetatable(u).__gc = mt.__gc
-  end
-  collectgarbage("restart")
+collectgarbage("stop")
+for i = 1, 5 do
+  local u = newproxy(true)
+  getmetatable(u).__gc = tostring
 end
+collectgarbage("restart")
 
 collectgarbage("collect")
 local a = jit.gcstats()
@@ -275,12 +257,8 @@ assert(a.fullgc_calls >= 1)
 assert(a.alloc_calls > 0)
 assert(a.alloc_bytes > 0)
 assert(a.new_gcobj_calls > 0)
-if has_sweep_udata then
-  assert(a.finalizer_scan_steps == 0, a.finalizer_scan_steps)
-  assert(a.sweep_udata_steps > 0, a.sweep_udata_steps)
-else
-  assert(a.finalizer_scan_steps > 0)
-end
+assert(a.finalizer_scan_steps == 0, a.finalizer_scan_steps)
+assert(a.sweep_udata_steps > 0, a.sweep_udata_steps)
 assert(a.finalizer_queued >= 5)
 assert(a.finalizer_calls >= 5)
 
@@ -307,13 +285,9 @@ do
   collectgarbage("collect")
   local first = jit.gcstats(true)
   check_shape(first)
-  if has_sweep_udata then
-    assert(first.finalizer_scan_steps == 0, first.finalizer_scan_steps)
-    assert(first.sweep_udata_steps >= n, first.sweep_udata_steps)
-    assert(first.sweep_udata_parked >= n, first.sweep_udata_parked)
-  else
-    assert(first.finalizer_scan_steps >= n, first.finalizer_scan_steps)
-  end
+  assert(first.finalizer_scan_steps == 0, first.finalizer_scan_steps)
+  assert(first.sweep_udata_steps >= n, first.sweep_udata_steps)
+  assert(first.sweep_udata_parked >= n, first.sweep_udata_parked)
 
   for _ = 1, 3 do collectgarbage("collect") end
 
@@ -323,37 +297,7 @@ do
   assert(refs[n] ~= nil)
 end
 
-if not has_sweep_udata then
-  local n = 2000
-  local resurrected = {}
-
-  do
-    collectgarbage("stop")
-    for i = 1, n do
-      local u = newproxy(true)
-      getmetatable(u).__gc = function(self)
-        resurrected[#resurrected + 1] = self
-      end
-      u = nil
-    end
-    collectgarbage("restart")
-  end
-
-  for _ = 1, 8 do
-    collectgarbage("collect")
-    if #resurrected == n then break end
-  end
-
-  assert(#resurrected == n, #resurrected)
-  jit.gcstats(true)
-
-  for _ = 1, 3 do collectgarbage("collect") end
-
-  local c = jit.gcstats()
-  check_shape(c)
-  assert(c.finalizer_scan_steps < n / 4, c.finalizer_scan_steps)
-  assert(#resurrected == n, #resurrected)
-else
+do
   local n = 2000
 
   do

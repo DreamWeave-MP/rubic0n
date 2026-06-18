@@ -638,7 +638,6 @@ typedef struct GCStats {
   uint64_t propagate_calls;
   uint64_t propagate_bytes;
   uint64_t atomic_calls;
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
   uint64_t sweep_udata_steps;
   uint64_t sweep_udata_queued;
   uint64_t sweep_udata_freed;
@@ -650,7 +649,6 @@ typedef struct GCStats {
   uint64_t sweep_udata_preserve_callable_dead;
   uint64_t sweep_udata_preserve_callable_alive_skip;
   uint64_t sweep_udata_preserve_callable_nongc;
-#endif
   uint64_t sweep_string_steps;
   uint64_t sweep_root_steps;
   uint64_t finalizer_scan_steps;
@@ -663,15 +661,11 @@ typedef struct GCStats {
   uint64_t finalizer_ffunc_calls;
   uint64_t finalizer_other_calls;
   uint64_t finalizer_error_calls;
-#if LJ_HAS_UNPROTECTED_C_FINALIZERS
   uint64_t finalizer_direct_cfunc_calls;
   uint64_t finalizer_direct_cfunc_nonzero_results;
   uint64_t finalizer_direct_cfunc_fallbacks;
-#endif
-#if LJ_HAS_NONRESURRECTING_C_FINALIZERS
   uint64_t finalizer_nonresurrecting_cfunc_frees;
   uint64_t finalizer_nonresurrecting_cfunc_fallbacks;
-#endif
   uint64_t weak_tables;
   uint64_t weak_slots_cleared;
   uint64_t barrier_forward;
@@ -696,9 +690,7 @@ typedef struct GCState {
   MSize sweepstr;	/* Sweep position in string table. */
   GCRef root;		/* List of all collectable objects. */
   MRef sweep;		/* Sweep position in root list. */
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
   MRef sweepudata;	/* Sweep position in userdata candidate list. */
-#endif
   GCRef gray;		/* List of gray objects. */
   GCRef grayagain;	/* List of objects for atomic traversal. */
   GCRef weak;		/* List of weak tables (to be cleared). */

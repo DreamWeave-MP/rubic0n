@@ -289,9 +289,8 @@ if jit then jit.off() end
 local m = require "finonres"
 
 local stats = jit and jit.gcstats and jit.gcstats()
-local has_nores = stats and stats.finalizer_nonresurrecting_cfunc_frees ~= nil
+local has_nores_stats = stats and stats.finalizer_nonresurrecting_cfunc_frees ~= nil
 local has_direct = stats and stats.finalizer_direct_cfunc_calls ~= nil
-local expect_nores = os.getenv("LUAJIT_TEST_EXPECT_NORES") == "1"
 
 local function stat(name)
   return jit.gcstats()[name]
@@ -311,7 +310,7 @@ local function force_stat(name, before, delta)
   end)
 end
 
-local function check_c_resurrection_when_nores_absent()
+local function check_resurrecting_c_finalizer_uses_generic_path()
   m.reset()
   collectgarbage("collect")
   if stats then jit.gcstats(true) end
@@ -360,7 +359,7 @@ local function check_leaf_lifetime_without_stats_dependency()
 end
 
 local function check_nores_direct_free_and_fallbacks()
-  assert(has_nores)
+  assert(has_nores_stats)
   m.reset()
   collectgarbage("collect")
   jit.gcstats(true)
@@ -418,15 +417,12 @@ local function check_close_drain_uses_generic_path()
 end
 
 local immediate_leaf_free = check_leaf_lifetime_without_stats_dependency()
-if has_nores or expect_nores then
-  assert(immediate_leaf_free, "no-res build did not free after first finalizer cycle")
-end
-if has_nores then
+assert(immediate_leaf_free, "non-resurrecting C finalizer did not free after first finalizer cycle")
+if has_nores_stats then
   check_close_drain_uses_generic_path()
   check_nores_direct_free_and_fallbacks()
-elseif stats then
-  check_c_resurrection_when_nores_absent()
 end
+check_resurrecting_c_finalizer_uses_generic_path()
 
 print("ok")
 LUA
@@ -445,4 +441,4 @@ close $errfh;
 
 chdir $cwd or die $!;
 
-is "$rc:$out$err", "0:ok\n", 'non-resurrecting direct C finalizer mode is guarded';
+is "$rc:$out$err", "0:ok\n", 'non-resurrecting direct-free C finalizer contract is guarded';

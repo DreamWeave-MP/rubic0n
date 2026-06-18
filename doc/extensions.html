@@ -312,11 +312,10 @@ and does not make collection automatically faster.
 
 <h3 id="static_udata_finalizers">Static userdata finalizer scan contract</h3>
 <p>
-This OpenMW-oriented fork enables sweep-time userdata finalizer discovery by
-default in its Unix and MSVC build scripts with
-<tt>-DLUAJIT_ENABLE_SWEEP_UDATA_FINALIZERS</tt>. The mode is intended for
-static/native/leaf userdata finalizers and is a restricted semantic contract of
-this fork, not stock general LuaJIT finalizer behavior.
+This OpenMW-oriented fork branch makes sweep-time userdata finalizer discovery
+mandatory. The mode is intended for static/native/leaf userdata finalizers and
+is a restricted semantic contract of this fork, not stock general LuaJIT
+finalizer behavior.
 </p>
 <p>
 Userdata finalizability is treated as static once a userdata object has survived

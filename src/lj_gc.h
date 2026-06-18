@@ -11,9 +11,7 @@
 /* Garbage collector states. Order matters. */
 enum {
   GCSpause, GCSpropagate, GCSatomic,
-#if LJ_HAS_SWEEP_UDATA_FINALIZERS
   GCSsweepudata,
-#endif
   GCSsweepstring, GCSsweep, GCSfinalize
 };
 
