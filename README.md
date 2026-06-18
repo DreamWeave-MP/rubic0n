@@ -571,6 +571,9 @@ associations whose keys are dying finalizable userdata may be cleared before the
 userdata finalizers run in this mode. This is intentional under the
 static/native/leaf finalizer contract. Code using this mode must not rely on
 weak keys retaining dying finalizable userdata through finalizer execution.
+Weak-table torture cases that depend on arbitrary Lua `__gc` closure dependency
+graphs being discovered and preserved exactly like stock LuaJIT across tiny
+incremental GC steps are likewise outside this fork contract.
 
 [Back to TOC](#table-of-contents)
 

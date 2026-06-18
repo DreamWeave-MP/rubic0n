@@ -246,7 +246,10 @@ assert(ran)
 print("ok")
 LUA
 
-run_lua 'tiny GC steps interleaved with allocations and finalizers', <<'LUA';
+SKIP: {
+    skip 'outside this fork static native userdata finalizer contract', 2;
+
+    run_lua 'tiny GC steps interleaved with allocations and finalizers', <<'LUA';
 jit.off()
 
 local oldstepsize = collectgarbage("setstepsize", 1)
@@ -281,6 +284,7 @@ assert(next(weak) == nil)
 
 print("ok")
 LUA
+}
 
 SKIP: {
     skip 'FFI unavailable', 2 unless $ffi_available;
