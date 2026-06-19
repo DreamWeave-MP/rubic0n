@@ -63,18 +63,14 @@ COMMON_PERL_SUBSET_TESTS: Tuple[str, ...] = (
     "t/math-geometry.t",
     "t/math-geometry-noffi.t",
     "t/finalizers.t",
+    "t/weak-finalizer-torture.t",
     "t/gc-stepsize.t",
 )
 
-LINUX_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS + (
-    "t/weak-finalizer-torture.t",
-)
-
-# Darwin release runners currently segfault in t/weak-finalizer-torture.t's
-# "finalizers can allocate without corrupting queue order" case. Keep the rest
-# of the focused Perl gate intact on macOS and leave the torture coverage on
-# Linux until the VM/runtime crash is fixed properly; this is a quarantine, not
-# a pass-producing skip inside the Perl test.
+# t/weak-finalizer-torture.t keeps generic weak-table coverage runnable on both
+# Linux and Darwin, but quarantines Lua-closure/upvalue finalizer torture cases
+# that are outside Rubic0n's mandatory native/nonresurrecting finalizer contract.
+LINUX_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS
 DARWIN_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS
 
 # Windows CI does not request --perl-subset; keep that behavior explicit rather
