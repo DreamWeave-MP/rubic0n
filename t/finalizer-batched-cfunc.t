@@ -184,6 +184,12 @@ local function force_until(label, pred)
   error(label)
 end
 
+local function force_stat(name, before, amount)
+  force_until(name, function()
+    return stat(name) >= before + amount
+  end)
+end
+
 local function reset_all()
   m.reset()
   collectgarbage("restart")
@@ -210,9 +216,56 @@ local function check_cap(observed_max, batched_calls, batches)
   assert(observed_max <= cap, "batch max " .. observed_max .. " > cap " .. cap)
   assert(batches >= math.ceil(batched_calls / cap),
          "too few batches for cap: " .. batches .. " calls=" .. batched_calls .. " cap=" .. cap)
-  if batched_calls > 1 and batches < batched_calls then
-    assert(observed_max > 1, "batch max did not show grouped finalizers")
+  if cap > 1 and batched_calls > cap then
+    assert(batches < batched_calls,
+           "batched path degraded to singleton dispatches: batches=" .. batches ..
+           " calls=" .. batched_calls)
+    assert(observed_max == cap,
+           "batch max " .. observed_max .. " did not reach cap " .. cap)
   end
+end
+
+local function check_step_pacing()
+  local cap = expected_cap or DEFAULT_BATCH_CAP
+  local n = math.min(cap * 4, 1000)
+  if cap <= 1 or n <= cap then return end
+
+  reset_all()
+  local old_stepmul = collectgarbage("setstepmul", 20)
+  local old_stepsize = collectgarbage("setstepsize", 1)
+  collectgarbage("stop")
+  m.alloc_eligible(n)
+  collectgarbage("restart")
+
+  local first_step_calls = nil
+  for _ = 1, 100000 do
+    local before_calls = stat("finalizer_direct_cfunc_batched_calls")
+    collectgarbage("step", 0)
+    local after_calls = stat("finalizer_direct_cfunc_batched_calls")
+    if after_calls > before_calls then
+      first_step_calls = after_calls - before_calls
+      break
+    end
+  end
+  assert(first_step_calls, "GC step loop never reached batched finalizers")
+  assert(first_step_calls <= cap,
+         "first finalizer step ran more than one batch: " .. first_step_calls ..
+         " > " .. cap)
+
+  local before_second = stat("finalizer_direct_cfunc_batched_calls")
+  collectgarbage("step", 0)
+  local second_step_calls = stat("finalizer_direct_cfunc_batched_calls") - before_second
+  assert(second_step_calls > 0, "second finalizer step did not run remaining finalizers")
+  assert(second_step_calls <= cap,
+         "second finalizer step ran more than one batch: " .. second_step_calls ..
+         " > " .. cap)
+
+  collectgarbage("setstepmul", old_stepmul)
+  collectgarbage("setstepsize", old_stepsize)
+  force_until("paced finalizers did not drain", function()
+    local leaf, closure, stack_errors = m.counters()
+    return leaf == n and closure == 0 and stack_errors == 0
+  end)
 end
 
 local function check_homogeneous_batch()
@@ -268,9 +321,44 @@ local function check_mixed_queue_keeps_fallbacks()
          "finalizer calls " .. calls .. " != " .. (eligible + ineligible))
 end
 
+local function check_unsupported_finalizers_do_not_batch()
+  reset_all()
+  local before = stats()
+  do
+    local u = newproxy(true)
+    getmetatable(u).__gc = tostring
+    u = nil
+  end
+  force_stat("finalizer_ffunc_calls", before.finalizer_ffunc_calls, 1)
+  local after = stats()
+  assert(delta(before, after, "finalizer_direct_cfunc_batches") == 0)
+  assert(delta(before, after, "finalizer_direct_cfunc_batched_calls") == 0)
+  assert(delta(before, after, "finalizer_direct_cfunc_calls") == 0)
+  assert(delta(before, after, "finalizer_nonresurrecting_cfunc_frees") == 0)
+
+  local ok, ffi = pcall(require, "ffi")
+  if ok then
+    local ran = 0
+    reset_all()
+    before = stats()
+    do
+      local p = ffi.gc(ffi.new("int[1]"), function() ran = ran + 1 end)
+      p = nil
+    end
+    force_until("cdata finalizer did not run", function() return ran == 1 end)
+    after = stats()
+    assert(delta(before, after, "finalizer_direct_cfunc_batches") == 0)
+    assert(delta(before, after, "finalizer_direct_cfunc_batched_calls") == 0)
+    assert(delta(before, after, "finalizer_direct_cfunc_calls") == 0)
+    assert(delta(before, after, "finalizer_nonresurrecting_cfunc_frees") == 0)
+  end
+end
+
 check_counter_shape()
 check_homogeneous_batch()
 check_mixed_queue_keeps_fallbacks()
+check_unsupported_finalizers_do_not_batch()
+check_step_pacing()
 
 print("ok")
 LUA
