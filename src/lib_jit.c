@@ -223,7 +223,7 @@ static int jit_gcstats(lua_State *L)
   GCtab *t;
   int hsize = 61;
 #if LJ_HASFFI
-  hsize += 3;
+  hsize += 6;
 #endif
   hsize += 11;
   hsize += 3;
