@@ -251,6 +251,11 @@ local function stat_delta(before, after, noise, collections, name)
   return tostring(value)
 end
 
+local function stat_highwater(after, name)
+  if not after or after[name] == nil then return "" end
+  return tostring(after[name])
+end
+
 local function finalizer_counts_string()
   local counts = m.finalizer_counts()
   local parts = {}
@@ -282,7 +287,7 @@ local function print_row(k, phase, summary, before, after, noise, collections,
     stat_delta(before, after, noise, collections, "finalizer_direct_cfunc_calls"),
     stat_delta(before, after, noise, collections, "finalizer_direct_cfunc_batches"),
     stat_delta(before, after, noise, collections, "finalizer_direct_cfunc_batched_calls"),
-    stat_delta(before, after, noise, collections, "finalizer_direct_cfunc_batch_max"),
+    stat_highwater(after, "finalizer_direct_cfunc_batch_max"),
     stat_delta(before, after, noise, collections, "finalizer_nonresurrecting_cfunc_frees"),
   }, ","), "\n")
 end
@@ -299,7 +304,7 @@ io.write("# gcstats=", has_gcstats and "available" or "unavailable", "\n")
 if has_gcstats then
   io.write("# batched_finalizer_counters=", batch_stats_available and "available" or "unavailable", "\n")
   io.write("# note=GCStats telemetry is enabled and adds overhead; compare against other GCStats builds only.\n")
-  io.write("# note=counter columns subtract one empty full-collection baseline per burst.\n")
+  io.write("# note=additive counter columns subtract one empty full-collection baseline per burst; high-water columns report measured-run values.\n")
 else
   io.write("# batched_finalizer_counters=unknown\n")
   io.write("# note=GCStats telemetry is unavailable; counter columns are blank.\n")
