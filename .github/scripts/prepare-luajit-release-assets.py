@@ -28,6 +28,9 @@ RELEASE_NOTES = "release-notes.md"
 VT_HEADER = ("archive", "sha256", "analysis_id", "analysis_url")
 NEXUS_NAME_PATTERN_TEXT = r"^[a-zA-Z0-9 _'().-]+$"
 NEXUS_NAME_PATTERN = re.compile(NEXUS_NAME_PATTERN_TEXT)
+INSTALL_DIR = "install me"
+INTERPRETER_DIR = "interpreter"
+JIT_DIR = "jit"
 
 
 @dataclass(frozen=True)
@@ -51,36 +54,36 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="Windows",
         arch="X64",
         platform="windows",
-        runtime_names=("lib/lua51.dll", "bin/luajit.exe"),
+        runtime_names=(f"{INSTALL_DIR}/lua51.dll", f"{INTERPRETER_DIR}/luajit.exe"),
         benchmarks_expected=True,
         nexus_output="windows_x64",
         nexus_title="LuaJIT Windows X64 development",
         nexus_platform_meaning="Windows x86_64 / 64-bit desktop build.",
-        nexus_runtime_payload="Selected variant [code]lib/lua51.dll[/code] and [code]bin/luajit.exe[/code].",
+        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/lua51.dll[/code] and [code]{INTERPRETER_DIR}/luajit.exe[/code].",
     ),
     ArchiveSpec(
         name="LuaJIT-Linux-X64.zip",
         os_name="Linux",
         arch="X64",
         platform="linux",
-        runtime_names=("lib/libluajit-5.1.so.2", "bin/luajit"),
+        runtime_names=(f"{INSTALL_DIR}/libluajit-5.1.so.2", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=True,
         nexus_output="linux_x64",
         nexus_title="LuaJIT Linux X64 development",
         nexus_platform_meaning="Linux x86_64 / AMD64 build.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.so.2[/code] and [code]bin/luajit[/code].",
+        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit-5.1.so.2[/code] and [code]{INTERPRETER_DIR}/luajit[/code].",
     ),
     ArchiveSpec(
         name="LuaJIT-macOS-ARM64.zip",
         os_name="macOS",
         arch="ARM64",
         platform="macos",
-        runtime_names=("lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib", "bin/luajit"),
+        runtime_names=(f"{INSTALL_DIR}/libluajit-5.1.2.dylib", f"{INSTALL_DIR}/libluajit-5.1.dylib", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=True,
         nexus_output="macos_arm64",
         nexus_title="LuaJIT macOS ARM64 development",
         nexus_platform_meaning="macOS Apple Silicon ARM64 build.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.2.dylib[/code], alias [code]lib/libluajit-5.1.dylib[/code], and [code]bin/luajit[/code].",
+        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit-5.1.2.dylib[/code], alias [code]{INSTALL_DIR}/libluajit-5.1.dylib[/code], and [code]{INTERPRETER_DIR}/luajit[/code].",
         nexus_caveats=("This is separate from the macOS Intel/X64 download; do not use it for x86_64-only macOS runtimes.",),
     ),
     ArchiveSpec(
@@ -88,12 +91,12 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="macOS",
         arch="X64",
         platform="macos",
-        runtime_names=("lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib", "bin/luajit"),
+        runtime_names=(f"{INSTALL_DIR}/libluajit-5.1.2.dylib", f"{INSTALL_DIR}/libluajit-5.1.dylib", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=True,
         nexus_output="macos_x64",
         nexus_title="LuaJIT macOS Intel X64 development",
         nexus_platform_meaning="macOS Intel x86_64 build.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.2.dylib[/code], alias [code]lib/libluajit-5.1.dylib[/code], and [code]bin/luajit[/code].",
+        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit-5.1.2.dylib[/code], alias [code]{INSTALL_DIR}/libluajit-5.1.dylib[/code], and [code]{INTERPRETER_DIR}/luajit[/code].",
         nexus_caveats=("This is separate from the macOS ARM64 / Apple Silicon download; do not use it for arm64-only macOS runtimes.",),
     ),
     ArchiveSpec(
@@ -101,12 +104,12 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="Android",
         arch="ARM64",
         platform="android",
-        runtime_names=("lib/libluajit.so",),
+        runtime_names=(f"{INSTALL_DIR}/libluajit.so",),
         benchmarks_expected=False,
         nexus_output="android_arm64",
         nexus_title="LuaJIT Android ARM64 development",
         nexus_platform_meaning="Android ARM64 / AArch64 ([code]arm64-v8a[/code]) native-library payload.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit.so[/code]; place it in the app's ARM64 native library location or equivalent engine-managed loader path.",
+        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit.so[/code]; place it in the app's ARM64 native library location or equivalent engine-managed loader path.",
         nexus_caveats=("This is a raw [code]libluajit.so[/code] runtime library, not an APK or installable Android application.",),
     ),
     ArchiveSpec(
@@ -114,12 +117,12 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="PortMaster",
         arch="ARM64",
         platform="portmaster",
-        runtime_names=("lib/libluajit.so", "bin/luajit"),
+        runtime_names=(f"{INSTALL_DIR}/libluajit.so", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=False,
         nexus_output="portmaster_arm64",
         nexus_title="LuaJIT PortMaster ARM64 development",
         nexus_platform_meaning="PortMaster Linux AArch64 / arm64 payload.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit.so[/code] and [code]bin/luajit[/code]; place the library where the PortMaster launcher/runtime library path can load it.",
+        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit.so[/code] and [code]{INTERPRETER_DIR}/luajit[/code]; place the library where the PortMaster launcher/runtime library path can load it.",
         nexus_caveats=("This is Linux AArch64 for PortMaster devices, not Android and not ARMv7/armhf.",),
     ),
 )
@@ -243,10 +246,10 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
 
     for variant in VARIANTS:
         variant_prefix = f"{variant}/"
-        bin_prefix = f"{variant_prefix}bin/"
-        jit_prefix = f"{variant_prefix}jit/"
-        lib_prefix = f"{variant_prefix}lib/"
-        expected_variant_dirs = {"bin", "jit", "lib"}
+        interpreter_prefix = f"{variant_prefix}{INTERPRETER_DIR}/"
+        jit_prefix = f"{interpreter_prefix}{JIT_DIR}/"
+        install_prefix = f"{variant_prefix}{INSTALL_DIR}/"
+        expected_variant_dirs = {INSTALL_DIR, INTERPRETER_DIR}
 
         if not any(name.startswith(variant_prefix) for name in names):
             fail(f"{path.name} is missing {variant}/")
@@ -258,14 +261,14 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
             if child not in expected_variant_dirs:
                 fail(f"{path.name} contains unexpected {variant}/ payload {remainder!r}")
         if not any(name.startswith(jit_prefix) for name in names):
-            fail(f"{path.name} is missing {variant}/jit/")
+            fail(f"{path.name} is missing {variant}/{INTERPRETER_DIR}/{JIT_DIR}/")
         if f"{jit_prefix}vmdef.lua" not in names:
-            fail(f"{path.name} is missing {variant}/jit/vmdef.lua")
-        if not any(name.startswith(lib_prefix) for name in names):
-            fail(f"{path.name} is missing {variant}/lib/")
+            fail(f"{path.name} is missing {variant}/{INTERPRETER_DIR}/{JIT_DIR}/vmdef.lua")
+        if not any(name.startswith(install_prefix) for name in names):
+            fail(f"{path.name} is missing {variant}/{INSTALL_DIR}/")
         actual_runtime_names = sorted(
-            [f"bin/{name}" for name in archive_files_under(names, bin_prefix)]
-            + [f"lib/{name}" for name in archive_files_under(names, lib_prefix)]
+            [f"{INTERPRETER_DIR}/{name}" for name in archive_files_under(names, interpreter_prefix) if "/" not in name]
+            + [f"{INSTALL_DIR}/{name}" for name in archive_files_under(names, install_prefix)]
         )
         if actual_runtime_names != sorted(spec.runtime_names):
             fail(
@@ -274,7 +277,7 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
             )
         for jit_file in archive_files_under(names, jit_prefix):
             if not jit_file.endswith(".lua"):
-                fail(f"{path.name} contains non-Lua JIT module {variant}/jit/{jit_file}")
+                fail(f"{path.name} contains non-Lua JIT module {variant}/{INTERPRETER_DIR}/{JIT_DIR}/{jit_file}")
         for runtime_name in spec.runtime_names:
             archive_member = f"{variant_prefix}{runtime_name}"
             if archive_member not in names:
@@ -283,12 +286,21 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
         variant_manifest = manifest.get("variants", {}).get(variant)
         if not isinstance(variant_manifest, dict):
             fail(f"{path.name} manifest is missing {variant}")
-        expected_library_files = sorted(name for name in spec.runtime_names if name.startswith("lib/"))
-        expected_executable_files = sorted(name for name in spec.runtime_names if name.startswith("bin/"))
+        expected_library_files = sorted(name for name in spec.runtime_names if name.startswith(f"{INSTALL_DIR}/"))
+        expected_executable_files = sorted(name for name in spec.runtime_names if name.startswith(f"{INTERPRETER_DIR}/"))
+        if sorted(variant_manifest.get("install_files", [])) != expected_library_files:
+            fail(f"{path.name} manifest has wrong install_files for {variant}")
         if sorted(variant_manifest.get("library_files", [])) != expected_library_files:
             fail(f"{path.name} manifest has wrong library_files for {variant}")
         if sorted(variant_manifest.get("runtime_executable_files", [])) != expected_executable_files:
             fail(f"{path.name} manifest has wrong runtime_executable_files for {variant}")
+        expected_jit_files = sorted(
+            name.removeprefix(variant_prefix)
+            for name in names
+            if name.startswith(jit_prefix) and not name.endswith("/")
+        )
+        if sorted(variant_manifest.get("jit_module_files", [])) != expected_jit_files:
+            fail(f"{path.name} manifest has wrong jit_module_files for {variant}")
         expected_bypass = variant == "unsandboxed"
         if variant_manifest.get("sandbox_bypass_enabled") is not expected_bypass:
             fail(f"{path.name} manifest has wrong sandbox bypass state for {variant}")
@@ -491,8 +503,8 @@ def write_nexus_metadata(
             handle.write(f"Primary runtime payload: {spec.nexus_runtime_payload}\n")
             for caveat in spec.nexus_caveats:
                 handle.write(f"Caveat: {caveat}\n")
-            handle.write("Use exactly one variant root from this archive; do not mix sandboxed and unsandboxed files or copy a runtime library from a different platform archive.\n\n")
-            handle.write("Keep the selected variant's [code]jit/[/code] directory with the matching runtime files, and put the selected variant root (the parent of [code]jit/[/code]) on [code]package.path[/code], not [code]jit/[/code] itself.\n\n")
+            handle.write(f"Use exactly one variant root from this archive; do not mix sandboxed and unsandboxed files or copy a runtime library from a different platform archive. Keep that variant's [code]{INSTALL_DIR}/[/code] and [code]{INTERPRETER_DIR}/[/code] directories together.\n\n")
+            handle.write(f"The selected variant's [code]{INTERPRETER_DIR}/[/code] directory contains the LuaJIT executable when this platform ships one, plus [code]{INTERPRETER_DIR}/{JIT_DIR}/[/code]. Put [code]{INTERPRETER_DIR}/[/code] on [code]package.path[/code], not [code]{INTERPRETER_DIR}/{JIT_DIR}/[/code] itself.\n\n")
             handle.write(f"{bbcode_url(github_changelog, 'GitHub changelog asset')}\n")
             handle.write(f"{bbcode_url(github_release, 'GitHub development release')}\n")
             handle.write(f"{bbcode_url(github_run, 'GitHub Actions workflow run')}\n")
