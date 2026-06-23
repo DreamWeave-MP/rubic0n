@@ -235,15 +235,21 @@ local function check_step_pacing()
   local old_stepsize = collectgarbage("setstepsize", 1)
   collectgarbage("stop")
   m.alloc_eligible(n)
-  collectgarbage("restart")
+
+  local function isolated_step_delta()
+    collectgarbage("stop")
+    local before_calls = stat("finalizer_direct_cfunc_batched_calls")
+    collectgarbage("restart")
+    collectgarbage("step", 0)
+    collectgarbage("stop")
+    return stat("finalizer_direct_cfunc_batched_calls") - before_calls
+  end
 
   local first_step_calls = nil
   for _ = 1, 100000 do
-    local before_calls = stat("finalizer_direct_cfunc_batched_calls")
-    collectgarbage("step", 0)
-    local after_calls = stat("finalizer_direct_cfunc_batched_calls")
-    if after_calls > before_calls then
-      first_step_calls = after_calls - before_calls
+    local step_calls = isolated_step_delta()
+    if step_calls > 0 then
+      first_step_calls = step_calls
       break
     end
   end
@@ -252,9 +258,7 @@ local function check_step_pacing()
          "first finalizer step ran more than one batch: " .. first_step_calls ..
          " > " .. cap)
 
-  local before_second = stat("finalizer_direct_cfunc_batched_calls")
-  collectgarbage("step", 0)
-  local second_step_calls = stat("finalizer_direct_cfunc_batched_calls") - before_second
+  local second_step_calls = isolated_step_delta()
   assert(second_step_calls > 0, "second finalizer step did not run remaining finalizers")
   assert(second_step_calls <= cap,
          "second finalizer step ran more than one batch: " .. second_step_calls ..
@@ -262,6 +266,7 @@ local function check_step_pacing()
 
   collectgarbage("setstepmul", old_stepmul)
   collectgarbage("setstepsize", old_stepsize)
+  collectgarbage("restart")
   force_until("paced finalizers did not drain", function()
     local leaf, closure, stack_errors = m.counters()
     return leaf == n and closure == 0 and stack_errors == 0
