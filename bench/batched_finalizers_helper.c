@@ -16,9 +16,9 @@ static int upvalue_finalizer_count;
 static int stack_error_count;
 static int finalizer_counts[BATCHFIN_HELPER_MAX_FINALIZERS];
 
-static void mt_name(char *buf, size_t len, int index)
+static void mt_name(char *buf, int index)
 {
-  snprintf(buf, len, "batchedfinalizers.udata.%d", index);
+  sprintf(buf, "batchedfinalizers.udata.%d", index);
 }
 
 static void check_count(lua_State *L, int n, const char *what)
@@ -69,7 +69,7 @@ static void ensure_metatable(lua_State *L, int index, int finalizer_index,
                              int ineligible)
 {
   char name[64];
-  mt_name(name, sizeof(name), index);
+  mt_name(name, index);
   if (luaL_newmetatable(L, name)) {
     if (ineligible) {
       lua_pushliteral(L, "upvalue");
@@ -90,7 +90,7 @@ static int is_ineligible_index(int index, int ineligible_every)
 static void push_metatable(lua_State *L, int index)
 {
   char name[64];
-  mt_name(name, sizeof(name), index);
+  mt_name(name, index);
   luaL_getmetatable(L, name);
 }
 
@@ -108,13 +108,14 @@ static int l_ensure_metatables(lua_State *L)
   int k = luaL_checkint(L, 1);
   int finalizer_n = luaL_checkint(L, 2);
   int ineligible_every = luaL_optint(L, 3, 0);
+  int i;
   check_count(L, k, "metatable count must be positive");
   luaL_argcheck(L, k <= BATCHFIN_HELPER_MAX_METATABLES, 1,
                 "metatable count is too large");
   luaL_argcheck(L, finalizer_n >= 1 && finalizer_n <= BATCHFIN_HELPER_MAX_FINALIZERS,
                 2, "finalizer function count is out of range");
   luaL_argcheck(L, ineligible_every >= 0, 3, "ineligible interval must be non-negative");
-  for (int i = 1; i <= k; i++) {
+  for (i = 1; i <= k; i++) {
     int fin = (i - 1) % finalizer_n;
     ensure_metatable(L, i, fin, is_ineligible_index(i, ineligible_every));
   }
@@ -124,8 +125,9 @@ static int l_ensure_metatables(lua_State *L)
 static int l_alloc_homogeneous(lua_State *L)
 {
   int n = luaL_checkint(L, 1);
+  int i;
   check_count(L, n, "object count must be positive");
-  for (int i = 1; i <= n; i++) {
+  for (i = 1; i <= n; i++) {
     new_udata(L, 1, i);
     lua_pop(L, 1);
   }
@@ -136,10 +138,11 @@ static int l_alloc_mixed(lua_State *L)
 {
   int n = luaL_checkint(L, 1);
   int k = luaL_checkint(L, 2);
+  int i;
   check_count(L, n, "object count must be positive");
   luaL_argcheck(L, k >= 1 && k <= BATCHFIN_HELPER_MAX_METATABLES, 2,
                 "metatable count is out of range");
-  for (int i = 1; i <= n; i++) {
+  for (i = 1; i <= n; i++) {
     new_udata(L, ((i - 1) % k) + 1, i);
     lua_pop(L, 1);
   }
@@ -156,8 +159,9 @@ static int l_counters(lua_State *L)
 
 static int l_finalizer_counts(lua_State *L)
 {
+  int i;
   lua_newtable(L);
-  for (int i = 0; i < BATCHFIN_HELPER_MAX_FINALIZERS; i++) {
+  for (i = 0; i < BATCHFIN_HELPER_MAX_FINALIZERS; i++) {
     lua_pushinteger(L, finalizer_counts[i]);
     lua_rawseti(L, -2, i + 1);
   }
@@ -166,11 +170,12 @@ static int l_finalizer_counts(lua_State *L)
 
 static int l_reset(lua_State *L)
 {
+  int i;
   (void)L;
   finalizer_count = 0;
   upvalue_finalizer_count = 0;
   stack_error_count = 0;
-  for (int i = 0; i < BATCHFIN_HELPER_MAX_FINALIZERS; i++)
+  for (i = 0; i < BATCHFIN_HELPER_MAX_FINALIZERS; i++)
     finalizer_counts[i] = 0;
   return 0;
 }

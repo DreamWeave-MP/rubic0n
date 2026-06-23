@@ -26,7 +26,8 @@ options:
 Output is CSV-ish and intended for build-to-build comparison. GCStats-enabled
 builds report whether batched-finalizer counters are available. Telemetry builds
 include counter overhead; compare timing against like-for-like telemetry
-settings only.
+settings only. Helper compilation assumes a POSIX-like shell and a compiler
+accepting -shared/-fPIC.
 ]])
 end
 
@@ -143,7 +144,7 @@ if not no_compile then
   local mkdir_cmd = "mkdir -p " .. shell_quote(build_dir)
   if not command_ok(mkdir_cmd) then fail("cannot create build dir: " .. build_dir) end
   local cmd = table.concat({
-    shell_quote(cc), " -shared -fPIC -I", shell_quote(repo_root .. "/src"),
+    cc, " -shared -fPIC -I", shell_quote(repo_root .. "/src"),
     " -o ", shell_quote(out), " ", shell_quote(src)
   })
   if not command_ok(cmd) then fail("cannot compile helper with: " .. cmd) end
