@@ -681,6 +681,12 @@ Batching reduces repeated dispatch and GC state setup overhead for audited nativ
 leaf destructors, but representative OpenMW frame behavior still needs to be
 measured separately from synthetic finalizer floods.
 
+Finalizer queue order is preserved, but interleaving changes: one collector step
+may run up to `LUAJIT_BATCHED_FINALIZER_MAX` eligible native destructors before
+returning to Lua or reaching the next ineligible finalizer. The cap is therefore
+an internal latency bound for this fast path, not a promise that public GC calls
+run exactly one destructor.
+
 With `LUAJIT_ENABLE_GCSTATS`, the batched path exposes:
 
 * `finalizer_direct_cfunc_batches`: number of internal batched dispatches;
