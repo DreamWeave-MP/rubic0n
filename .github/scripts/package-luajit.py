@@ -10,23 +10,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, NoReturn
 
 
-HEADERS = (
-    "lauxlib.h",
-    "lua.h",
-    "lua.hpp",
-    "luaconf.h",
-    "luajit.h",
-    "lualib.h",
-)
-
-DOC_FILES = (
-    "COPYRIGHT",
-    "README",
-    "README.md",
-)
-
 LINUX_SONAME_ALIASES = (
-    "libluajit-5.1.so",
     "libluajit-5.1.so.2",
 )
 
@@ -61,14 +45,6 @@ def copy_required_file_as(source: Path, destination: Path) -> None:
     shutil.copy2(source, destination)
 
 
-def copy_tree_if_present(source: Path, destination: Path) -> None:
-    if not source.exists():
-        return
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(source, destination)
-
-
 def write_zip(package_dir: Path, archive_path: Path) -> None:
     if archive_path.exists():
         archive_path.unlink()
@@ -89,27 +65,11 @@ def copy_optional_files(sources: Iterable[Path], destination_dir: Path) -> None:
             shutil.copy2(source, destination_dir / source.name)
 
 
-def copy_optional_libraries(
-    src_dir: Path, lib_dir: Path, patterns: Iterable[str], *, exclude: Iterable[Path] = ()
-) -> None:
-    excluded = {path.absolute() for path in exclude}
-    copied = set()
-    for pattern in patterns:
-        for source in sorted(src_dir.glob(pattern)):
-            absolute = source.absolute()
-            if not source.is_file() or absolute in excluded or absolute in copied:
-                continue
-            copied.add(absolute)
-            shutil.copy2(source, lib_dir / source.name)
-
-
 def package_windows(src_dir: Path, package_dir: Path) -> None:
     bin_dir = package_dir / "bin"
     lib_dir = package_dir / "lib"
     copy_required_file(src_dir / "luajit.exe", bin_dir)
     copy_required_file(src_dir / "lua51.dll", lib_dir)
-    copy_required_file(src_dir / "lua51.lib", lib_dir)
-    copy_optional_files(sorted(src_dir.glob("*.pdb")), bin_dir)
 
 
 def package_android(src_dir: Path, package_dir: Path) -> None:
@@ -141,10 +101,6 @@ def package_macos(src_dir: Path, package_dir: Path) -> None:
     for dylib_name in MACOS_DYLIBS:
         copy_required_file_as(source, lib_dir / dylib_name)
 
-    for dylib in sorted(src_dir.glob("libluajit*.dylib")):
-        if dylib.name not in MACOS_DYLIBS:
-            copy_required_file(dylib, lib_dir)
-
 
 def package_posix(src_dir: Path, package_dir: Path, *, os_name: str) -> None:
     bin_dir = package_dir / "bin"
@@ -154,18 +110,14 @@ def package_posix(src_dir: Path, package_dir: Path, *, os_name: str) -> None:
 
     if os_name == "macOS":
         package_macos(src_dir, package_dir)
-    else:
-        copy_required_file(shared_library, lib_dir)
-        copy_optional_libraries(
-            src_dir, lib_dir, ("libluajit*.so*",), exclude=(shared_library,)
-        )
-
-    if os_name == "Linux":
+    elif os_name == "Linux":
         for alias in LINUX_SONAME_ALIASES:
             copy_required_file_as(shared_library, lib_dir / alias)
+    else:
+        copy_required_file(shared_library, lib_dir)
 
     copy_required_file(src_dir / "luajit", bin_dir)
-    copy_required_file(src_dir / "libluajit.a", lib_dir)
+
 
 
 def package_jit_modules(src_dir: Path, package_dir: Path) -> None:
@@ -184,6 +136,7 @@ def package_jit_modules(src_dir: Path, package_dir: Path) -> None:
 def validate_variant_package_layout(
     variant_dir: Path, *, os_name: str, variant_name: str
 ) -> None:
+    bin_dir = variant_dir / "bin"
     jit_dir = variant_dir / "jit"
     lib_dir = variant_dir / "lib"
 
@@ -193,23 +146,28 @@ def validate_variant_package_layout(
         fail(f"packaged {variant_name}/jit directory has no Lua modules: {jit_dir}")
     if not (jit_dir / "vmdef.lua").is_file():
         fail(f"packaged {variant_name}/jit/vmdef.lua is missing: {jit_dir / 'vmdef.lua'}")
+    jit_files = files_under(jit_dir)
+    bad_jit_files = [name for name in jit_files if not name.endswith(".lua")]
+    if bad_jit_files:
+        fail(f"packaged {variant_name}/jit contains non-Lua files: {', '.join(bad_jit_files)}")
     if not lib_dir.is_dir():
         fail(f"packaged {variant_name}/lib directory is missing: {lib_dir}")
 
-    if os_name == "Linux":
-        required = (lib_dir / "libluajit-5.1.so.2",)
-    elif os_name in {"Android", "PortMaster", "Portmaster"}:
-        required = (lib_dir / "libluajit.so",)
-    elif os_name == "Windows":
-        required = (lib_dir / "lua51.dll", lib_dir / "lua51.lib")
-    elif os_name == "macOS":
-        required = tuple(lib_dir / dylib for dylib in MACOS_DYLIBS)
-    else:
-        required = ()
+    expected_libraries = sorted(name.removeprefix("lib/") for name in packaged_runtime_libraries(os_name))
+    actual_libraries = files_under(lib_dir)
+    if actual_libraries != expected_libraries:
+        fail(
+            f"packaged {variant_name}/lib contains {actual_libraries!r}, "
+            f"expected runtime libraries {expected_libraries!r}"
+        )
 
-    for path in required:
-        if not path.is_file():
-            fail(f"required packaged file is missing: {path}")
+    expected_executables = sorted(name.removeprefix("bin/") for name in packaged_runtime_executables(os_name))
+    actual_executables = files_under(bin_dir)
+    if actual_executables != expected_executables:
+        fail(
+            f"packaged {variant_name}/bin contains {actual_executables!r}, "
+            f"expected runtime executables {expected_executables!r}"
+        )
 
 
 def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_included: bool) -> None:
@@ -227,7 +185,17 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
             "expected sandboxed/ and unsandboxed/ at artifact root"
         )
 
-    for required_doc in (ARTIFACT_README, ARTIFACT_MANIFEST):
+    allowed_root_files = {ARTIFACT_README, ARTIFACT_MANIFEST, "COPYRIGHT"}
+    allowed_root_dirs = {*VARIANTS, "benchmarks"}
+    for name in names:
+        if name in allowed_root_files:
+            continue
+        root_name = name.split("/", 1)[0]
+        if root_name in allowed_root_dirs:
+            continue
+        fail(f"archive contains unexpected top-level payload {name!r}: {archive_path}")
+
+    for required_doc in (ARTIFACT_README, ARTIFACT_MANIFEST, "COPYRIGHT"):
         if required_doc not in names:
             fail(f"archive artifact metadata file is missing: {required_doc} in {archive_path}")
 
@@ -262,36 +230,68 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
 
     for variant_name in VARIANTS:
         variant_prefix = f"{variant_name}/"
+        bin_prefix = f"{variant_prefix}bin/"
         jit_prefix = f"{variant_prefix}jit/"
         lib_prefix = f"{variant_prefix}lib/"
+        expected_variant_dirs = {"bin", "jit", "lib"}
 
         if not any(name.startswith(variant_prefix) for name in names):
             fail(f"archive {variant_name}/ directory is missing: {archive_path}")
+        for name in names:
+            if not name.startswith(variant_prefix) or name == variant_prefix:
+                continue
+            remainder = name.removeprefix(variant_prefix)
+            child = remainder.split("/", 1)[0]
+            if child not in expected_variant_dirs:
+                fail(f"archive contains unexpected {variant_name}/ payload {remainder!r}: {archive_path}")
         if not any(name.startswith(jit_prefix) for name in names):
             fail(f"archive {variant_name}/jit/ directory is missing: {archive_path}")
         if f"{jit_prefix}vmdef.lua" not in names:
             fail(f"archive {variant_name}/jit/vmdef.lua is missing: {archive_path}")
         if not any(name.startswith(lib_prefix) for name in names):
             fail(f"archive {variant_name}/lib/ directory is missing: {archive_path}")
+        for name in names:
+            if name.startswith(jit_prefix) and not name.endswith("/") and not name.endswith(".lua"):
+                fail(f"archive contains non-Lua JIT module {name}: {archive_path}")
 
-        if os_name == "Linux":
-            required_names = (f"{lib_prefix}libluajit-5.1.so.2",)
-        elif os_name in {"Android", "PortMaster", "Portmaster"}:
-            required_names = (f"{lib_prefix}libluajit.so",)
-        elif os_name == "Windows":
-            required_names = (f"{lib_prefix}lua51.dll", f"{lib_prefix}lua51.lib")
-        elif os_name == "macOS":
-            required_names = tuple(f"{lib_prefix}{dylib}" for dylib in MACOS_DYLIBS)
-        else:
-            required_names = ()
+        expected_libraries = sorted(name.removeprefix("lib/") for name in packaged_runtime_libraries(os_name))
+        actual_libraries = sorted(
+            name.removeprefix(lib_prefix)
+            for name in names
+            if name.startswith(lib_prefix) and not name.endswith("/")
+        )
+        if actual_libraries != expected_libraries:
+            fail(
+                f"archive {variant_name}/lib contains {actual_libraries!r}, "
+                f"expected runtime libraries {expected_libraries!r}: {archive_path}"
+            )
 
-        for name in required_names:
-            if name not in names:
-                fail(f"archive required file is missing: {name} in {archive_path}")
+        expected_executables = sorted(name.removeprefix("bin/") for name in packaged_runtime_executables(os_name))
+        actual_executables = sorted(
+            name.removeprefix(bin_prefix)
+            for name in names
+            if name.startswith(bin_prefix) and not name.endswith("/")
+        )
+        if actual_executables != expected_executables:
+            fail(
+                f"archive {variant_name}/bin contains {actual_executables!r}, "
+                f"expected runtime executables {expected_executables!r}: {archive_path}"
+            )
+
+        for name in packaged_runtime_libraries(os_name) + packaged_runtime_executables(os_name):
+            archive_member = f"{variant_prefix}{name}"
+            if archive_member not in names:
+                fail(f"archive required file is missing: {archive_member} in {archive_path}")
 
         variant_manifest = manifest_variants.get(variant_name)
         if not isinstance(variant_manifest, dict):
             fail(f"archive manifest is missing variant {variant_name!r}: {archive_path}")
+        expected_library_files = sorted(packaged_runtime_libraries(os_name))
+        expected_executable_files = sorted(packaged_runtime_executables(os_name))
+        if sorted(variant_manifest.get("library_files", [])) != expected_library_files:
+            fail(f"archive manifest library_files is wrong for {variant_name}: {archive_path}")
+        if sorted(variant_manifest.get("runtime_executable_files", [])) != expected_executable_files:
+            fail(f"archive manifest runtime_executable_files is wrong for {variant_name}: {archive_path}")
         expected_bypass = variant_name == "unsandboxed"
         if variant_manifest.get("sandbox_bypass_enabled") is not expected_bypass:
             fail(
@@ -324,6 +324,28 @@ def primary_runtime_libraries(os_name: str) -> List[str]:
         return [f"lib/{MACOS_DYLIB_NAME}"]
     if key in {"android", "portmaster"}:
         return ["lib/libluajit.so"]
+    return []
+
+
+def packaged_runtime_libraries(os_name: str) -> List[str]:
+    key = platform_key(os_name)
+    if key == "windows":
+        return ["lib/lua51.dll"]
+    if key == "linux":
+        return ["lib/libluajit-5.1.so.2"]
+    if key == "macos":
+        return [f"lib/{name}" for name in MACOS_DYLIBS]
+    if key in {"android", "portmaster"}:
+        return ["lib/libluajit.so"]
+    return []
+
+
+def packaged_runtime_executables(os_name: str) -> List[str]:
+    key = platform_key(os_name)
+    if key == "windows":
+        return ["bin/luajit.exe"]
+    if key in {"linux", "macos", "portmaster"}:
+        return ["bin/luajit"]
     return []
 
 
@@ -389,6 +411,7 @@ def make_manifest(
                 else "Default build; select(\"sandbox.bypass\") is unavailable."
             ),
             "library_files": [f"lib/{name}" for name in files_under(variant_dir / "lib")],
+            "runtime_executable_files": [f"bin/{name}" for name in files_under(variant_dir / "bin")],
             "jit_module_files": [f"jit/{name}" for name in files_under(variant_dir / "jit")],
         }
 
@@ -407,7 +430,11 @@ def make_manifest(
         ),
         "copy_policy": (
             "Copy exactly one selected variant root, or at minimum that same variant's "
-            "matching lib/ payload plus jit/ directory. Do not mix payloads between variants."
+            "matching runtime files plus jit/ directory. Do not mix payloads between variants."
+        ),
+        "support_payload_policy": (
+            "Published archives intentionally omit developer support payloads such as "
+            "headers, import/static libraries, debug symbols, and copied upstream source docs."
         ),
         "primary_runtime_libraries": primary_runtime_libraries(os_name),
         "jit_module_path_requirement": (
@@ -474,6 +501,9 @@ def write_artifact_readme(
     package_dir: Path, *, binary_name: str, os_name: str, arch: str, benchmarks_included: bool
 ) -> None:
     primary = ", ".join(f"`{library}`" for library in primary_runtime_libraries(os_name))
+    runtime_executables = ", ".join(
+        f"`{executable}`" for executable in packaged_runtime_executables(os_name)
+    )
     lines = [
         f"# {binary_name} {os_name} {arch} artifact",
         "",
@@ -488,26 +518,34 @@ def write_artifact_readme(
         "`select(\"sandbox.bypass\")`, which is a deliberate sandbox escape hatch.",
         "",
         "Choose exactly one variant root (`sandboxed/` or `unsandboxed/`) and keep its "
-        "`jit/` modules with its library. If your packaging layout cannot preserve the "
-        "root verbatim, copy at minimum that same variant's matching `lib/` payload plus "
+        "`jit/` modules with its runtime files. If your packaging layout cannot preserve the "
+        "root verbatim, copy at minimum that same variant's runtime payload plus "
         "its `jit/` directory. Do not mix payloads between variants.",
         "",
-        "## Library to copy",
+        "## Runtime files to copy",
         "",
-        f"For this artifact, copy from the selected variant: {primary or '`lib/` payload'}.",
+        f"Runtime library from the selected variant: {primary or '`lib/` payload'}.",
+        (
+            f"Runtime executable/tool from the selected variant: {runtime_executables}."
+            if runtime_executables
+            else "This platform artifact does not include a standalone LuaJIT executable."
+        ),
+        "Developer support payloads are not part of the published archive; build from "
+        "source if you need headers, import/static libraries, debug symbols, or upstream "
+        "source documentation.",
         "",
         "Platform table:",
         "",
-        "| Artifact | Runtime library to copy | Example destination / loader contract |",
+        "| Artifact | Runtime files | Example destination / loader contract |",
         "| --- | --- | --- |",
-        "| Windows X64 | `lib/lua51.dll` (`lib/lua51.lib` is the import library) | Application binary directory or another DLL search path. |",
-        "| Linux X64 | `lib/libluajit-5.1.so.2` | A directory resolved by `rpath`, `runpath`, `ldconfig`, or `LD_LIBRARY_PATH`. |",
+        "| Windows X64 | `lib/lua51.dll`, `bin/luajit.exe` | DLL in the application binary directory or another DLL search path; executable wherever you want the CLI tool. |",
+        "| Linux X64 | `lib/libluajit-5.1.so.2`, `bin/luajit` | Library in a directory resolved by `rpath`, `runpath`, `ldconfig`, or `LD_LIBRARY_PATH`; executable wherever you want the CLI tool. |",
         f"| macOS ARM64/X64 | `lib/{MACOS_DYLIB_NAME}` "
-        f"(install id `{MACOS_INSTALL_ID}`; also includes `lib/{MACOS_DYLIB_ALIAS}`) "
+        f"(install id `{MACOS_INSTALL_ID}`; also includes `lib/{MACOS_DYLIB_ALIAS}`), `bin/luajit` "
         "| App bundle `Contents/Frameworks` or equivalent, with rpath resolving "
         f"`{MACOS_INSTALL_ID}`. |",
         "| Android ARM64 | `lib/libluajit.so` | `app/src/main/jniLibs/arm64-v8a/libluajit.so` or equivalent native-lib ABI location. |",
-        "| PortMaster ARM64 | `lib/libluajit.so` | Place `libluajit.so` where the launcher/runtime `LD_LIBRARY_PATH` can find it. |",
+        "| PortMaster ARM64 | `lib/libluajit.so`, `bin/luajit` | Place `libluajit.so` where the launcher/runtime `LD_LIBRARY_PATH` can find it; executable wherever you want the CLI tool. |",
         "",
         "## JIT module path",
         "",
@@ -594,23 +632,8 @@ def package_variant(src_dir: Path, variant_dir: Path, *, os_name: str) -> None:
     validate_variant_package_layout(variant_dir, os_name=os_name, variant_name=variant_dir.name)
 
 
-def copy_common_payload(
-    root: Path, package_dir: Path, *, source_dir: Path, variant_sources: Mapping[str, Path]
-) -> None:
-    include_dir = package_dir / "include"
-
-    for header in HEADERS:
-        copy_required_file(source_dir / header, include_dir)
-
-    for doc_file in DOC_FILES:
-        source = root / doc_file
-        if source.exists():
-            copy_required_file(source, package_dir)
-
-    if not (package_dir / "COPYRIGHT").is_file():
-        fail("COPYRIGHT was not packaged")
-
-    copy_tree_if_present(root / "doc", package_dir / "doc")
+def copy_common_payload(root: Path, package_dir: Path, *, variant_sources: Mapping[str, Path]) -> None:
+    copy_required_file(root / "COPYRIGHT", package_dir)
 
     for variant_name in VARIANTS:
         if variant_name not in variant_sources:
@@ -672,7 +695,6 @@ def main() -> int:
     copy_common_payload(
         root,
         package_dir,
-        source_dir=variant_sources["sandboxed"],
         variant_sources=variant_sources,
     )
     benchmarks_included = False

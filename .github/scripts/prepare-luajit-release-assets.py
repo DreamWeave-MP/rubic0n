@@ -36,7 +36,7 @@ class ArchiveSpec:
     os_name: str
     arch: str
     platform: str
-    required_names: tuple[str, ...]
+    runtime_names: tuple[str, ...]
     benchmarks_expected: bool
     nexus_output: str
     nexus_title: str
@@ -51,36 +51,36 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="Windows",
         arch="X64",
         platform="windows",
-        required_names=("lib/lua51.dll", "lib/lua51.lib"),
+        runtime_names=("lib/lua51.dll", "bin/luajit.exe"),
         benchmarks_expected=True,
         nexus_output="windows_x64",
         nexus_title="LuaJIT Windows X64 development",
         nexus_platform_meaning="Windows x86_64 / 64-bit desktop build.",
-        nexus_runtime_payload="Selected variant [code]lib/lua51.dll[/code]; [code]lib/lua51.lib[/code] is the import library for native linking.",
+        nexus_runtime_payload="Selected variant [code]lib/lua51.dll[/code] and [code]bin/luajit.exe[/code].",
     ),
     ArchiveSpec(
         name="LuaJIT-Linux-X64.zip",
         os_name="Linux",
         arch="X64",
         platform="linux",
-        required_names=("lib/libluajit-5.1.so.2",),
+        runtime_names=("lib/libluajit-5.1.so.2", "bin/luajit"),
         benchmarks_expected=True,
         nexus_output="linux_x64",
         nexus_title="LuaJIT Linux X64 development",
         nexus_platform_meaning="Linux x86_64 / AMD64 build.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.so.2[/code].",
+        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.so.2[/code] and [code]bin/luajit[/code].",
     ),
     ArchiveSpec(
         name="LuaJIT-macOS-ARM64.zip",
         os_name="macOS",
         arch="ARM64",
         platform="macos",
-        required_names=("lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"),
+        runtime_names=("lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib", "bin/luajit"),
         benchmarks_expected=True,
         nexus_output="macos_arm64",
         nexus_title="LuaJIT macOS ARM64 development",
         nexus_platform_meaning="macOS Apple Silicon ARM64 build.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.2.dylib[/code]; [code]lib/libluajit-5.1.dylib[/code] is also included as an alias.",
+        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.2.dylib[/code], alias [code]lib/libluajit-5.1.dylib[/code], and [code]bin/luajit[/code].",
         nexus_caveats=("This is separate from the macOS Intel/X64 download; do not use it for x86_64-only macOS runtimes.",),
     ),
     ArchiveSpec(
@@ -88,12 +88,12 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="macOS",
         arch="X64",
         platform="macos",
-        required_names=("lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib"),
+        runtime_names=("lib/libluajit-5.1.2.dylib", "lib/libluajit-5.1.dylib", "bin/luajit"),
         benchmarks_expected=True,
         nexus_output="macos_x64",
         nexus_title="LuaJIT macOS Intel X64 development",
         nexus_platform_meaning="macOS Intel x86_64 build.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.2.dylib[/code]; [code]lib/libluajit-5.1.dylib[/code] is also included as an alias.",
+        nexus_runtime_payload="Selected variant [code]lib/libluajit-5.1.2.dylib[/code], alias [code]lib/libluajit-5.1.dylib[/code], and [code]bin/luajit[/code].",
         nexus_caveats=("This is separate from the macOS ARM64 / Apple Silicon download; do not use it for arm64-only macOS runtimes.",),
     ),
     ArchiveSpec(
@@ -101,7 +101,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="Android",
         arch="ARM64",
         platform="android",
-        required_names=("lib/libluajit.so",),
+        runtime_names=("lib/libluajit.so",),
         benchmarks_expected=False,
         nexus_output="android_arm64",
         nexus_title="LuaJIT Android ARM64 development",
@@ -114,12 +114,12 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="PortMaster",
         arch="ARM64",
         platform="portmaster",
-        required_names=("lib/libluajit.so",),
+        runtime_names=("lib/libluajit.so", "bin/luajit"),
         benchmarks_expected=False,
         nexus_output="portmaster_arm64",
         nexus_title="LuaJIT PortMaster ARM64 development",
         nexus_platform_meaning="PortMaster Linux AArch64 / arm64 payload.",
-        nexus_runtime_payload="Selected variant [code]lib/libluajit.so[/code]; place it where the PortMaster launcher/runtime library path can load it.",
+        nexus_runtime_payload="Selected variant [code]lib/libluajit.so[/code] and [code]bin/luajit[/code]; place the library where the PortMaster launcher/runtime library path can load it.",
         nexus_caveats=("This is Linux AArch64 for PortMaster devices, not Android and not ARMv7/armhf.",),
     ),
 )
@@ -175,6 +175,14 @@ def require_exact_archives(archive_dir: Path) -> dict[str, Path]:
     return archives
 
 
+def archive_files_under(names: set[str], prefix: str) -> list[str]:
+    return sorted(
+        name.removeprefix(prefix)
+        for name in names
+        if name.startswith(prefix) and not name.endswith("/")
+    )
+
+
 def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
     with zipfile.ZipFile(path) as archive:
         names = set(archive.namelist())
@@ -182,11 +190,22 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
             fail(f"{path.name} is missing manifest.json")
         if "README-LuaJIT-artifact.md" not in names:
             fail(f"{path.name} is missing README-LuaJIT-artifact.md")
+        if "COPYRIGHT" not in names:
+            fail(f"{path.name} is missing COPYRIGHT")
         manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
 
     nested_prefix = f"{path.stem}/"
     if any(name.startswith(nested_prefix) for name in names):
         fail(f"{path.name} contains nested {path.stem}/; expected variant dirs at zip root")
+    allowed_root_files = {"README-LuaJIT-artifact.md", "manifest.json", "COPYRIGHT"}
+    allowed_root_dirs = {*VARIANTS, "benchmarks"}
+    for name in names:
+        if name in allowed_root_files:
+            continue
+        root_name = name.split("/", 1)[0]
+        if root_name in allowed_root_dirs:
+            continue
+        fail(f"{path.name} contains unexpected top-level payload {name!r}")
     if manifest.get("os_name") != spec.os_name:
         fail(f"{path.name} manifest os_name is {manifest.get('os_name')!r}, expected {spec.os_name!r}")
     if manifest.get("arch") != spec.arch:
@@ -224,25 +243,52 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
 
     for variant in VARIANTS:
         variant_prefix = f"{variant}/"
+        bin_prefix = f"{variant_prefix}bin/"
         jit_prefix = f"{variant_prefix}jit/"
         lib_prefix = f"{variant_prefix}lib/"
+        expected_variant_dirs = {"bin", "jit", "lib"}
 
         if not any(name.startswith(variant_prefix) for name in names):
             fail(f"{path.name} is missing {variant}/")
+        for name in names:
+            if not name.startswith(variant_prefix) or name == variant_prefix:
+                continue
+            remainder = name.removeprefix(variant_prefix)
+            child = remainder.split("/", 1)[0]
+            if child not in expected_variant_dirs:
+                fail(f"{path.name} contains unexpected {variant}/ payload {remainder!r}")
         if not any(name.startswith(jit_prefix) for name in names):
             fail(f"{path.name} is missing {variant}/jit/")
         if f"{jit_prefix}vmdef.lua" not in names:
             fail(f"{path.name} is missing {variant}/jit/vmdef.lua")
         if not any(name.startswith(lib_prefix) for name in names):
             fail(f"{path.name} is missing {variant}/lib/")
-        for required_name in spec.required_names:
-            archive_member = f"{variant_prefix}{required_name}"
+        actual_runtime_names = sorted(
+            [f"bin/{name}" for name in archive_files_under(names, bin_prefix)]
+            + [f"lib/{name}" for name in archive_files_under(names, lib_prefix)]
+        )
+        if actual_runtime_names != sorted(spec.runtime_names):
+            fail(
+                f"{path.name} {variant}/ runtime payload is {actual_runtime_names!r}, "
+                f"expected {sorted(spec.runtime_names)!r}"
+            )
+        for jit_file in archive_files_under(names, jit_prefix):
+            if not jit_file.endswith(".lua"):
+                fail(f"{path.name} contains non-Lua JIT module {variant}/jit/{jit_file}")
+        for runtime_name in spec.runtime_names:
+            archive_member = f"{variant_prefix}{runtime_name}"
             if archive_member not in names:
                 fail(f"{path.name} is missing {archive_member}")
 
         variant_manifest = manifest.get("variants", {}).get(variant)
         if not isinstance(variant_manifest, dict):
             fail(f"{path.name} manifest is missing {variant}")
+        expected_library_files = sorted(name for name in spec.runtime_names if name.startswith("lib/"))
+        expected_executable_files = sorted(name for name in spec.runtime_names if name.startswith("bin/"))
+        if sorted(variant_manifest.get("library_files", [])) != expected_library_files:
+            fail(f"{path.name} manifest has wrong library_files for {variant}")
+        if sorted(variant_manifest.get("runtime_executable_files", [])) != expected_executable_files:
+            fail(f"{path.name} manifest has wrong runtime_executable_files for {variant}")
         expected_bypass = variant == "unsandboxed"
         if variant_manifest.get("sandbox_bypass_enabled") is not expected_bypass:
             fail(f"{path.name} manifest has wrong sandbox bypass state for {variant}")
@@ -350,7 +396,7 @@ def write_release_notes(
         handle.write("Artifacts contain two variant roots:\n")
         handle.write("- sandboxed/: default build, no LUAJIT_ENABLE_SANDBOX_BYPASS, select(\"sandbox.bypass\") unavailable.\n")
         handle.write("- unsandboxed/: WARNING: trusted engine/dev use only; enables LUAJIT_ENABLE_SANDBOX_BYPASS and exposes select(\"sandbox.bypass\").\n\n")
-        handle.write("Each zip includes README-LuaJIT-artifact.md and manifest.json. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n")
+        handle.write("Each zip includes README-LuaJIT-artifact.md, manifest.json, and COPYRIGHT. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n")
         if release_is_tag:
             handle.write("This is a tag release stable snapshot; CI refuses to overwrite existing release assets.\n")
         else:
@@ -407,7 +453,7 @@ def write_changelog(
         for spec in EXPECTED_ARCHIVES:
             row = vt_rows[spec.name]
             handle.write(f"| `{spec.name}` | `{hashes[spec.name]}` | [{row['analysis_id']}]({row['analysis_url']}) |\n")
-        handle.write("\nAll archives contain `sandboxed/` and `unsandboxed/` variant roots. No GCStats telemetry build is included.\n")
+        handle.write("\nAll archives contain `sandboxed/` and `unsandboxed/` variant roots. No GCStats telemetry build or developer support payload is included.\n")
     return path
 
 
@@ -446,7 +492,7 @@ def write_nexus_metadata(
             for caveat in spec.nexus_caveats:
                 handle.write(f"Caveat: {caveat}\n")
             handle.write("Use exactly one variant root from this archive; do not mix sandboxed and unsandboxed files or copy a runtime library from a different platform archive.\n\n")
-            handle.write("Keep the selected variant's [code]jit/[/code] directory with the matching [code]lib/[/code] payload, and put the selected variant root (the parent of [code]jit/[/code]) on [code]package.path[/code], not [code]jit/[/code] itself.\n\n")
+            handle.write("Keep the selected variant's [code]jit/[/code] directory with the matching runtime files, and put the selected variant root (the parent of [code]jit/[/code]) on [code]package.path[/code], not [code]jit/[/code] itself.\n\n")
             handle.write(f"{bbcode_url(github_changelog, 'GitHub changelog asset')}\n")
             handle.write(f"{bbcode_url(github_release, 'GitHub development release')}\n")
             handle.write(f"{bbcode_url(github_run, 'GitHub Actions workflow run')}\n")
@@ -456,7 +502,7 @@ def write_nexus_metadata(
             handle.write(f"SHA256: [code]{hashes[spec.name]}[/code]\n")
             handle.write(f"VirusTotal: {bbcode_url(row['analysis_url'], row['analysis_id'])}\n\n")
             handle.write("This Nexus file is uploaded only after the GitHub development release publisher succeeds and the published GitHub SHA256SUMS.txt matches this workflow's candidate checksums. It is uploaded from the same workflow artifact as the GitHub release asset. The platform build submitted that exact zip to VirusTotal before artifact upload; the publisher recomputed SHA256 before this Nexus upload. NexusMods may run its own scanner/cache, which is separate from the GitHub/VirusTotal chain.\n\n")
-            handle.write("Contains two roots: [code]sandboxed/[/code] (default, no sandbox bypass) and [code]unsandboxed/[/code] (trusted engine/development only; exposes [code]select(\"sandbox.bypass\")[/code]). No GCStats telemetry build is included.\n")
+            handle.write("Contains two roots: [code]sandboxed/[/code] (default, no sandbox bypass) and [code]unsandboxed/[/code] (trusted engine/development only; exposes [code]select(\"sandbox.bypass\")[/code]). No GCStats telemetry build or developer support payload is included.\n")
 
 
 def append_step_summary(path: Path, vt_rows: dict[str, dict[str, str]], hashes: dict[str, str]) -> None:
