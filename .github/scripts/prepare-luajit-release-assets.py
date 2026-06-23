@@ -28,7 +28,7 @@ RELEASE_NOTES = "release-notes.md"
 VT_HEADER = ("archive", "sha256", "analysis_id", "analysis_url")
 NEXUS_NAME_PATTERN_TEXT = r"^[a-zA-Z0-9 _'().-]+$"
 NEXUS_NAME_PATTERN = re.compile(NEXUS_NAME_PATTERN_TEXT)
-INSTALL_DIR = "install me"
+INSTALL_DIR = "extract into your OpenMW install"
 INTERPRETER_DIR = "interpreter"
 JIT_DIR = "jit"
 

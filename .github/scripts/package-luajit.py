@@ -20,7 +20,7 @@ MACOS_DYLIBS = (MACOS_DYLIB_NAME, MACOS_DYLIB_ALIAS)
 MACOS_INSTALL_ID = f"@rpath/{MACOS_DYLIB_NAME}"
 
 VARIANTS = ("sandboxed", "unsandboxed")
-INSTALL_DIR = "install me"
+INSTALL_DIR = "extract into your OpenMW install"
 INTERPRETER_DIR = "interpreter"
 JIT_DIR = "jit"
 
