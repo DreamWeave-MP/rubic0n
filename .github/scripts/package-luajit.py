@@ -28,6 +28,8 @@ ARTIFACT_README = "README-LuaJIT-artifact.md"
 ARTIFACT_MANIFEST = "manifest.json"
 SHA256SUMS_ASSET = "SHA256SUMS.txt"
 VT_SUBMISSIONS_ASSET = "virustotal-submissions.tsv"
+RESOURCES_DIR = "resources"
+REQUIRED_RESOURCE_FILE = "resources/lua_libs/content.lua"
 
 
 def fail(message: str) -> NoReturn:
@@ -46,6 +48,16 @@ def copy_required_file_as(source: Path, destination: Path) -> None:
         fail(f"required file is missing: {source}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
+
+
+def copy_required_tree(source: Path, destination: Path) -> None:
+    if not source.is_dir():
+        fail(f"required directory is missing: {source}")
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(source, destination)
+    if not files_under(destination):
+        fail(f"required directory is empty: {source}")
 
 
 def write_zip(package_dir: Path, archive_path: Path) -> None:
@@ -201,7 +213,7 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
         )
 
     allowed_root_files = {ARTIFACT_README, ARTIFACT_MANIFEST, "COPYRIGHT"}
-    allowed_root_dirs = {*VARIANTS, "benchmarks"}
+    allowed_root_dirs = {*VARIANTS, RESOURCES_DIR, "benchmarks"}
     for name in names:
         if name in allowed_root_files:
             continue
@@ -213,6 +225,8 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
     for required_doc in (ARTIFACT_README, ARTIFACT_MANIFEST, "COPYRIGHT"):
         if required_doc not in names:
             fail(f"archive artifact metadata file is missing: {required_doc} in {archive_path}")
+    if REQUIRED_RESOURCE_FILE not in names:
+        fail(f"archive required resource file is missing: {REQUIRED_RESOURCE_FILE} in {archive_path}")
 
     if not isinstance(manifest, dict):
         fail(f"archive manifest is not a JSON object: {archive_path}")
@@ -504,6 +518,7 @@ def make_manifest(
         "gcstats_enabled": False,
         "benchmarks_included": benchmarks_included,
         "benchmark_files": [f"benchmarks/{name}" for name in files_under(package_dir / "benchmarks")],
+        "resource_files": [f"{RESOURCES_DIR}/{name}" for name in files_under(package_dir / RESOURCES_DIR)],
         "benchmark_policy": (
             "Desktop-only comparison of this fork's sandboxed build against upstream LuaJIT; "
             "CI-hosted runner timings are noisy and not authoritative."
@@ -558,6 +573,8 @@ def write_artifact_readme(
         f"Choose exactly one variant root (`sandboxed/` or `unsandboxed/`) and keep its "
         f"`{INSTALL_DIR}/` and `{INTERPRETER_DIR}/` directories together. Do not mix "
         "payloads between variants.",
+        f"The top-level `{RESOURCES_DIR}/` directory is shared runtime payload and should "
+        "be copied along with the selected variant.",
         "",
         "## Runtime files to copy",
         "",
@@ -584,6 +601,7 @@ def write_artifact_readme(
         f"`{MACOS_INSTALL_ID}`. |",
         f"| Android ARM64 | `{INSTALL_DIR}/libluajit.so`, `{INTERPRETER_DIR}/jit/` | `app/src/main/jniLibs/arm64-v8a/libluajit.so` or equivalent native-lib ABI location. |",
         f"| PortMaster ARM64 | `{INSTALL_DIR}/libluajit.so`, `{INTERPRETER_DIR}/luajit`, `{INTERPRETER_DIR}/jit/` | Place `libluajit.so` where the launcher/runtime `LD_LIBRARY_PATH` can find it; executable wherever you want the CLI tool. |",
+        f"| Shared resources | `{RESOURCES_DIR}/` | Copy with the selected variant; contains runtime Lua resources used by OpenMW integrations. |",
         "",
         "## JIT module path",
         "",
@@ -673,6 +691,9 @@ def package_variant(src_dir: Path, variant_dir: Path, *, os_name: str) -> None:
 
 def copy_common_payload(root: Path, package_dir: Path, *, variant_sources: Mapping[str, Path]) -> None:
     copy_required_file(root / "COPYRIGHT", package_dir)
+    copy_required_tree(root / RESOURCES_DIR, package_dir / RESOURCES_DIR)
+    if not (package_dir / REQUIRED_RESOURCE_FILE).is_file():
+        fail(f"required resource file was not packaged: {REQUIRED_RESOURCE_FILE}")
 
     for variant_name in VARIANTS:
         if variant_name not in variant_sources:

@@ -31,6 +31,8 @@ NEXUS_NAME_PATTERN = re.compile(NEXUS_NAME_PATTERN_TEXT)
 INSTALL_DIR = "extract into your OpenMW install"
 INTERPRETER_DIR = "interpreter"
 JIT_DIR = "jit"
+RESOURCES_DIR = "resources"
+REQUIRED_RESOURCE_FILE = "resources/lua_libs/content.lua"
 
 
 @dataclass(frozen=True)
@@ -195,13 +197,15 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
             fail(f"{path.name} is missing README-LuaJIT-artifact.md")
         if "COPYRIGHT" not in names:
             fail(f"{path.name} is missing COPYRIGHT")
+        if REQUIRED_RESOURCE_FILE not in names:
+            fail(f"{path.name} is missing {REQUIRED_RESOURCE_FILE}")
         manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
 
     nested_prefix = f"{path.stem}/"
     if any(name.startswith(nested_prefix) for name in names):
         fail(f"{path.name} contains nested {path.stem}/; expected variant dirs at zip root")
     allowed_root_files = {"README-LuaJIT-artifact.md", "manifest.json", "COPYRIGHT"}
-    allowed_root_dirs = {*VARIANTS, "benchmarks"}
+    allowed_root_dirs = {*VARIANTS, RESOURCES_DIR, "benchmarks"}
     for name in names:
         if name in allowed_root_files:
             continue
@@ -234,6 +238,9 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
         fail(f"{path.name} manifest must declare that GCStats is disabled")
     if not manifest.get("package_path_root"):
         fail(f"{path.name} manifest is missing package_path_root")
+    resource_files = manifest.get("resource_files")
+    if not isinstance(resource_files, list) or REQUIRED_RESOURCE_FILE not in resource_files:
+        fail(f"{path.name} manifest is missing required resource_files entry")
     security = manifest.get("security")
     if not isinstance(security, dict):
         fail(f"{path.name} manifest is missing security")
@@ -408,7 +415,7 @@ def write_release_notes(
         handle.write("Artifacts contain two variant roots:\n")
         handle.write("- sandboxed/: default build, no LUAJIT_ENABLE_SANDBOX_BYPASS, select(\"sandbox.bypass\") unavailable.\n")
         handle.write("- unsandboxed/: WARNING: trusted engine/dev use only; enables LUAJIT_ENABLE_SANDBOX_BYPASS and exposes select(\"sandbox.bypass\").\n\n")
-        handle.write("Each zip includes README-LuaJIT-artifact.md, manifest.json, and COPYRIGHT. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n")
+        handle.write("Each zip includes README-LuaJIT-artifact.md, manifest.json, COPYRIGHT, and shared resources/. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n")
         if release_is_tag:
             handle.write("This is a tag release stable snapshot; CI refuses to overwrite existing release assets.\n")
         else:
@@ -465,7 +472,7 @@ def write_changelog(
         for spec in EXPECTED_ARCHIVES:
             row = vt_rows[spec.name]
             handle.write(f"| `{spec.name}` | `{hashes[spec.name]}` | [{row['analysis_id']}]({row['analysis_url']}) |\n")
-        handle.write("\nAll archives contain `sandboxed/` and `unsandboxed/` variant roots. No GCStats telemetry build or developer support payload is included.\n")
+        handle.write("\nAll archives contain `sandboxed/` and `unsandboxed/` variant roots plus shared `resources/`. No GCStats telemetry build or developer support payload is included.\n")
     return path
 
 
@@ -503,7 +510,7 @@ def write_nexus_metadata(
             handle.write(f"Primary runtime payload: {spec.nexus_runtime_payload}\n")
             for caveat in spec.nexus_caveats:
                 handle.write(f"Caveat: {caveat}\n")
-            handle.write(f"Use exactly one variant root from this archive; do not mix sandboxed and unsandboxed files or copy a runtime library from a different platform archive. Keep that variant's [code]{INSTALL_DIR}/[/code] and [code]{INTERPRETER_DIR}/[/code] directories together.\n\n")
+            handle.write(f"Use exactly one variant root from this archive; do not mix sandboxed and unsandboxed files or copy a runtime library from a different platform archive. Keep that variant's [code]{INSTALL_DIR}/[/code] and [code]{INTERPRETER_DIR}/[/code] directories together, and keep the shared [code]{RESOURCES_DIR}/[/code] directory.\n\n")
             handle.write(f"The selected variant's [code]{INTERPRETER_DIR}/[/code] directory contains the LuaJIT executable when this platform ships one, plus [code]{INTERPRETER_DIR}/{JIT_DIR}/[/code]. Put [code]{INTERPRETER_DIR}/[/code] on [code]package.path[/code], not [code]{INTERPRETER_DIR}/{JIT_DIR}/[/code] itself.\n\n")
             handle.write(f"{bbcode_url(github_changelog, 'GitHub changelog asset')}\n")
             handle.write(f"{bbcode_url(github_release, 'GitHub development release')}\n")
@@ -514,7 +521,7 @@ def write_nexus_metadata(
             handle.write(f"SHA256: [code]{hashes[spec.name]}[/code]\n")
             handle.write(f"VirusTotal: {bbcode_url(row['analysis_url'], row['analysis_id'])}\n\n")
             handle.write("This Nexus file is uploaded only after the GitHub development release publisher succeeds and the published GitHub SHA256SUMS.txt matches this workflow's candidate checksums. It is uploaded from the same workflow artifact as the GitHub release asset. The platform build submitted that exact zip to VirusTotal before artifact upload; the publisher recomputed SHA256 before this Nexus upload. NexusMods may run its own scanner/cache, which is separate from the GitHub/VirusTotal chain.\n\n")
-            handle.write("Contains two roots: [code]sandboxed/[/code] (default, no sandbox bypass) and [code]unsandboxed/[/code] (trusted engine/development only; exposes [code]select(\"sandbox.bypass\")[/code]). No GCStats telemetry build or developer support payload is included.\n")
+            handle.write(f"Contains two variant roots: [code]sandboxed/[/code] (default, no sandbox bypass) and [code]unsandboxed/[/code] (trusted engine/development only; exposes [code]select(\"sandbox.bypass\")[/code]), plus shared [code]{RESOURCES_DIR}/[/code]. No GCStats telemetry build or developer support payload is included.\n")
 
 
 def append_step_summary(path: Path, vt_rows: dict[str, dict[str, str]], hashes: dict[str, str]) -> None:
