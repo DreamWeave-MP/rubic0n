@@ -722,7 +722,7 @@ static MSize gc_finalize_direct_cfunc_batch(lua_State *L)
   lua_State *VL = vmthread(g);
   GCRef oldcur_L;
   uint8_t oldh;
-  GCSize oldt, finalized = 0;
+  GCSize oldt, freed_bytes = 0;
   MSize n = 0;
   GCobj *o;
   cTValue *mo;
@@ -754,7 +754,7 @@ static MSize gc_finalize_direct_cfunc_batch(lua_State *L)
     ok = gc_unprotected_c_finalizer(g, VL, mo, o);
     lj_assertG(ok, "bad batched finalizer eligibility");
     UNUSED(ok);
-    finalized += sz;
+    freed_bytes += sz;
     lj_udata_free(g, ud);
     lj_gc_stats_inc(g, finalizer_nonresurrecting_cfunc_frees);
     n++;
@@ -768,7 +768,7 @@ static MSize gc_finalize_direct_cfunc_batch(lua_State *L)
   hook_restore(g, oldh);
   if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
   g->gc.threshold = oldt;
-  g->gc.estimate += finalized;  /* Queued finalizable size was pre-subtracted. */
+  g->gc.estimate += freed_bytes;  /* Queued finalizable size was pre-subtracted. */
   lj_gc_stats_inc(g, finalizer_direct_cfunc_batches);
   lj_gc_stats_add(g, finalizer_direct_cfunc_batched_calls, n);
   lj_gc_stats_max(g, finalizer_direct_cfunc_batch_max, n);
@@ -890,7 +890,7 @@ static void gc_finalize(lua_State *L, int allow_nores)
 void lj_gc_finalize_udata(lua_State *L)
 {
   while (gcref(G(L)->gc.mmudata) != NULL)
-    gc_finalize(L, 0);  /* lua_close() drain: keep resurrection-capable path. */
+    gc_finalize(L, 0);  /* lua_close() drain: keep unbatched resurrection-capable path. */
 }
 
 #if LJ_HASFFI
@@ -1031,15 +1031,21 @@ static size_t gc_onestep(lua_State *L)
   case GCSfinalize:
     if (gcref(g->gc.mmudata) != NULL) {
       GCSize old = g->gc.total;
+      MSize finalized;
+      GCSize cost;
       if (tvref(g->jit_base))  /* Don't call finalizers on trace. */
 	return LJ_MAX_MEM;
-      if (gc_finalize_direct_cfunc_batch(L) == 0)
+      finalized = gc_finalize_direct_cfunc_batch(L);
+      if (finalized == 0) {
 	gc_finalize(L, 1);  /* Normal GC queue after sweep/weak clearing. */
+	finalized = 1;
+      }
+      cost = (GCSize)GCFINALIZECOST * finalized;
       if (old >= g->gc.total && g->gc.estimate > old - g->gc.total)
 	g->gc.estimate -= old - g->gc.total;
-      if (g->gc.estimate > GCFINALIZECOST)
-	g->gc.estimate -= GCFINALIZECOST;
-      return GCFINALIZECOST;
+      if (g->gc.estimate > cost)
+	g->gc.estimate -= cost;
+      return cost;
     }
     g->gc.state = GCSpause;  /* End of GC cycle. */
     g->gc.debt = 0;
