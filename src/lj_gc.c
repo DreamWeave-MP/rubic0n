@@ -34,6 +34,14 @@
 #define GCSWEEPCOST	10
 #define GCFINALIZECOST	100
 
+#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
+#ifndef LUAJIT_BATCHED_FINALIZER_MAX
+#define LUAJIT_BATCHED_FINALIZER_MAX 64
+#elif LUAJIT_BATCHED_FINALIZER_MAX < 1
+#error "LUAJIT_BATCHED_FINALIZER_MAX must be >= 1"
+#endif
+#endif
+
 /* Macros to set GCobj colors and flags. */
 #define white2gray(x)		((x)->gch.marked &= (uint8_t)~LJ_GC_WHITES)
 #define gray2black(x)		((x)->gch.marked |= LJ_GC_BLACK)
@@ -701,6 +709,76 @@ static void gc_call_nonresurrecting_c_finalizer(global_State *g, lua_State *L,
   g->gc.threshold = oldt;
 }
 
+#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
+static cTValue *gc_direct_udata_finalizer_mo(global_State *g, GCobj *o)
+{
+  cTValue *mo;
+  if (o->gch.gct != ~LJ_TUDATA)
+    return NULL;
+  mo = lj_meta_fastg(g, tabref(gco2ud(o)->metatable), MM_gc);
+  return mo && gc_unprotected_c_finalizer_func(mo, o) != NULL ? mo : NULL;
+}
+
+static MSize gc_finalize_direct_cfunc_batch(lua_State *L)
+{
+  global_State *g = G(L);
+  lua_State *VL = vmthread(g);
+  GCRef oldcur_L;
+  uint8_t oldh;
+  GCSize oldt, finalized = 0;
+  MSize n = 0;
+  GCobj *o;
+  cTValue *mo;
+
+  lj_assertG(g->gc.state == GCSfinalize,
+	     "batched finalizer outside finalizer phase");
+  o = gcnext(gcref(g->gc.mmudata));
+  mo = gc_direct_udata_finalizer_mo(g, o);
+  if (mo == NULL)
+    return 0;
+
+  /* May throw while the queue is still untouched. One frame is reused. */
+  lj_state_checkstack(VL, 1+LJ_FR2+LUA_MINSTACK);
+  oldcur_L = g->cur_L;
+  oldh = hook_save(g);
+  oldt = g->gc.threshold;
+  lj_trace_abort(g);
+  hook_entergc(g);
+  if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
+  g->gc.threshold = LJ_MAX_MEM;
+
+  do {
+    GCudata *ud = gco2ud(o);
+    GCSize sz = (GCSize)sizeudata(ud);
+    int ok;
+    lj_gc_stats_inc(g, finalizer_calls);
+    gc_count_finalizer_kind(g, mo);
+    gc_unqueuefinalizer(g, o);
+    ok = gc_unprotected_c_finalizer(g, VL, mo, o);
+    lj_assertG(ok, "bad batched finalizer eligibility");
+    UNUSED(ok);
+    finalized += sz;
+    lj_udata_free(g, ud);
+    lj_gc_stats_inc(g, finalizer_nonresurrecting_cfunc_frees);
+    n++;
+    if (n >= LUAJIT_BATCHED_FINALIZER_MAX || gcref(g->gc.mmudata) == NULL)
+      break;
+    o = gcnext(gcref(g->gc.mmudata));
+    mo = gc_direct_udata_finalizer_mo(g, o);
+  } while (mo != NULL);
+
+  setgcrefr(g->cur_L, oldcur_L);
+  hook_restore(g, oldh);
+  if (LJ_HASPROFILE && (oldh & HOOK_PROFILE)) lj_dispatch_update(g, 0);
+  g->gc.threshold = oldt;
+  g->gc.estimate += finalized;  /* Queued finalizable size was pre-subtracted. */
+  lj_gc_stats_inc(g, finalizer_direct_cfunc_batches);
+  lj_gc_stats_add(g, finalizer_direct_cfunc_batched_calls, n);
+  lj_gc_stats_max(g, finalizer_direct_cfunc_batch_max, n);
+  return n;
+}
+#endif
+
 /* Call a userdata or cdata finalizer. */
 static void gc_call_finalizer(global_State *g, lua_State *L,
 			      cTValue *mo, GCobj *o)
@@ -959,7 +1037,12 @@ static size_t gc_onestep(lua_State *L)
       GCSize old = g->gc.total;
       if (tvref(g->jit_base))  /* Don't call finalizers on trace. */
 	return LJ_MAX_MEM;
+#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
+      if (gc_finalize_direct_cfunc_batch(L) == 0)
+	gc_finalize(L, 1);  /* Normal GC queue after sweep/weak clearing. */
+#else
       gc_finalize(L, 1);  /* Normal GC queue after sweep/weak clearing. */
+#endif
       if (old >= g->gc.total && g->gc.estimate > old - g->gc.total)
 	g->gc.estimate -= old - g->gc.total;
       if (g->gc.estimate > GCFINALIZECOST)
