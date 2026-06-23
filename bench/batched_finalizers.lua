@@ -24,9 +24,9 @@ options:
   -h, --help           show this help
 
 Output is CSV-ish and intended for build-to-build comparison. GCStats-enabled
-builds report whether LUAJIT_ENABLE_BATCHED_FINALIZERS appears to be enabled
-from the presence of batch counters. Telemetry builds include counter overhead;
-compare timing against like-for-like telemetry settings only.
+builds report whether batched-finalizer counters are available. Telemetry builds
+include counter overhead; compare timing against like-for-like telemetry
+settings only.
 ]])
 end
 
@@ -297,11 +297,11 @@ io.write("# finalizer_functions=", tostring(finalizer_functions), "\n")
 io.write("# ineligible_every=", tostring(ineligible_every), "\n")
 io.write("# gcstats=", has_gcstats and "available" or "unavailable", "\n")
 if has_gcstats then
-  io.write("# batched_finalizers=", batch_stats_available and "enabled" or "disabled", "\n")
+  io.write("# batched_finalizer_counters=", batch_stats_available and "available" or "unavailable", "\n")
   io.write("# note=GCStats telemetry is enabled and adds overhead; compare against other GCStats builds only.\n")
   io.write("# note=counter columns subtract one empty full-collection baseline per burst.\n")
 else
-  io.write("# batched_finalizers=unknown\n")
+  io.write("# batched_finalizer_counters=unknown\n")
   io.write("# note=GCStats telemetry is unavailable; counter columns are blank.\n")
 end
 io.write("k,phase,samples,avg_ms,median_ms,p90_ms,p95_ms,p99_ms,p999_ms,max_ms,worst_0_1pct_avg_ms,direct_finalizers,upvalue_finalizers,function_counts,finalizer_queued,finalizer_calls,cfunc_nup0_calls,cfunc_upvalue_calls,direct_cfunc_calls,direct_cfunc_batches,direct_cfunc_batched_calls,direct_cfunc_batch_max,nonresurrecting_cfunc_frees\n")

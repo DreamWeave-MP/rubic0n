@@ -226,9 +226,7 @@ static int jit_gcstats(lua_State *L)
   hsize += 3;
 #endif
   hsize += 11;
-#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
   hsize += 3;
-#endif
   hsize += 2;
   t = lj_tab_new_ah(L, 0, hsize);
 
@@ -306,11 +304,9 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "finalizer_direct_cfunc_calls", s->finalizer_direct_cfunc_calls);
   gcstats_set(L, t, "finalizer_direct_cfunc_nonzero_results", s->finalizer_direct_cfunc_nonzero_results);
   gcstats_set(L, t, "finalizer_direct_cfunc_fallbacks", s->finalizer_direct_cfunc_fallbacks);
-#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
   gcstats_set(L, t, "finalizer_direct_cfunc_batches", s->finalizer_direct_cfunc_batches);
   gcstats_set(L, t, "finalizer_direct_cfunc_batched_calls", s->finalizer_direct_cfunc_batched_calls);
   gcstats_set(L, t, "finalizer_direct_cfunc_batch_max", s->finalizer_direct_cfunc_batch_max);
-#endif
   gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_frees", s->finalizer_nonresurrecting_cfunc_frees);
   gcstats_set(L, t, "finalizer_nonresurrecting_cfunc_fallbacks", s->finalizer_nonresurrecting_cfunc_fallbacks);
   gcstats_set(L, t, "weak_tables", s->weak_tables);

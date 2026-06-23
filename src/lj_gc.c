@@ -34,12 +34,10 @@
 #define GCSWEEPCOST	10
 #define GCFINALIZECOST	100
 
-#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
 #ifndef LUAJIT_BATCHED_FINALIZER_MAX
 #define LUAJIT_BATCHED_FINALIZER_MAX 64
 #elif LUAJIT_BATCHED_FINALIZER_MAX < 1
 #error "LUAJIT_BATCHED_FINALIZER_MAX must be >= 1"
-#endif
 #endif
 
 /* Macros to set GCobj colors and flags. */
@@ -709,7 +707,6 @@ static void gc_call_nonresurrecting_c_finalizer(global_State *g, lua_State *L,
   g->gc.threshold = oldt;
 }
 
-#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
 static cTValue *gc_direct_udata_finalizer_mo(global_State *g, GCobj *o)
 {
   cTValue *mo;
@@ -777,7 +774,6 @@ static MSize gc_finalize_direct_cfunc_batch(lua_State *L)
   lj_gc_stats_max(g, finalizer_direct_cfunc_batch_max, n);
   return n;
 }
-#endif
 
 /* Call a userdata or cdata finalizer. */
 static void gc_call_finalizer(global_State *g, lua_State *L,
@@ -1037,12 +1033,8 @@ static size_t gc_onestep(lua_State *L)
       GCSize old = g->gc.total;
       if (tvref(g->jit_base))  /* Don't call finalizers on trace. */
 	return LJ_MAX_MEM;
-#ifdef LUAJIT_ENABLE_BATCHED_FINALIZERS
       if (gc_finalize_direct_cfunc_batch(L) == 0)
 	gc_finalize(L, 1);  /* Normal GC queue after sweep/weak clearing. */
-#else
-      gc_finalize(L, 1);  /* Normal GC queue after sweep/weak clearing. */
-#endif
       if (old >= g->gc.total && g->gc.estimate > old - g->gc.total)
 	g->gc.estimate -= old - g->gc.total;
       if (g->gc.estimate > GCFINALIZECOST)
