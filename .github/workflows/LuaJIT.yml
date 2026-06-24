@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - v2.1-agentzh
+      - development
     tags:
       - '*'
   pull_request:
     branches:
-      - v2.1-agentzh
+      - development
 
 permissions:
   contents: read
@@ -24,6 +24,7 @@ env:
   # LuaJIT upstream does not publish frequent immutable release tags for 2.1.
   # Resolve and record the SHA in each job so the benchmark input is explicit.
   LUAJIT_UPSTREAM_REF: v2.1
+  SUBMIT_TO_VIRUSTOTAL: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/')) }}
 
 jobs:
   build-native-posix:
@@ -198,7 +199,7 @@ jobs:
           done
 
       - name: Submit release archive to VirusTotal
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         shell: bash
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
@@ -216,7 +217,7 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
 
       - name: Upload VirusTotal metadata artifact
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-${{ matrix.os_name }}-${{ matrix.arch }}
@@ -347,7 +348,7 @@ jobs:
           --benchmarks-dir benchmarks-output
 
       - name: Submit release archive to VirusTotal
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         shell: pwsh
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
@@ -365,7 +366,7 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
 
       - name: Upload VirusTotal metadata artifact
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64
@@ -484,7 +485,7 @@ jobs:
           --variant-src unsandboxed=build-variants/unsandboxed/src
 
       - name: Submit release archive to VirusTotal
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         shell: bash
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
@@ -502,7 +503,7 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
 
       - name: Upload VirusTotal metadata artifact
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64
@@ -621,7 +622,7 @@ jobs:
           --variant-src unsandboxed=build-variants/unsandboxed/src
 
       - name: Submit release archive to VirusTotal
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         shell: bash
         env:
           VT_API_KEY: ${{ secrets.VT_API_KEY }}
@@ -639,7 +640,7 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 1 }}
 
       - name: Upload VirusTotal metadata artifact
-        if: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/v2.1-agentzh' || startsWith(github.ref, 'refs/tags/')) }}
+        if: ${{ env.SUBMIT_TO_VIRUSTOTAL == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: github-release-vt-${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64
@@ -649,7 +650,7 @@ jobs:
 
   publish-github-release:
     name: Publish GitHub Release
-    if: ${{ github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/v2.1-agentzh') }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/development' }}
     needs:
       - build-native-posix
       - build-windows-x64
@@ -679,7 +680,6 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_IS_TAG: ${{ startsWith(github.ref, 'refs/tags/') }}
           RELEASE_REF_NAME: ${{ github.ref_name }}
           RELEASE_TARGET: ${{ github.sha }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
@@ -687,46 +687,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$RELEASE_IS_TAG" == true ]]; then
-            release_name="$RELEASE_REF_NAME"
-            release_create_args=()
-            release_edit_args=()
-
-            # Stable tag releases are immutable once assets exist. Check this
-            # before creating notes, editing release metadata, or uploading
-            # anything; otherwise a rerun can make the body point at a new run
-            # while the assets are still the old ones. That is not a release,
-            # it is a small lie with a download button.
-            release_exists=false
-            release_view_error="$(mktemp)"
-            if asset_count="$(gh release view "$release_name" \
-              --repo "$RELEASE_REPOSITORY" \
-              --json assets \
-              --jq '.assets | length' 2>"$release_view_error")"; then
-              release_exists=true
-              if [[ "$asset_count" != 0 ]]; then
-                echo "::error::Stable tag release $release_name already has assets; refusing to edit release metadata or overwrite assets." >&2
-                gh release view "$release_name" \
-                  --repo "$RELEASE_REPOSITORY" \
-                  --json assets \
-                  --jq '.assets[].name' >&2
-                rm -f "$release_view_error"
-                exit 1
-              fi
-            elif grep -qiE 'not found|could not resolve to a Release|HTTP 404' "$release_view_error"; then
-              release_exists=false
-            else
-              cat "$release_view_error" >&2
-              rm -f "$release_view_error"
-              exit 1
-            fi
-            rm -f "$release_view_error"
-          else
-            release_name=development
-            release_create_args=(--prerelease)
-            release_edit_args=(--prerelease)
-            release_exists=false
-          fi
+          release_name=development
+          release_create_args=(--prerelease)
+          release_edit_args=(--prerelease)
+          release_exists=false
 
           prepare_args=(
             .github/scripts/prepare-luajit-release-assets.py
@@ -739,9 +703,6 @@ jobs:
             --target-sha "$RELEASE_TARGET"
             --ref-name "$RELEASE_REF_NAME"
           )
-          if [[ "$RELEASE_IS_TAG" == true ]]; then
-            prepare_args+=(--release-is-tag)
-          fi
           python3 "${prepare_args[@]}"
 
           notes_file='release-assets/release-notes.md'
@@ -749,38 +710,36 @@ jobs:
           vt_summary='release-assets/virustotal-submissions.tsv'
           changelog='release-assets/CHANGELOG.md'
 
-          if [[ "$RELEASE_IS_TAG" != true ]]; then
-            tag_ref_error="$(mktemp)"
-            if gh api "repos/${RELEASE_REPOSITORY}/git/ref/tags/${release_name}" >/dev/null 2>"$tag_ref_error"; then
-              rm -f "$tag_ref_error"
-              gh api -X PATCH "repos/${RELEASE_REPOSITORY}/git/refs/tags/${release_name}" \
-                -f "sha=${RELEASE_TARGET}" \
-                -F force=true \
-                >/dev/null
-            elif grep -q 'Not Found' "$tag_ref_error"; then
-              rm -f "$tag_ref_error"
-              gh api -X POST "repos/${RELEASE_REPOSITORY}/git/refs" \
-                -f "ref=refs/tags/${release_name}" \
-                -f "sha=${RELEASE_TARGET}" \
-                >/dev/null
-            else
-              cat "$tag_ref_error" >&2
-              rm -f "$tag_ref_error"
-              exit 1
-            fi
-
-            release_view_error="$(mktemp)"
-            if gh release view "$release_name" --repo "$RELEASE_REPOSITORY" >/dev/null 2>"$release_view_error"; then
-              release_exists=true
-            elif grep -qiE 'not found|could not resolve to a Release|HTTP 404' "$release_view_error"; then
-              release_exists=false
-            else
-              cat "$release_view_error" >&2
-              rm -f "$release_view_error"
-              exit 1
-            fi
-            rm -f "$release_view_error"
+          tag_ref_error="$(mktemp)"
+          if gh api "repos/${RELEASE_REPOSITORY}/git/ref/tags/${release_name}" >/dev/null 2>"$tag_ref_error"; then
+            rm -f "$tag_ref_error"
+            gh api -X PATCH "repos/${RELEASE_REPOSITORY}/git/refs/tags/${release_name}" \
+              -f "sha=${RELEASE_TARGET}" \
+              -F force=true \
+              >/dev/null
+          elif grep -q 'Not Found' "$tag_ref_error"; then
+            rm -f "$tag_ref_error"
+            gh api -X POST "repos/${RELEASE_REPOSITORY}/git/refs" \
+              -f "ref=refs/tags/${release_name}" \
+              -f "sha=${RELEASE_TARGET}" \
+              >/dev/null
+          else
+            cat "$tag_ref_error" >&2
+            rm -f "$tag_ref_error"
+            exit 1
           fi
+
+          release_view_error="$(mktemp)"
+          if gh release view "$release_name" --repo "$RELEASE_REPOSITORY" >/dev/null 2>"$release_view_error"; then
+            release_exists=true
+          elif grep -qiE 'not found|could not resolve to a Release|HTTP 404' "$release_view_error"; then
+            release_exists=false
+          else
+            cat "$release_view_error" >&2
+            rm -f "$release_view_error"
+            exit 1
+          fi
+          rm -f "$release_view_error"
 
           if [[ "$release_exists" == true ]]; then
             gh release edit "$release_name" \
@@ -796,24 +755,20 @@ jobs:
               --notes-file "$notes_file"
           fi
 
-          upload_args=(--repo "$RELEASE_REPOSITORY")
-          if [[ "$RELEASE_IS_TAG" != true ]]; then
-            # The development release is intentionally mutable: it tracks the
-            # latest non-PR CI result for this branch.
-            upload_args+=(--clobber)
-          fi
+          # The development release is intentionally mutable: it tracks the
+          # latest non-PR CI result for this branch.
+          upload_args=(--repo "$RELEASE_REPOSITORY" --clobber)
 
           gh release upload "$release_name" release-downloads/*.zip "$sha256_sums" "$vt_summary" "$changelog" "${upload_args[@]}"
 
   publish-nexusmods:
-    name: Publish NexusMods development files
-    if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/v2.1-agentzh' }}
+    name: Publish NexusMods release files
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     needs:
       - build-native-posix
       - build-windows-x64
       - build-android-arm64
       - build-portmaster-arm64
-      - publish-github-release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -839,7 +794,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "${NEXUS_API_KEY:-}" ]]; then
-            echo '::error::NEXUS_API_KEY is required for development NexusMods publishing.' >&2
+            echo '::error::NEXUS_API_KEY is required for NexusMods release publishing.' >&2
             exit 1
           fi
 
@@ -855,32 +810,14 @@ jobs:
           --archive-dir release-downloads
           --vt-dir release-vt-downloads
           --output-dir nexus-assets
-          --release-name development
+          --release-name "$RELEASE_REF_NAME"
           --repository "$RELEASE_REPOSITORY"
           --workflow-run-id "$WORKFLOW_RUN_ID"
           --target-sha "$RELEASE_TARGET"
           --ref-name "$RELEASE_REF_NAME"
+          --release-is-tag
+          --skip-github-release-assets
           --nexus-metadata-dir nexus-metadata
-
-      - name: Verify published GitHub development checksums
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          rm -rf github-release-verification
-          mkdir -p github-release-verification
-          gh release download development \
-            --repo "$RELEASE_REPOSITORY" \
-            --pattern SHA256SUMS.txt \
-            --dir github-release-verification \
-            --clobber
-          if ! cmp -s nexus-assets/SHA256SUMS.txt github-release-verification/SHA256SUMS.txt; then
-            echo '::error::Published GitHub development SHA256SUMS.txt does not match the local Nexus candidate checksums.' >&2
-            diff -u nexus-assets/SHA256SUMS.txt github-release-verification/SHA256SUMS.txt >&2 || true
-            exit 1
-          fi
 
       - name: Read NexusMods metadata
         id: nexus_metadata
@@ -913,15 +850,27 @@ jobs:
             append_description_output portmaster_arm64 NEXUS_PORTMASTER_ARM64_DESCRIPTION nexus-metadata/portmaster_arm64.bbcode
           } >> "$GITHUB_OUTPUT"
 
+      - name: Prepare NexusMods upload filenames
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p nexus-upload
+          cp "release-downloads/${LUAJIT_RELEASE_BINARY}-Windows-X64.zip" nexus-upload/Windows-X64.zip
+          cp "release-downloads/${LUAJIT_RELEASE_BINARY}-Linux-X64.zip" nexus-upload/Linux-X64.zip
+          cp "release-downloads/${LUAJIT_RELEASE_BINARY}-macOS-ARM64.zip" nexus-upload/macOS-ARM64.zip
+          cp "release-downloads/${LUAJIT_RELEASE_BINARY}-macOS-X64.zip" nexus-upload/macOS-X64.zip
+          cp "release-downloads/${LUAJIT_RELEASE_BINARY}-Android-ARM64.zip" nexus-upload/Android-ARM64.zip
+          cp "release-downloads/${LUAJIT_RELEASE_BINARY}-PortMaster-ARM64.zip" nexus-upload/PortMaster-ARM64.zip
+
       - name: Upload Windows X64 to NexusMods
         # Nexus-Mods/upload-action v1.0.0-beta.7, pinned because it receives NEXUS_API_KEY.
         uses: Nexus-Mods/upload-action@0bf670d75d46988c176c9bfacc94ca0144e0fe3f
         with:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7252706'
-          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Windows-X64.zip
+          filename: nexus-upload/Windows-X64.zip
           display_name: ${{ steps.nexus_metadata.outputs.windows_x64_display_name }}
-          version: development
+          version: ${{ github.ref_name }}
           description: ${{ steps.nexus_metadata.outputs.windows_x64 }}
           archive_existing_file: 'true'
 
@@ -931,9 +880,9 @@ jobs:
         with:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7252712'
-          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Linux-X64.zip
+          filename: nexus-upload/Linux-X64.zip
           display_name: ${{ steps.nexus_metadata.outputs.linux_x64_display_name }}
-          version: development
+          version: ${{ github.ref_name }}
           description: ${{ steps.nexus_metadata.outputs.linux_x64 }}
           archive_existing_file: 'true'
 
@@ -943,9 +892,9 @@ jobs:
         with:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7252718'
-          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-ARM64.zip
+          filename: nexus-upload/macOS-ARM64.zip
           display_name: ${{ steps.nexus_metadata.outputs.macos_arm64_display_name }}
-          version: development
+          version: ${{ github.ref_name }}
           description: ${{ steps.nexus_metadata.outputs.macos_arm64 }}
           archive_existing_file: 'true'
 
@@ -955,9 +904,9 @@ jobs:
         with:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7536308'
-          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-macOS-X64.zip
+          filename: nexus-upload/macOS-X64.zip
           display_name: ${{ steps.nexus_metadata.outputs.macos_x64_display_name }}
-          version: development
+          version: ${{ github.ref_name }}
           description: ${{ steps.nexus_metadata.outputs.macos_x64 }}
           archive_existing_file: 'true'
 
@@ -967,9 +916,9 @@ jobs:
         with:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7536302'
-          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-Android-ARM64.zip
+          filename: nexus-upload/Android-ARM64.zip
           display_name: ${{ steps.nexus_metadata.outputs.android_arm64_display_name }}
-          version: development
+          version: ${{ github.ref_name }}
           description: ${{ steps.nexus_metadata.outputs.android_arm64 }}
           archive_existing_file: 'true'
 
@@ -979,8 +928,8 @@ jobs:
         with:
           api_key: ${{ secrets.NEXUS_API_KEY }}
           file_group_id: '7536305'
-          filename: release-downloads/${{ env.LUAJIT_RELEASE_BINARY }}-PortMaster-ARM64.zip
+          filename: nexus-upload/PortMaster-ARM64.zip
           display_name: ${{ steps.nexus_metadata.outputs.portmaster_arm64_display_name }}
-          version: development
+          version: ${{ github.ref_name }}
           description: ${{ steps.nexus_metadata.outputs.portmaster_arm64 }}
           archive_existing_file: 'true'

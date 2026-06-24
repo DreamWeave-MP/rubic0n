@@ -59,7 +59,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         runtime_names=(f"{INSTALL_DIR}/lua51.dll", f"{INTERPRETER_DIR}/luajit.exe"),
         benchmarks_expected=True,
         nexus_output="windows_x64",
-        nexus_title="LuaJIT Windows X64 development",
+        nexus_title="LuaJIT Windows X64",
         nexus_platform_meaning="Windows x86_64 / 64-bit desktop build.",
         nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/lua51.dll[/code] and [code]{INTERPRETER_DIR}/luajit.exe[/code].",
     ),
@@ -71,7 +71,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         runtime_names=(f"{INSTALL_DIR}/lib/libluajit-5.1.so.2", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=True,
         nexus_output="linux_x64",
-        nexus_title="LuaJIT Linux X64 development",
+        nexus_title="LuaJIT Linux X64",
         nexus_platform_meaning="Linux x86_64 / AMD64 build.",
         nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/lib/libluajit-5.1.so.2[/code] and [code]{INTERPRETER_DIR}/luajit[/code].",
     ),
@@ -83,7 +83,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         runtime_names=(f"{INSTALL_DIR}/libluajit-5.1.2.dylib", f"{INSTALL_DIR}/libluajit-5.1.dylib", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=True,
         nexus_output="macos_arm64",
-        nexus_title="LuaJIT macOS ARM64 development",
+        nexus_title="LuaJIT macOS ARM64",
         nexus_platform_meaning="macOS Apple Silicon ARM64 build.",
         nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit-5.1.2.dylib[/code], alias [code]{INSTALL_DIR}/libluajit-5.1.dylib[/code], and [code]{INTERPRETER_DIR}/luajit[/code].",
         nexus_caveats=("This is separate from the macOS Intel/X64 download; do not use it for x86_64-only macOS runtimes.",),
@@ -96,7 +96,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         runtime_names=(f"{INSTALL_DIR}/libluajit-5.1.2.dylib", f"{INSTALL_DIR}/libluajit-5.1.dylib", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=True,
         nexus_output="macos_x64",
-        nexus_title="LuaJIT macOS Intel X64 development",
+        nexus_title="LuaJIT macOS Intel X64",
         nexus_platform_meaning="macOS Intel x86_64 build.",
         nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit-5.1.2.dylib[/code], alias [code]{INSTALL_DIR}/libluajit-5.1.dylib[/code], and [code]{INTERPRETER_DIR}/luajit[/code].",
         nexus_caveats=("This is separate from the macOS ARM64 / Apple Silicon download; do not use it for arm64-only macOS runtimes.",),
@@ -109,7 +109,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         runtime_names=(f"{INSTALL_DIR}/libluajit.so",),
         benchmarks_expected=False,
         nexus_output="android_arm64",
-        nexus_title="LuaJIT Android ARM64 development",
+        nexus_title="LuaJIT Android ARM64",
         nexus_platform_meaning="Android ARM64 / AArch64 ([code]arm64-v8a[/code]) native-library payload.",
         nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit.so[/code]; place it in the app's ARM64 native library location or equivalent engine-managed loader path.",
         nexus_caveats=("This is a raw [code]libluajit.so[/code] runtime library, not an APK or installable Android application.",),
@@ -122,7 +122,7 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         runtime_names=(f"{INSTALL_DIR}/libluajit.so", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=False,
         nexus_output="portmaster_arm64",
-        nexus_title="LuaJIT PortMaster ARM64 development",
+        nexus_title="LuaJIT PortMaster ARM64",
         nexus_platform_meaning="PortMaster Linux AArch64 / arm64 payload.",
         nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit.so[/code] and [code]{INTERPRETER_DIR}/luajit[/code]; place the library where the PortMaster launcher/runtime library path can load it.",
         nexus_caveats=("This is Linux AArch64 for PortMaster devices, not Android and not ARMv7/armhf.",),
@@ -150,6 +150,10 @@ def nexus_display_name(spec: ArchiveSpec) -> str:
     if NEXUS_NAME_PATTERN.fullmatch(name) is None:
         fail(f"{spec.name} Nexus display name {name!r} does not match {NEXUS_NAME_PATTERN_TEXT}")
     return name
+
+
+def nexus_archive_name(spec: ArchiveSpec) -> str:
+    return f"{spec.os_name}-{spec.arch}.zip"
 
 
 def sha256_file(path: Path) -> str:
@@ -502,8 +506,6 @@ def write_nexus_metadata(
     vt_rows: dict[str, dict[str, str]],
 ) -> None:
     metadata_dir.mkdir(parents=True, exist_ok=True)
-    github_release = release_url(repository, release_name)
-    github_changelog = changelog_url(repository, release_name)
     github_run = workflow_url(repository, workflow_run_id)
     github_commit = commit_url(repository, target_sha)
     for spec in EXPECTED_ARCHIVES:
@@ -514,17 +516,16 @@ def write_nexus_metadata(
 
         path = metadata_dir / f"{spec.nexus_output}.bbcode"
         with path.open("w", encoding="utf-8") as handle:
-            handle.write("Rolling Release of Rubic0n for OpenMW.\n\n")
             handle.write("[b]Install[/b]\n")
             handle.write("Pick [code]sandboxed/[/code] or [code]unsandboxed/[/code], then copy the contents of that variant's:\n\n")
             handle.write(f"[code]{INSTALL_DIR}/[/code]\n\n")
             handle.write("into your OpenMW install folder.\n\n")
             handle.write("Use [code]sandboxed/[/code] unless you were directed here by a mod that requires the unsandboxed build.\n\n")
             handle.write("[b]Provenance and verification[/b]\n")
-            handle.write(f"Changelog: {bbcode_url(github_changelog, 'CHANGELOG.md')}\n")
+            handle.write(f"Changelog/provenance: generated from {bbcode_url(github_run, 'this workflow run')} and the source commit below\n")
             handle.write(f"Workflow run: {bbcode_url(github_run, 'GitHub Actions')}\n")
             handle.write(f"Source commit: {bbcode_url(github_commit, target_sha)}\n")
-            handle.write(f"Archive filename: [code]{spec.name}[/code]\n")
+            handle.write(f"Archive filename: [code]{nexus_archive_name(spec)}[/code]\n")
             handle.write(f"SHA256: [code]{hashes[spec.name]}[/code]\n")
             handle.write(f"VirusTotal: {bbcode_url(row['analysis_url'], 'analysis report')}\n")
 
@@ -553,6 +554,11 @@ def main() -> int:
     parser.add_argument("--ref-name", required=True)
     parser.add_argument("--nexus-metadata-dir", type=Path)
     parser.add_argument("--nexus-description-dir", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--skip-github-release-assets",
+        action="store_true",
+        help="Skip GitHub release notes and changelog assets; archive, hash, VirusTotal, and Nexus metadata validation still run.",
+    )
     args = parser.parse_args()
 
     archive_dir = args.archive_dir.resolve()
@@ -568,27 +574,28 @@ def main() -> int:
 
     write_sha256sums(output_dir, hashes)
     write_vt_aggregate(output_dir, vt_rows)
-    write_changelog(
-        output_dir,
-        release_name=args.release_name,
-        release_is_tag=args.release_is_tag,
-        repository=args.repository,
-        workflow_run_id=args.workflow_run_id,
-        target_sha=args.target_sha,
-        ref_name=args.ref_name,
-        hashes=hashes,
-        vt_rows=vt_rows,
-    )
-    write_release_notes(
-        output_dir,
-        release_name=args.release_name,
-        release_is_tag=args.release_is_tag,
-        repository=args.repository,
-        workflow_run_id=args.workflow_run_id,
-        target_sha=args.target_sha,
-        hashes=hashes,
-        vt_rows=vt_rows,
-    )
+    if not args.skip_github_release_assets:
+        write_changelog(
+            output_dir,
+            release_name=args.release_name,
+            release_is_tag=args.release_is_tag,
+            repository=args.repository,
+            workflow_run_id=args.workflow_run_id,
+            target_sha=args.target_sha,
+            ref_name=args.ref_name,
+            hashes=hashes,
+            vt_rows=vt_rows,
+        )
+        write_release_notes(
+            output_dir,
+            release_name=args.release_name,
+            release_is_tag=args.release_is_tag,
+            repository=args.repository,
+            workflow_run_id=args.workflow_run_id,
+            target_sha=args.target_sha,
+            hashes=hashes,
+            vt_rows=vt_rows,
+        )
 
     nexus_metadata_dir = args.nexus_metadata_dir
     if args.nexus_description_dir is not None:
