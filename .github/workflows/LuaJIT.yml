@@ -188,7 +188,7 @@ jobs:
           fi
 
           for variant in sandboxed unsandboxed; do
-            library="$package_root/$variant/lib/libluajit-5.1.2.dylib"
+            library="$package_root/$variant/extract into your OpenMW install/libluajit-5.1.2.dylib"
             test -s "$library"
             actual_id="$(otool -D "$library" | awk 'NR == 2 { print $1 }')"
             if [[ "$actual_id" != "$expected_id" ]]; then
