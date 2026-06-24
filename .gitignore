@@ -14,3 +14,6 @@
 tags
 *.swo
 /AGENTS.md
+/build-variants
+/dist/LuaJIT-Linux-X64
+/release-artifact
