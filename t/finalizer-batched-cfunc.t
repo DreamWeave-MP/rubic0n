@@ -31,6 +31,7 @@ print $c <<'C';
 
 static int leaf_count;
 static int closure_count;
+static int nonzero_count;
 static int stack_error_count;
 
 static void check_udata_arg(lua_State *L)
@@ -55,6 +56,13 @@ static int closure_finalizer(lua_State *L)
   return 0;
 }
 
+static int nonzero_finalizer(lua_State *L)
+{
+  check_udata_arg(L);
+  nonzero_count++;
+  return 1;
+}
+
 static void push_eligible(lua_State *L)
 {
   lua_newuserdata(L, 1);
@@ -66,6 +74,13 @@ static void push_ineligible(lua_State *L)
 {
   lua_newuserdata(L, 1);
   luaL_getmetatable(L, "fibatch.ineligible");
+  lua_setmetatable(L, -2);
+}
+
+static void push_nonzero(lua_State *L)
+{
+  lua_newuserdata(L, 1);
+  luaL_getmetatable(L, "fibatch.nonzero");
   lua_setmetatable(L, -2);
 }
 
@@ -100,18 +115,31 @@ static int alloc_mixed(lua_State *L)
   return 0;
 }
 
+static int alloc_nonzero(lua_State *L)
+{
+  int i, n = luaL_checkint(L, 1);
+  luaL_argcheck(L, n >= 0, 1, "non-negative count expected");
+  for (i = 0; i < n; i++) {
+    push_nonzero(L);
+    lua_pop(L, 1);
+  }
+  return 0;
+}
+
 static int counters(lua_State *L)
 {
   lua_pushinteger(L, leaf_count);
   lua_pushinteger(L, closure_count);
   lua_pushinteger(L, stack_error_count);
-  return 3;
+  lua_pushinteger(L, nonzero_count);
+  return 4;
 }
 
 static int reset(lua_State *L)
 {
   leaf_count = 0;
   closure_count = 0;
+  nonzero_count = 0;
   stack_error_count = 0;
   return 0;
 }
@@ -129,11 +157,18 @@ LUALIB_API int luaopen_fibatch(lua_State *L)
   lua_setfield(L, -2, "__gc");
   lua_pop(L, 1);
 
+  luaL_newmetatable(L, "fibatch.nonzero");
+  lua_pushcfunction(L, nonzero_finalizer);
+  lua_setfield(L, -2, "__gc");
+  lua_pop(L, 1);
+
   lua_newtable(L);
   lua_pushcfunction(L, alloc_eligible);
   lua_setfield(L, -2, "alloc_eligible");
   lua_pushcfunction(L, alloc_mixed);
   lua_setfield(L, -2, "alloc_mixed");
+  lua_pushcfunction(L, alloc_nonzero);
+  lua_setfield(L, -2, "alloc_nonzero");
   lua_pushcfunction(L, counters);
   lua_setfield(L, -2, "counters");
   lua_pushcfunction(L, reset);
@@ -162,6 +197,7 @@ if jit then jit.off() end
 local m = require "fibatch"
 
 local DEFAULT_BATCH_CAP = 64
+local FINALIZE_COST = 100
 local expected_cap = tonumber(os.getenv("EXPECTED_BATCHED_FINALIZER_MAX") or "")
 
 local function stats()
@@ -228,11 +264,16 @@ end
 local function check_step_pacing()
   local cap = expected_cap or DEFAULT_BATCH_CAP
   local n = math.min(cap * 4, 1000)
+  local stepmul = 20
+  local stepsize_kb = 1
+  local budget = math.floor((stepsize_kb * 1024) / 100) * stepmul
+  local step_cap = math.max(1, math.floor(budget / FINALIZE_COST))
+  local expected_step_cap = math.min(cap, step_cap)
   if cap <= 1 or n <= cap then return end
 
   reset_all()
-  local old_stepmul = collectgarbage("setstepmul", 20)
-  local old_stepsize = collectgarbage("setstepsize", 1)
+  local old_stepmul = collectgarbage("setstepmul", stepmul)
+  local old_stepsize = collectgarbage("setstepsize", stepsize_kb)
   collectgarbage("stop")
   m.alloc_eligible(n)
 
@@ -254,15 +295,15 @@ local function check_step_pacing()
     end
   end
   assert(first_step_calls, "GC step loop never reached batched finalizers")
-  assert(first_step_calls <= cap,
-         "first finalizer step ran more than one batch: " .. first_step_calls ..
-         " > " .. cap)
+  assert(first_step_calls <= expected_step_cap,
+         "first finalizer step exceeded budget-aware cap: " .. first_step_calls ..
+         " > " .. expected_step_cap)
 
   local second_step_calls = isolated_step_delta()
   assert(second_step_calls > 0, "second finalizer step did not run remaining finalizers")
-  assert(second_step_calls <= cap,
-         "second finalizer step ran more than one batch: " .. second_step_calls ..
-         " > " .. cap)
+  assert(second_step_calls <= expected_step_cap,
+         "second finalizer step exceeded budget-aware cap: " .. second_step_calls ..
+         " > " .. expected_step_cap)
 
   collectgarbage("setstepmul", old_stepmul)
   collectgarbage("setstepsize", old_stepsize)
@@ -326,6 +367,32 @@ local function check_mixed_queue_keeps_fallbacks()
          "finalizer calls " .. calls .. " != " .. (eligible + ineligible))
 end
 
+local function check_nonzero_result_stops_each_batch()
+  local n = 4
+  reset_all()
+  local before = stats()
+  collectgarbage("stop")
+  m.alloc_nonzero(n)
+  collectgarbage("restart")
+  force_until("nonzero finalizers did not drain", function()
+    local leaf, closure, stack_errors, nonzero = m.counters()
+    return leaf == 0 and closure == 0 and stack_errors == 0 and nonzero == n
+  end)
+  local after = stats()
+  local batches = delta(before, after, "finalizer_direct_cfunc_batches")
+  local direct = delta(before, after, "finalizer_direct_cfunc_calls")
+  local batched = delta(before, after, "finalizer_direct_cfunc_batched_calls")
+  local nonzero = delta(before, after, "finalizer_direct_cfunc_nonzero_results")
+  local frees = delta(before, after, "finalizer_nonresurrecting_cfunc_frees")
+  assert(batches == n, "nonzero batches " .. batches .. " != " .. n)
+  assert(direct == n, "nonzero direct calls " .. direct .. " != " .. n)
+  assert(batched == n, "nonzero batched calls " .. batched .. " != " .. n)
+  assert(nonzero == n, "nonzero results " .. nonzero .. " != " .. n)
+  assert(frees == n, "nonzero frees " .. frees .. " != " .. n)
+  assert(after.finalizer_direct_cfunc_batch_max == 1,
+         "nonzero batch max " .. after.finalizer_direct_cfunc_batch_max .. " != 1")
+end
+
 local function check_unsupported_finalizers_do_not_batch()
   reset_all()
   local before = stats()
@@ -362,6 +429,7 @@ end
 check_counter_shape()
 check_homogeneous_batch()
 check_mixed_queue_keeps_fallbacks()
+check_nonzero_result_stops_each_batch()
 check_unsupported_finalizers_do_not_batch()
 check_step_pacing()
 
