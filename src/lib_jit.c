@@ -216,18 +216,24 @@ static void gcstats_set(lua_State *L, GCtab *t, const char *name, uint64_t n)
 
 static int jit_gcstats(lua_State *L)
 {
+  enum {
+    GCSTATS_BASE_FIELDS = 60,
+    GCSTATS_SWEEP_UDATA_FIELDS = 11,
+    GCSTATS_DIRECT_CFUNC_FIELDS = 3,
+    GCSTATS_BATCHED_CFUNC_FIELDS = 3,
+    GCSTATS_NONRES_CFUNC_FIELDS = 2
+  };
   global_State *g = G(L);
   GCStats snap = g->gc.stats;
   GCStats *s = &snap;
   int reset = L->base < L->top && tvistruecond(L->base);
   GCtab *t;
-  int hsize = 61;
+  int hsize = GCSTATS_BASE_FIELDS + GCSTATS_SWEEP_UDATA_FIELDS +
+    GCSTATS_DIRECT_CFUNC_FIELDS + GCSTATS_BATCHED_CFUNC_FIELDS +
+    GCSTATS_NONRES_CFUNC_FIELDS;
 #if LJ_HASFFI
-  hsize += 6;
-#endif
-  hsize += 11;
   hsize += 3;
-  hsize += 2;
+#endif
   t = lj_tab_new_ah(L, 0, hsize);
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
