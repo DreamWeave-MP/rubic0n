@@ -523,16 +523,16 @@ def write_nexus_metadata(
         path = metadata_dir / f"{spec.nexus_output}.bbcode"
         with path.open("w", encoding="utf-8") as handle:
             handle.write("[b]Install[/b]\n")
-            handle.write("Pick [code]sandboxed/[/code] or [code]unsandboxed/[/code], then copy the contents of that variant's:\n\n")
-            handle.write(f"[code]{INSTALL_DIR}/[/code]\n\n")
-            handle.write("into your OpenMW install folder.\n\n")
-            handle.write("Use [code]sandboxed/[/code] unless you were directed here by a mod that requires the unsandboxed build.\n\n")
+            handle.write(
+                f"Pick sandboxed/ or unsandboxed/, then copy the contents of that "
+                f"variant's {INSTALL_DIR}/ folder into your OpenMW install folder.\n"
+            )
+            handle.write("Use sandboxed/ unless you were directed here by a mod that requires the unsandboxed build.\n\n")
             handle.write("[b]Provenance and verification[/b]\n")
             handle.write(f"Changelog/provenance: generated from {bbcode_url(github_run, 'this workflow run')} and the source commit below\n")
             handle.write(f"Workflow run: {bbcode_url(github_run, 'GitHub Actions')}\n")
             handle.write(f"Source commit: {bbcode_url(github_commit, target_sha)}\n")
-            handle.write(f"Archive filename: [code]{nexus_archive_name(spec)}[/code]\n")
-            handle.write(f"SHA256: [code]{hashes[spec.name]}[/code]\n")
+            handle.write(f"SHA256: {hashes[spec.name]}\n")
             handle.write(f"VirusTotal: {bbcode_url(row['analysis_url'], 'analysis report')}\n")
 
 
