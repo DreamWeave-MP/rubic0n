@@ -684,12 +684,13 @@ measured separately from synthetic finalizer floods.
 
 Finalizer queue order is preserved, but interleaving changes: one incremental
 collector step may run more than one eligible native destructor before returning
-to Lua or reaching the next ineligible finalizer. A nonzero return count is still
-a contract violation; the batched path records it when stats are enabled and
-stops the current internal batch after that object rather than continuing through
-more queued userdata. For incremental GC, that violation also ends the current
-public GC step; an explicit full collection may continue through later internal
-steps.
+to Lua. The internal batch stops when it reaches the next ineligible finalizer;
+the surrounding GC step may then continue through the normal finalizer path if
+budget remains. A nonzero return count is still a contract violation; the batched
+path records it when stats are enabled and stops the current internal batch after
+that object rather than continuing through more queued userdata. For incremental
+GC, that violation also ends the current public GC step; an explicit full
+collection may continue through later internal steps.
 
 With `LUAJIT_ENABLE_GCSTATS`, the batched path exposes:
 
