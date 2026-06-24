@@ -127,7 +127,7 @@ def package_posix(src_dir: Path, package_dir: Path, *, os_name: str) -> None:
         package_macos(src_dir, package_dir)
     elif os_name == "Linux":
         for alias in LINUX_SONAME_ALIASES:
-            copy_required_file_as(shared_library, install_dir / alias)
+            copy_required_file_as(shared_library, install_dir / "lib" / alias)
     else:
         copy_required_file(shared_library, install_dir)
 
@@ -169,10 +169,15 @@ def validate_variant_package_layout(
         fail(f"packaged {variant_name}/{INSTALL_DIR} directory is missing: {install_dir}")
 
     expected_libraries = sorted(name.removeprefix(f"{INSTALL_DIR}/") for name in packaged_runtime_libraries(os_name))
-    actual_libraries = files_under(install_dir)
+    actual_install_files = files_under(install_dir)
+    actual_libraries = sorted(
+        name
+        for name in actual_install_files
+        if name in expected_libraries
+    )
     if actual_libraries != expected_libraries:
         fail(
-            f"packaged {variant_name}/{INSTALL_DIR} contains {actual_libraries!r}, "
+            f"packaged {variant_name}/{INSTALL_DIR} runtime libraries are {actual_libraries!r}, "
             f"expected runtime libraries {expected_libraries!r}"
         )
 
@@ -213,7 +218,7 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
         )
 
     allowed_root_files = {ARTIFACT_README, ARTIFACT_MANIFEST, "COPYRIGHT"}
-    allowed_root_dirs = {*VARIANTS, RESOURCES_DIR, "benchmarks"}
+    allowed_root_dirs = {*VARIANTS, "benchmarks"}
     for name in names:
         if name in allowed_root_files:
             continue
@@ -225,8 +230,10 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
     for required_doc in (ARTIFACT_README, ARTIFACT_MANIFEST, "COPYRIGHT"):
         if required_doc not in names:
             fail(f"archive artifact metadata file is missing: {required_doc} in {archive_path}")
-    if REQUIRED_RESOURCE_FILE not in names:
-        fail(f"archive required resource file is missing: {REQUIRED_RESOURCE_FILE} in {archive_path}")
+    for variant_name in VARIANTS:
+        required_resource_file = f"{variant_name}/{INSTALL_DIR}/{REQUIRED_RESOURCE_FILE}"
+        if required_resource_file not in names:
+            fail(f"archive required resource file is missing: {required_resource_file} in {archive_path}")
 
     if not isinstance(manifest, dict):
         fail(f"archive manifest is not a JSON object: {archive_path}")
@@ -286,14 +293,15 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
         expected_libraries = sorted(
             name.removeprefix(f"{INSTALL_DIR}/") for name in packaged_runtime_libraries(os_name)
         )
-        actual_libraries = sorted(
+        actual_install_files = sorted(
             name.removeprefix(install_prefix)
             for name in names
             if name.startswith(install_prefix) and not name.endswith("/")
         )
+        actual_libraries = sorted(name for name in actual_install_files if name in expected_libraries)
         if actual_libraries != expected_libraries:
             fail(
-                f"archive {variant_name}/{INSTALL_DIR} contains {actual_libraries!r}, "
+                f"archive {variant_name}/{INSTALL_DIR} runtime libraries are {actual_libraries!r}, "
                 f"expected runtime libraries {expected_libraries!r}: {archive_path}"
             )
 
@@ -321,7 +329,8 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
             fail(f"archive manifest is missing variant {variant_name!r}: {archive_path}")
         expected_library_files = sorted(packaged_runtime_libraries(os_name))
         expected_executable_files = sorted(packaged_runtime_executables(os_name))
-        if sorted(variant_manifest.get("install_files", [])) != expected_library_files:
+        expected_install_files = [f"{INSTALL_DIR}/{name}" for name in actual_install_files]
+        if sorted(variant_manifest.get("install_files", [])) != sorted(expected_install_files):
             fail(f"archive manifest install_files is wrong for {variant_name}: {archive_path}")
         if sorted(variant_manifest.get("library_files", [])) != expected_library_files:
             fail(f"archive manifest library_files is wrong for {variant_name}: {archive_path}")
@@ -362,7 +371,7 @@ def primary_runtime_libraries(os_name: str) -> List[str]:
     if key == "windows":
         return [f"{INSTALL_DIR}/lua51.dll"]
     if key == "linux":
-        return [f"{INSTALL_DIR}/libluajit-5.1.so.2"]
+        return [f"{INSTALL_DIR}/lib/libluajit-5.1.so.2"]
     if key == "macos":
         return [f"{INSTALL_DIR}/{MACOS_DYLIB_NAME}"]
     if key in {"android", "portmaster"}:
@@ -375,7 +384,7 @@ def packaged_runtime_libraries(os_name: str) -> List[str]:
     if key == "windows":
         return [f"{INSTALL_DIR}/lua51.dll"]
     if key == "linux":
-        return [f"{INSTALL_DIR}/libluajit-5.1.so.2"]
+        return [f"{INSTALL_DIR}/lib/libluajit-5.1.so.2"]
     if key == "macos":
         return [f"{INSTALL_DIR}/{name}" for name in MACOS_DYLIBS]
     if key in {"android", "portmaster"}:
@@ -454,7 +463,7 @@ def make_manifest(
                 else "Default build; select(\"sandbox.bypass\") is unavailable."
             ),
             "install_files": [f"{INSTALL_DIR}/{name}" for name in files_under(variant_dir / INSTALL_DIR)],
-            "library_files": [f"{INSTALL_DIR}/{name}" for name in files_under(variant_dir / INSTALL_DIR)],
+            "library_files": sorted(packaged_runtime_libraries(os_name)),
             "runtime_executable_files": [
                 f"{INTERPRETER_DIR}/{name}"
                 for name in files_under(variant_dir / INTERPRETER_DIR)
@@ -518,7 +527,11 @@ def make_manifest(
         "gcstats_enabled": False,
         "benchmarks_included": benchmarks_included,
         "benchmark_files": [f"benchmarks/{name}" for name in files_under(package_dir / "benchmarks")],
-        "resource_files": [f"{RESOURCES_DIR}/{name}" for name in files_under(package_dir / RESOURCES_DIR)],
+        "resource_files": [
+            f"{variant_name}/{INSTALL_DIR}/{RESOURCES_DIR}/{name}"
+            for variant_name in VARIANTS
+            for name in files_under(package_dir / variant_name / INSTALL_DIR / RESOURCES_DIR)
+        ],
         "benchmark_policy": (
             "Desktop-only comparison of this fork's sandboxed build against upstream LuaJIT; "
             "CI-hosted runner timings are noisy and not authoritative."
@@ -573,8 +586,8 @@ def write_artifact_readme(
         f"Choose exactly one variant root (`sandboxed/` or `unsandboxed/`) and keep its "
         f"`{INSTALL_DIR}/` and `{INTERPRETER_DIR}/` directories together. Do not mix "
         "payloads between variants.",
-        f"The top-level `{RESOURCES_DIR}/` directory is shared runtime payload and should "
-        "be copied along with the selected variant.",
+        f"The selected variant's `{INSTALL_DIR}/{RESOURCES_DIR}/` directory is runtime "
+        "payload and should be copied with the rest of that install directory.",
         "",
         "## Runtime files to copy",
         "",
@@ -594,14 +607,14 @@ def write_artifact_readme(
         "| Artifact | Runtime files | Example destination / loader contract |",
         "| --- | --- | --- |",
         f"| Windows X64 | `{INSTALL_DIR}/lua51.dll`, `{INTERPRETER_DIR}/luajit.exe`, `{INTERPRETER_DIR}/jit/` | DLL in the application binary directory or another DLL search path; executable wherever you want the CLI tool. |",
-        f"| Linux X64 | `{INSTALL_DIR}/libluajit-5.1.so.2`, `{INTERPRETER_DIR}/luajit`, `{INTERPRETER_DIR}/jit/` | Library in a directory resolved by `rpath`, `runpath`, `ldconfig`, or `LD_LIBRARY_PATH`; executable wherever you want the CLI tool. |",
+        f"| Linux X64 | `{INSTALL_DIR}/lib/libluajit-5.1.so.2`, `{INTERPRETER_DIR}/luajit`, `{INTERPRETER_DIR}/jit/` | Library in OpenMW's `lib/` directory; executable wherever you want the CLI tool. |",
         f"| macOS ARM64/X64 | `{INSTALL_DIR}/{MACOS_DYLIB_NAME}` "
         f"(install id `{MACOS_INSTALL_ID}`; also includes `{INSTALL_DIR}/{MACOS_DYLIB_ALIAS}`), `{INTERPRETER_DIR}/luajit`, `{INTERPRETER_DIR}/jit/` "
         "| App bundle `Contents/Frameworks` or equivalent, with rpath resolving "
         f"`{MACOS_INSTALL_ID}`. |",
         f"| Android ARM64 | `{INSTALL_DIR}/libluajit.so`, `{INTERPRETER_DIR}/jit/` | `app/src/main/jniLibs/arm64-v8a/libluajit.so` or equivalent native-lib ABI location. |",
         f"| PortMaster ARM64 | `{INSTALL_DIR}/libluajit.so`, `{INTERPRETER_DIR}/luajit`, `{INTERPRETER_DIR}/jit/` | Place `libluajit.so` where the launcher/runtime `LD_LIBRARY_PATH` can find it; executable wherever you want the CLI tool. |",
-        f"| Shared resources | `{RESOURCES_DIR}/` | Copy with the selected variant; contains runtime Lua resources used by OpenMW integrations. |",
+        f"| Shared resources | `{INSTALL_DIR}/{RESOURCES_DIR}/` | Copy with the selected variant's install directory; contains runtime Lua resources used by OpenMW integrations. |",
         "",
         "## JIT module path",
         "",
@@ -691,13 +704,14 @@ def package_variant(src_dir: Path, variant_dir: Path, *, os_name: str) -> None:
 
 def copy_common_payload(root: Path, package_dir: Path, *, variant_sources: Mapping[str, Path]) -> None:
     copy_required_file(root / "COPYRIGHT", package_dir)
-    copy_required_tree(root / RESOURCES_DIR, package_dir / RESOURCES_DIR)
-    if not (package_dir / REQUIRED_RESOURCE_FILE).is_file():
-        fail(f"required resource file was not packaged: {REQUIRED_RESOURCE_FILE}")
 
     for variant_name in VARIANTS:
         if variant_name not in variant_sources:
             fail(f"internal error: missing source for {variant_name}")
+        copy_required_tree(root / RESOURCES_DIR, package_dir / variant_name / INSTALL_DIR / RESOURCES_DIR)
+        required_resource_file = package_dir / variant_name / INSTALL_DIR / REQUIRED_RESOURCE_FILE
+        if not required_resource_file.is_file():
+            fail(f"required resource file was not packaged: {required_resource_file}")
 
 
 def copy_benchmarks_payload(source: Path, package_dir: Path) -> bool:

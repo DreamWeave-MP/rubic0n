@@ -68,12 +68,12 @@ EXPECTED_ARCHIVES: tuple[ArchiveSpec, ...] = (
         os_name="Linux",
         arch="X64",
         platform="linux",
-        runtime_names=(f"{INSTALL_DIR}/libluajit-5.1.so.2", f"{INTERPRETER_DIR}/luajit"),
+        runtime_names=(f"{INSTALL_DIR}/lib/libluajit-5.1.so.2", f"{INTERPRETER_DIR}/luajit"),
         benchmarks_expected=True,
         nexus_output="linux_x64",
         nexus_title="LuaJIT Linux X64 development",
         nexus_platform_meaning="Linux x86_64 / AMD64 build.",
-        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/libluajit-5.1.so.2[/code] and [code]{INTERPRETER_DIR}/luajit[/code].",
+        nexus_runtime_payload=f"Selected variant [code]{INSTALL_DIR}/lib/libluajit-5.1.so.2[/code] and [code]{INTERPRETER_DIR}/luajit[/code].",
     ),
     ArchiveSpec(
         name="LuaJIT-macOS-ARM64.zip",
@@ -197,15 +197,13 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
             fail(f"{path.name} is missing README-LuaJIT-artifact.md")
         if "COPYRIGHT" not in names:
             fail(f"{path.name} is missing COPYRIGHT")
-        if REQUIRED_RESOURCE_FILE not in names:
-            fail(f"{path.name} is missing {REQUIRED_RESOURCE_FILE}")
         manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
 
     nested_prefix = f"{path.stem}/"
     if any(name.startswith(nested_prefix) for name in names):
         fail(f"{path.name} contains nested {path.stem}/; expected variant dirs at zip root")
     allowed_root_files = {"README-LuaJIT-artifact.md", "manifest.json", "COPYRIGHT"}
-    allowed_root_dirs = {*VARIANTS, RESOURCES_DIR, "benchmarks"}
+    allowed_root_dirs = {*VARIANTS, "benchmarks"}
     for name in names:
         if name in allowed_root_files:
             continue
@@ -239,8 +237,8 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
     if not manifest.get("package_path_root"):
         fail(f"{path.name} manifest is missing package_path_root")
     resource_files = manifest.get("resource_files")
-    if not isinstance(resource_files, list) or REQUIRED_RESOURCE_FILE not in resource_files:
-        fail(f"{path.name} manifest is missing required resource_files entry")
+    if not isinstance(resource_files, list):
+        fail(f"{path.name} manifest is missing resource_files")
     security = manifest.get("security")
     if not isinstance(security, dict):
         fail(f"{path.name} manifest is missing security")
@@ -257,6 +255,7 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
         jit_prefix = f"{interpreter_prefix}{JIT_DIR}/"
         install_prefix = f"{variant_prefix}{INSTALL_DIR}/"
         expected_variant_dirs = {INSTALL_DIR, INTERPRETER_DIR}
+        required_resource_file = f"{install_prefix}{REQUIRED_RESOURCE_FILE}"
 
         if not any(name.startswith(variant_prefix) for name in names):
             fail(f"{path.name} is missing {variant}/")
@@ -273,9 +272,15 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
             fail(f"{path.name} is missing {variant}/{INTERPRETER_DIR}/{JIT_DIR}/vmdef.lua")
         if not any(name.startswith(install_prefix) for name in names):
             fail(f"{path.name} is missing {variant}/{INSTALL_DIR}/")
+        if required_resource_file not in names:
+            fail(f"{path.name} is missing {required_resource_file}")
         actual_runtime_names = sorted(
             [f"{INTERPRETER_DIR}/{name}" for name in archive_files_under(names, interpreter_prefix) if "/" not in name]
-            + [f"{INSTALL_DIR}/{name}" for name in archive_files_under(names, install_prefix)]
+            + [
+                f"{INSTALL_DIR}/{name}"
+                for name in archive_files_under(names, install_prefix)
+                if f"{INSTALL_DIR}/{name}" in spec.runtime_names
+            ]
         )
         if actual_runtime_names != sorted(spec.runtime_names):
             fail(
@@ -295,7 +300,11 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
             fail(f"{path.name} manifest is missing {variant}")
         expected_library_files = sorted(name for name in spec.runtime_names if name.startswith(f"{INSTALL_DIR}/"))
         expected_executable_files = sorted(name for name in spec.runtime_names if name.startswith(f"{INTERPRETER_DIR}/"))
-        if sorted(variant_manifest.get("install_files", [])) != expected_library_files:
+        expected_install_files = sorted(
+            expected_library_files
+            + [f"{INSTALL_DIR}/{RESOURCES_DIR}/{name}" for name in archive_files_under(names, f"{install_prefix}{RESOURCES_DIR}/")]
+        )
+        if sorted(variant_manifest.get("install_files", [])) != expected_install_files:
             fail(f"{path.name} manifest has wrong install_files for {variant}")
         if sorted(variant_manifest.get("library_files", [])) != expected_library_files:
             fail(f"{path.name} manifest has wrong library_files for {variant}")
@@ -308,6 +317,8 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
         )
         if sorted(variant_manifest.get("jit_module_files", [])) != expected_jit_files:
             fail(f"{path.name} manifest has wrong jit_module_files for {variant}")
+        if required_resource_file not in resource_files:
+            fail(f"{path.name} manifest resource_files is missing {required_resource_file}")
         expected_bypass = variant == "unsandboxed"
         if variant_manifest.get("sandbox_bypass_enabled") is not expected_bypass:
             fail(f"{path.name} manifest has wrong sandbox bypass state for {variant}")
@@ -415,7 +426,7 @@ def write_release_notes(
         handle.write("Artifacts contain two variant roots:\n")
         handle.write("- sandboxed/: default build, no LUAJIT_ENABLE_SANDBOX_BYPASS, select(\"sandbox.bypass\") unavailable.\n")
         handle.write("- unsandboxed/: WARNING: trusted engine/dev use only; enables LUAJIT_ENABLE_SANDBOX_BYPASS and exposes select(\"sandbox.bypass\").\n\n")
-        handle.write("Each zip includes README-LuaJIT-artifact.md, manifest.json, COPYRIGHT, and shared resources/. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n")
+        handle.write("Each zip includes README-LuaJIT-artifact.md, manifest.json, COPYRIGHT, and resources/ inside each variant's OpenMW install payload. No GCStats telemetry build is included. Desktop zips include benchmarks/ comparing the sandboxed build against upstream LuaJIT; Android and PortMaster omit benchmarks because they are cross targets.\n")
         if release_is_tag:
             handle.write("This is a tag release stable snapshot; CI refuses to overwrite existing release assets.\n")
         else:
@@ -503,25 +514,19 @@ def write_nexus_metadata(
 
         path = metadata_dir / f"{spec.nexus_output}.bbcode"
         with path.open("w", encoding="utf-8") as handle:
-            handle.write(f"[b]{display_name}[/b]\n\n")
-            handle.write("Moving development build of the Dreamweave LuaJIT fork. Tag releases are not uploaded to NexusMods; stable archives live on GitHub.\n\n")
-            handle.write("[b]Platform / runtime payload[/b]\n")
-            handle.write(f"Platform meaning: {spec.nexus_platform_meaning}\n")
-            handle.write(f"Primary runtime payload: {spec.nexus_runtime_payload}\n")
-            for caveat in spec.nexus_caveats:
-                handle.write(f"Caveat: {caveat}\n")
-            handle.write(f"Use exactly one variant root from this archive; do not mix sandboxed and unsandboxed files or copy a runtime library from a different platform archive. Keep that variant's [code]{INSTALL_DIR}/[/code] and [code]{INTERPRETER_DIR}/[/code] directories together, and keep the shared [code]{RESOURCES_DIR}/[/code] directory.\n\n")
-            handle.write(f"The selected variant's [code]{INTERPRETER_DIR}/[/code] directory contains the LuaJIT executable when this platform ships one, plus [code]{INTERPRETER_DIR}/{JIT_DIR}/[/code]. Put [code]{INTERPRETER_DIR}/[/code] on [code]package.path[/code], not [code]{INTERPRETER_DIR}/{JIT_DIR}/[/code] itself.\n\n")
-            handle.write(f"{bbcode_url(github_changelog, 'GitHub changelog asset')}\n")
-            handle.write(f"{bbcode_url(github_release, 'GitHub development release')}\n")
-            handle.write(f"{bbcode_url(github_run, 'GitHub Actions workflow run')}\n")
-            handle.write(f"{bbcode_url(github_commit, 'Source commit')}\n\n")
-            handle.write("[b]Archive chain of custody[/b]\n")
+            handle.write("Rolling Release of Rubic0n for OpenMW.\n\n")
+            handle.write("[b]Install[/b]\n")
+            handle.write("Pick [code]sandboxed/[/code] or [code]unsandboxed/[/code], then copy the contents of that variant's:\n\n")
+            handle.write(f"[code]{INSTALL_DIR}/[/code]\n\n")
+            handle.write("into your OpenMW install folder.\n\n")
+            handle.write("Use [code]sandboxed/[/code] unless you were directed here by a mod that requires the unsandboxed build.\n\n")
+            handle.write("[b]Provenance and verification[/b]\n")
+            handle.write(f"Changelog: {bbcode_url(github_changelog, 'CHANGELOG.md')}\n")
+            handle.write(f"Workflow run: {bbcode_url(github_run, 'GitHub Actions')}\n")
+            handle.write(f"Source commit: {bbcode_url(github_commit, target_sha)}\n")
             handle.write(f"Archive filename: [code]{spec.name}[/code]\n")
             handle.write(f"SHA256: [code]{hashes[spec.name]}[/code]\n")
-            handle.write(f"VirusTotal: {bbcode_url(row['analysis_url'], row['analysis_id'])}\n\n")
-            handle.write("This Nexus file is uploaded only after the GitHub development release publisher succeeds and the published GitHub SHA256SUMS.txt matches this workflow's candidate checksums. It is uploaded from the same workflow artifact as the GitHub release asset. The platform build submitted that exact zip to VirusTotal before artifact upload; the publisher recomputed SHA256 before this Nexus upload. NexusMods may run its own scanner/cache, which is separate from the GitHub/VirusTotal chain.\n\n")
-            handle.write(f"Contains two variant roots: [code]sandboxed/[/code] (default, no sandbox bypass) and [code]unsandboxed/[/code] (trusted engine/development only; exposes [code]select(\"sandbox.bypass\")[/code]), plus shared [code]{RESOURCES_DIR}/[/code]. No GCStats telemetry build or developer support payload is included.\n")
+            handle.write(f"VirusTotal: {bbcode_url(row['analysis_url'], 'analysis report')}\n")
 
 
 def append_step_summary(path: Path, vt_rows: dict[str, dict[str, str]], hashes: dict[str, str]) -> None:
