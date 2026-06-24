@@ -36,6 +36,12 @@ def fail(message: str) -> NoReturn:
     raise SystemExit(f"package-luajit: {message}")
 
 
+def remove_prefix(value: str, prefix: str) -> str:
+    if not value.startswith(prefix):
+        fail(f"internal error: {value!r} does not start with {prefix!r}")
+    return value[len(prefix):]
+
+
 def copy_required_file(source: Path, destination_dir: Path) -> None:
     if not source.is_file():
         fail(f"required file is missing: {source}")
@@ -168,7 +174,7 @@ def validate_variant_package_layout(
     if not install_dir.is_dir():
         fail(f"packaged {variant_name}/{INSTALL_DIR} directory is missing: {install_dir}")
 
-    expected_libraries = sorted(name.removeprefix(f"{INSTALL_DIR}/") for name in packaged_runtime_libraries(os_name))
+    expected_libraries = sorted(remove_prefix(name, f"{INSTALL_DIR}/") for name in packaged_runtime_libraries(os_name))
     actual_install_files = files_under(install_dir)
     actual_libraries = sorted(
         name
@@ -182,7 +188,7 @@ def validate_variant_package_layout(
         )
 
     expected_interpreter_files = sorted(
-        name.removeprefix(f"{INTERPRETER_DIR}/") for name in packaged_runtime_executables(os_name)
+        remove_prefix(name, f"{INTERPRETER_DIR}/") for name in packaged_runtime_executables(os_name)
     ) + [f"{JIT_DIR}/{name}" for name in jit_files]
     actual_interpreter_files = files_under(interpreter_dir)
     if actual_interpreter_files != sorted(expected_interpreter_files):
@@ -191,7 +197,7 @@ def validate_variant_package_layout(
             f"expected interpreter payload {sorted(expected_interpreter_files)!r}"
         )
 
-    expected_executables = sorted(name.removeprefix(f"{INTERPRETER_DIR}/") for name in packaged_runtime_executables(os_name))
+    expected_executables = sorted(remove_prefix(name, f"{INTERPRETER_DIR}/") for name in packaged_runtime_executables(os_name))
     actual_executables = sorted(
         name for name in actual_interpreter_files if "/" not in name
     )
@@ -276,7 +282,7 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
         for name in names:
             if not name.startswith(variant_prefix) or name == variant_prefix:
                 continue
-            remainder = name.removeprefix(variant_prefix)
+            remainder = remove_prefix(name, variant_prefix)
             child = remainder.split("/", 1)[0]
             if child not in expected_variant_dirs:
                 fail(f"archive contains unexpected {variant_name}/ payload {remainder!r}: {archive_path}")
@@ -291,10 +297,10 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
                 fail(f"archive contains non-Lua JIT module {name}: {archive_path}")
 
         expected_libraries = sorted(
-            name.removeprefix(f"{INSTALL_DIR}/") for name in packaged_runtime_libraries(os_name)
+            remove_prefix(name, f"{INSTALL_DIR}/") for name in packaged_runtime_libraries(os_name)
         )
         actual_install_files = sorted(
-            name.removeprefix(install_prefix)
+            remove_prefix(name, install_prefix)
             for name in names
             if name.startswith(install_prefix) and not name.endswith("/")
         )
@@ -306,12 +312,12 @@ def validate_archive_layout(archive_path: Path, *, os_name: str, benchmarks_incl
             )
 
         expected_executables = sorted(
-            name.removeprefix(f"{INTERPRETER_DIR}/") for name in packaged_runtime_executables(os_name)
+            remove_prefix(name, f"{INTERPRETER_DIR}/") for name in packaged_runtime_executables(os_name)
         )
         actual_executables = sorted(
-            name.removeprefix(interpreter_prefix)
+            remove_prefix(name, interpreter_prefix)
             for name in names
-            if name.startswith(interpreter_prefix) and not name.endswith("/") and "/" not in name.removeprefix(interpreter_prefix)
+            if name.startswith(interpreter_prefix) and not name.endswith("/") and "/" not in remove_prefix(name, interpreter_prefix)
         )
         if actual_executables != expected_executables:
             fail(

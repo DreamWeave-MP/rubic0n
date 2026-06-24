@@ -136,6 +136,12 @@ def fail(message: str) -> NoReturn:
     raise SystemExit(f"prepare-luajit-release-assets: {message}")
 
 
+def remove_prefix(value: str, prefix: str) -> str:
+    if not value.startswith(prefix):
+        fail(f"internal error: {value!r} does not start with {prefix!r}")
+    return value[len(prefix):]
+
+
 def sanitize_nexus_name(name: str) -> str:
     # Nexus validates upload/version names with ^[a-zA-Z0-9 _'().-]+$.
     # Human platform labels tend to grow slash-separated synonyms; turn those
@@ -186,7 +192,7 @@ def require_exact_archives(archive_dir: Path) -> dict[str, Path]:
 
 def archive_files_under(names: set[str], prefix: str) -> list[str]:
     return sorted(
-        name.removeprefix(prefix)
+        remove_prefix(name, prefix)
         for name in names
         if name.startswith(prefix) and not name.endswith("/")
     )
@@ -266,7 +272,7 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
         for name in names:
             if not name.startswith(variant_prefix) or name == variant_prefix:
                 continue
-            remainder = name.removeprefix(variant_prefix)
+            remainder = remove_prefix(name, variant_prefix)
             child = remainder.split("/", 1)[0]
             if child not in expected_variant_dirs:
                 fail(f"{path.name} contains unexpected {variant}/ payload {remainder!r}")
@@ -315,7 +321,7 @@ def validate_archive_layout(path: Path, spec: ArchiveSpec) -> None:
         if sorted(variant_manifest.get("runtime_executable_files", [])) != expected_executable_files:
             fail(f"{path.name} manifest has wrong runtime_executable_files for {variant}")
         expected_jit_files = sorted(
-            name.removeprefix(variant_prefix)
+            remove_prefix(name, variant_prefix)
             for name in names
             if name.startswith(jit_prefix) and not name.endswith("/")
         )

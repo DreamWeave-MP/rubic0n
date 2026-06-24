@@ -4,11 +4,13 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - v2.1-agentzh
       - development
     tags:
       - '*'
   pull_request:
     branches:
+      - v2.1-agentzh
       - development
 
 permissions:
