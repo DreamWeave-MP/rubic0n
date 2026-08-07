@@ -38,6 +38,7 @@ Table of Contents
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
         * [Direct zero-upvalue C finalizer ABI](#direct-zero-upvalue-c-finalizer-abi)
         * [Non-resurrecting direct-free C finalizer ABI](#non-resurrecting-direct-free-c-finalizer-abi)
+        * [Experimental paged allocator front end](#experimental-paged-allocator-front-end)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
         * [Updated `-bl` option](#updated--bl-option)
@@ -650,6 +651,39 @@ every zero-upvalue C userdata finalizer covered by the ABI. With
 `finalizer_nonresurrecting_cfunc_fallbacks`,
 `finalizer_direct_cfunc_nonzero_results`, and the finalizer dispatch counters on
 representative workloads before relying on this ABI in production.
+
+[Back to TOC](#table-of-contents)
+
+### Experimental paged allocator front end
+
+Enable it with:
+
+```bash
+make clean && make XCFLAGS='-DLUAJIT_USE_PAGEALLOC'
+```
+
+The front end currently delegates every allocation to LuaJIT's bundled
+allocator. It provides separate allocator state, PRNG forwarding, rollback,
+and teardown, but does not pool allocations or change allocation policy or
+performance.
+
+`LUAJIT_USE_PAGEALLOC` is incompatible with `LUAJIT_USE_SYSMALLOC`. Allocators
+passed to `lua_newstate` bypass the front end.
+
+Run the lifecycle smoke test with:
+
+```bash
+LUAJIT_TEST_PAGEALLOC=1 perl t/pagealloc-lifecycle-smoke.t
+```
+
+For rollback and teardown fault injection, rebuild with test hooks:
+
+```bash
+make clean && make \
+  XCFLAGS='-DLUAJIT_USE_PAGEALLOC -DLUAJIT_PAGEALLOC_TEST'
+LUAJIT_TEST_PAGEALLOC=1 LUAJIT_TEST_PAGEALLOC_FAULTS=1 \
+  perl t/pagealloc-lifecycle-smoke.t
+```
 
 [Back to TOC](#table-of-contents)
 

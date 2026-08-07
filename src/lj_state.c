@@ -28,6 +28,7 @@
 #include "lj_prng.h"
 #include "lj_lex.h"
 #include "lj_alloc.h"
+#include "lj_alloc_page.h"
 #include "luajit.h"
 
 /* -- Stack handling ------------------------------------------------------ */
@@ -236,6 +237,11 @@ static void close_state(lua_State *L)
 	     "memory leak of %lld bytes",
 	     (long long)(g->gc.total - sizeof(GG_State)));
 #ifndef LUAJIT_USE_SYSMALLOC
+#ifdef LUAJIT_USE_PAGEALLOC
+  if (g->allocf == lj_page_alloc_f)
+    lj_page_alloc_destroy(g->allocd);
+  else
+#endif
   if (g->allocf == lj_alloc_f)
     lj_alloc_destroy(g->allocd);
   else
@@ -253,6 +259,9 @@ LUA_API lua_State *lua_newstate(lua_Alloc allocf, void *allocd)
   GG_State *GG;
   lua_State *L;
   global_State *g;
+#ifndef LUAJIT_USE_SYSMALLOC
+  int ownalloc = 0;
+#endif
   /* We need the PRNG for the memory allocator, so initialize this first. */
   if (!lj_prng_seed_secure(&prng)) {
     lj_assertX(0, "secure PRNG seeding failed");
@@ -261,15 +270,49 @@ LUA_API lua_State *lua_newstate(lua_Alloc allocf, void *allocd)
   }
 #ifndef LUAJIT_USE_SYSMALLOC
   if (allocf == LJ_ALLOCF_INTERNAL) {
+#ifdef LUAJIT_USE_PAGEALLOC
+    allocd = lj_page_alloc_create(&prng);
+    if (!allocd) return NULL;
+    allocf = lj_page_alloc_f;
+#else
     allocd = lj_alloc_create(&prng);
     if (!allocd) return NULL;
     allocf = lj_alloc_f;
+#endif
+    ownalloc = 1;
   }
 #endif
   GG = (GG_State *)allocf(allocd, NULL, 0, sizeof(GG_State));
-  if (GG == NULL) return NULL;
-  if (!checkptrGC(GG)) {
+  if (GG == NULL) {
+#ifndef LUAJIT_USE_SYSMALLOC
+    if (ownalloc) {
+#ifdef LUAJIT_USE_PAGEALLOC
+      if (allocf == lj_page_alloc_f)
+	lj_page_alloc_destroy(allocd);
+      else
+#endif
+	lj_alloc_destroy(allocd);
+    }
+#endif
+    return NULL;
+  }
+  if (!checkptrGC(GG)
+#if defined(LUAJIT_USE_PAGEALLOC) && defined(LUAJIT_PAGEALLOC_TEST)
+      || (ownalloc && allocf == lj_page_alloc_f &&
+	  lj_page_alloc_test_should_reject_pointer())
+#endif
+     ) {
     allocf(allocd, GG, sizeof(GG_State), 0);
+#ifndef LUAJIT_USE_SYSMALLOC
+    if (ownalloc) {
+#ifdef LUAJIT_USE_PAGEALLOC
+      if (allocf == lj_page_alloc_f)
+	lj_page_alloc_destroy(allocd);
+      else
+#endif
+	lj_alloc_destroy(allocd);
+    }
+#endif
     return NULL;
   }
   memset(GG, 0, sizeof(GG_State));
@@ -286,6 +329,11 @@ LUA_API lua_State *lua_newstate(lua_Alloc allocf, void *allocd)
   g->allocd = allocd;
   g->prng = prng;
 #ifndef LUAJIT_USE_SYSMALLOC
+#ifdef LUAJIT_USE_PAGEALLOC
+  if (allocf == lj_page_alloc_f) {
+    lj_page_alloc_setprng(allocd, &g->prng);
+  } else
+#endif
   if (allocf == lj_alloc_f) {
     lj_alloc_setprng(allocd, &g->prng);
   }
