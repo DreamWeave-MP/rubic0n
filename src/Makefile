@@ -99,6 +99,8 @@ XCFLAGS=
 # code (e.g. __pairs or os.execute() return values) can be enabled here.
 # Note: this does not provide full compatibility with Lua 5.2 at this time.
 XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
+# Use the bundled segregated page allocator by default on supported builds.
+XCFLAGS+= -DLUAJIT_USE_PAGEALLOC
 
 # This fork branch always includes the narrow direct zero-upvalue C finalizer ABI
 # and the narrower non-resurrecting direct-free ABI. They are dangerous native

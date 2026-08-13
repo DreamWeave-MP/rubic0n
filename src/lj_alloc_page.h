@@ -27,6 +27,10 @@ typedef struct LJPageAllocTestStats {
   int wrapper_destroyed;
   int setprng_calls;
   int request_calls;
+  int pages_created;
+  int pages_destroyed;
+  int pooled_allocations;
+  int pooled_frees;
 } LJPageAllocTestStats;
 
 LJ_FUNC void lj_page_alloc_test_reset(void);
