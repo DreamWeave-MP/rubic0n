@@ -71,6 +71,7 @@ if exist minilua.exe.manifest^
 @rem @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_SANDBOX_BYPASS
 @rem Enabled by default in this fork, matching the Unix Makefile.
 @set LJCOMPILE=%LJCOMPILE% /DLUAJIT_ENABLE_LUA52COMPAT
+@set LJCOMPILE=%LJCOMPILE% /DLUAJIT_USE_PAGEALLOC
 @if "%1" neq "lua52compat" goto :NOLUA52COMPAT
 @shift
 :NOLUA52COMPAT

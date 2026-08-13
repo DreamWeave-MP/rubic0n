@@ -15,7 +15,7 @@ my $cc = $ENV{CC} || "cc";
 system("$cc --version >/dev/null 2>&1");
 plan skip_all => "C compiler '$cc' is not available" if $? == -1 || ($? >> 8) == 127;
 
-my $expect_pagealloc = $ENV{LUAJIT_TEST_PAGEALLOC} ? 1 : 0;
+my $expect_pagealloc = $ENV{LUAJIT_TEST_NO_PAGEALLOC} ? 0 : 1;
 my $expect_faults = $ENV{LUAJIT_TEST_PAGEALLOC_FAULTS} ? 1 : 0;
 my $symbols = `nm "$lib" 2>/dev/null`;
 my $page_symbol_present = $symbols =~ /\b[TtWw]\s+lj_page_alloc_f\b/ ? 1 : 0;

@@ -656,16 +656,19 @@ representative workloads before relying on this ABI in production.
 
 ### Experimental paged allocator front end
 
-Enable it with:
+It is enabled by default in the Linux, macOS, Android, and Windows builds
+covered by GitHub CI. To build explicitly with the same configuration:
 
 ```bash
 make clean && make XCFLAGS='-DLUAJIT_USE_PAGEALLOC'
 ```
 
-The front end currently delegates every allocation to LuaJIT's bundled
-allocator. It provides separate allocator state, PRNG forwarding, rollback,
-and teardown, but does not pool allocations or change allocation policy or
-performance.
+Requests up to 1,024 bytes use segregated 16 or 32 KiB pages; larger requests
+remain delegated to LuaJIT's bundled allocator. Empty pages return to the
+bundled allocator immediately. The front end has no empty-page cache.
+
+For non-null pointers, callers must provide the current logical size as
+`osize`. The allocator uses it to distinguish pooled from delegated pointers.
 
 `LUAJIT_USE_PAGEALLOC` is incompatible with `LUAJIT_USE_SYSMALLOC`. Allocators
 passed to `lua_newstate` bypass the front end.
@@ -673,7 +676,7 @@ passed to `lua_newstate` bypass the front end.
 Run the lifecycle smoke test with:
 
 ```bash
-LUAJIT_TEST_PAGEALLOC=1 perl t/pagealloc-lifecycle-smoke.t
+perl t/pagealloc-lifecycle-smoke.t
 ```
 
 For rollback and teardown fault injection, rebuild with test hooks:
@@ -683,6 +686,7 @@ make clean && make \
   XCFLAGS='-DLUAJIT_USE_PAGEALLOC -DLUAJIT_PAGEALLOC_TEST'
 LUAJIT_TEST_PAGEALLOC=1 LUAJIT_TEST_PAGEALLOC_FAULTS=1 \
   perl t/pagealloc-lifecycle-smoke.t
+perl t/pagealloc-boundary.t
 ```
 
 [Back to TOC](#table-of-contents)
