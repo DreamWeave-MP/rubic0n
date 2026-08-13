@@ -38,6 +38,7 @@ Table of Contents
         * [Static userdata finalizer scan contract](#static-userdata-finalizer-scan-contract)
         * [Direct zero-upvalue C finalizer ABI](#direct-zero-upvalue-c-finalizer-abi)
         * [Non-resurrecting direct-free C finalizer ABI](#non-resurrecting-direct-free-c-finalizer-abi)
+        * [Experimental paged allocator front end](#experimental-paged-allocator-front-end)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
         * [Updated `-bl` option](#updated--bl-option)
@@ -650,6 +651,43 @@ every zero-upvalue C userdata finalizer covered by the ABI. With
 `finalizer_nonresurrecting_cfunc_fallbacks`,
 `finalizer_direct_cfunc_nonzero_results`, and the finalizer dispatch counters on
 representative workloads before relying on this ABI in production.
+
+[Back to TOC](#table-of-contents)
+
+### Experimental paged allocator front end
+
+It is enabled by default in the Linux, macOS, Android, and Windows builds
+covered by GitHub CI. To build explicitly with the same configuration:
+
+```bash
+make clean && make XCFLAGS='-DLUAJIT_USE_PAGEALLOC'
+```
+
+Requests up to 1,024 bytes use segregated 16 or 32 KiB pages; larger requests
+remain delegated to LuaJIT's bundled allocator. Empty pages return to the
+bundled allocator immediately. The front end has no empty-page cache.
+
+For non-null pointers, callers must provide the current logical size as
+`osize`. The allocator uses it to distinguish pooled from delegated pointers.
+
+`LUAJIT_USE_PAGEALLOC` is incompatible with `LUAJIT_USE_SYSMALLOC`. Allocators
+passed to `lua_newstate` bypass the front end.
+
+Run the lifecycle smoke test with:
+
+```bash
+perl t/pagealloc-lifecycle-smoke.t
+```
+
+For rollback and teardown fault injection, rebuild with test hooks:
+
+```bash
+make clean && make \
+  XCFLAGS='-DLUAJIT_USE_PAGEALLOC -DLUAJIT_PAGEALLOC_TEST'
+LUAJIT_TEST_PAGEALLOC=1 LUAJIT_TEST_PAGEALLOC_FAULTS=1 \
+  perl t/pagealloc-lifecycle-smoke.t
+perl t/pagealloc-boundary.t
+```
 
 [Back to TOC](#table-of-contents)
 

@@ -50,6 +50,8 @@ lib_table.o: lib_table.c lua.h luaconf.h lauxlib.h lualib.h lj_obj.h \
  lib_table_extensions.inc
 lj_alloc.o: lj_alloc.c lj_def.h lua.h luaconf.h lj_arch.h lj_alloc.h \
  lj_prng.h
+lj_alloc_page.o: lj_alloc_page.c lj_def.h lua.h luaconf.h lj_arch.h \
+ lj_alloc.h lj_alloc_page.h lj_prng.h
 ljamalg.o: ljamalg.c lua.h luaconf.h lauxlib.h lj_assert.c lj_gc.c \
  lj_obj.h lj_def.h lj_arch.h lj_gc.h lj_err.h lj_errmsg.h lj_buf.h \
  lj_str.h lj_tab.h lj_func.h lj_udata.h lj_meta.h lj_state.h lj_frame.h \
@@ -70,6 +72,7 @@ ljamalg.o: ljamalg.c lua.h luaconf.h lauxlib.h lj_assert.c lj_gc.c \
  lj_opt_sink.c lj_mcode.c lj_snap.c lj_record.c lj_record.h lj_ffrecord.h \
  lj_crecord.c lj_crecord.h lj_ffrecord.c lj_recdef.h lj_asm.c lj_asm.h \
  lj_emit_*.h lj_asm_*.h lj_trace.c lj_gdbjit.h lj_gdbjit.c lj_alloc.c \
+ lj_alloc_page.c lj_alloc_page.h \
  lib_aux.c lib_base.c lj_libdef.h lib_math.c lib_math_extensions.inc \
  lib_math_geometry.inc lib_string.c lib_table.c lib_table_extensions.inc \
  lib_io.c lib_os.c lib_package.c lib_debug.c lib_bit.c lib_jit.c \
@@ -223,7 +226,7 @@ lj_state.o: lj_state.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h \
  lj_gc.h lj_err.h lj_errmsg.h lj_buf.h lj_str.h lj_tab.h lj_func.h \
  lj_meta.h lj_state.h lj_frame.h lj_bc.h lj_ctype.h lj_trace.h lj_jit.h \
  lj_ir.h lj_dispatch.h lj_traceerr.h lj_vm.h lj_prng.h lj_lex.h \
- lj_alloc.h luajit.h
+ lj_alloc.h lj_alloc_page.h luajit.h
 lj_str.o: lj_str.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h lj_gc.h \
  lj_err.h lj_errmsg.h lj_str.h lj_char.h lj_prng.h
 lj_strfmt.o: lj_strfmt.c lj_obj.h lua.h luaconf.h lj_def.h lj_arch.h \
