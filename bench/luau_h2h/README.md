@@ -79,6 +79,25 @@ The "before" figures at 200,000 objects include page faults. That build
 returned every empty page to the bundled allocator, which unmaps free
 memory above 2 MiB, so each round mapped its heap again.
 
+## The comparison image
+
+![Bars comparing Luau, Rubic0n before and Rubic0n after](comparison.png)
+
+`comparison.png` is the 200,000 object table as bars, for release notes. Its
+alt text is `comparison.txt`. `comparison.jsl` draws it with
+[Jess](https://github.com/DreamWeave-MP/jess) and its `magick` and `truetype`
+packages, in the style of DreamWeave's `dream_propaganda` campaign:
+
+```bash
+jess run --trusted --package truetype.jpk --package magick.jpk \
+  bench/luau_h2h/comparison.jsl \
+  --font-dir ~/.local/share/fonts --font-dir /usr/share/fonts/google-noto
+```
+
+It needs `MysticCards.ttf`, `NotoSans-Medium.ttf` and `NotoSansMono-Bold.ttf`
+in the folders named. The figures are copied into the script by hand: change
+the table above first, then the script.
+
 The collection figures are for explicit full collections. See
 `bench/openmw_userdata` with `--gc incremental` for the collector running
 in steps behind a Sol binding.
