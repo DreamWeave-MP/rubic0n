@@ -239,12 +239,16 @@ int main(void)
 
   before_nores = gcstat(T, "finalizer_nonresurrecting_cfunc_frees");
   before_direct = gcstat(T, "finalizer_direct_cfunc_calls");
-  lua_newuserdata(T, 1);
+  /* Build the metatable first. Allocating between lua_newuserdata and
+  ** lua_setmetatable can run a GC step that scans the userdata while it has
+  ** no __gc yet, and the static finalizer contract then drops it for good. */
   lua_newtable(T);
   lua_pushcfunction(T, leaf_finalizer);
   lua_setfield(T, -2, "__gc");
+  lua_newuserdata(T, 1);
+  lua_pushvalue(T, -2);
   lua_setmetatable(T, -2);
-  lua_pop(T, 1);
+  lua_pop(T, 2);
 
   lj_gc_separateudata(G(T), 1);
   lj_gc_finalize_udata(T);
