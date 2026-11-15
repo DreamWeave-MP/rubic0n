@@ -15,6 +15,9 @@ plan skip_all => 'requires a page-allocator build with visible symbols'
 my $hooks = $symbols =~ /\b[TW]\s+lj_page_alloc_test_reset\b/ ? 1 : 0;
 
 my $cc = $ENV{CC} || 'cc';
+system("$cc --version >/dev/null 2>&1");
+plan skip_all => "C compiler '$cc' is not available" if $? == -1 || ($? >> 8) == 127;
+
 my $cwd = cwd;
 my $dir = tempdir 'testlj_pagealloc_stress_XXXXXXX', CLEANUP => 1;
 chdir $dir or die "Cannot chdir to $dir: $!";

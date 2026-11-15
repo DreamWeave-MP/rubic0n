@@ -70,7 +70,16 @@ COMMON_PERL_SUBSET_TESTS: Tuple[str, ...] = (
 # t/weak-finalizer-torture.t keeps generic weak-table coverage runnable on both
 # Linux and Darwin, but quarantines Lua-closure/upvalue finalizer torture cases
 # that are outside Rubic0n's mandatory native/nonresurrecting finalizer contract.
-LINUX_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS
+#
+# The allocator, sweep-step finalizer and C API tests build small C helpers
+# against src/. They are gated on Linux, where that has been exercised on x64
+# and arm64. Each skips itself when no C compiler is available.
+LINUX_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS + (
+    "t/pagealloc-lifecycle-smoke.t",
+    "t/pagealloc-stress.t",
+    "t/sweep-udata-inline-finalize.t",
+    "t/capi-fastpaths.t",
+)
 DARWIN_PERL_SUBSET_TESTS: Tuple[str, ...] = COMMON_PERL_SUBSET_TESTS
 
 # Windows CI does not request --perl-subset; keep that behavior explicit rather
