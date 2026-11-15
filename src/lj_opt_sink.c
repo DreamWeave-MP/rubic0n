@@ -14,6 +14,7 @@
 #include "lj_jit.h"
 #include "lj_iropt.h"
 #include "lj_target.h"
+#include "lj_dispatch.h"
 
 /* Some local macros to save typing. Undef'd at the end. */
 #define IR(ref)		(&J->cur.ir[(ref)])
