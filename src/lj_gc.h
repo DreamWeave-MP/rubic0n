@@ -7,6 +7,7 @@
 #define _LJ_GC_H
 
 #include "lj_obj.h"
+#include "lj_alloc_page.h"
 
 /* Garbage collector states. Order matters. */
 enum {
@@ -136,14 +137,21 @@ LJ_FUNC void * LJ_FASTCALL lj_mem_newgco(lua_State *L, GCSize size);
 LJ_FUNC void *lj_mem_grow(lua_State *L, void *p,
 			  MSize *szp, MSize lim, MSize esz);
 
-#define lj_mem_new(L, s)	lj_mem_realloc(L, NULL, 0, (s))
+LJ_FUNC void * LJ_FASTCALL lj_mem_new(lua_State *L, GCSize size);
 
 static LJ_AINLINE void lj_mem_free(global_State *g, void *p, size_t osize)
 {
   lj_gc_stats_inc(g, free_calls);
   lj_gc_stats_add(g, free_bytes, osize);
   g->gc.total -= (GCSize)osize;
-  g->allocf(g->allocd, p, osize, 0);
+#if LJ_HASPAGEALLOC
+  /* Pooled block of the bundled page allocator? Skip the generic dispatch. */
+  if (LJ_LIKELY(osize-1 < LJ_PAGE_ALLOC_MAX_SIZE) &&
+      LJ_LIKELY(g->allocf == lj_page_alloc_f))
+    lj_page_free_small(g->allocd, p);
+  else
+#endif
+    g->allocf(g->allocd, p, osize, 0);
 }
 
 #define lj_mem_newvec(L, n, t)	((t *)lj_mem_new(L, (GCSize)((n)*sizeof(t))))

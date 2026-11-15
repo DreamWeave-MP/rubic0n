@@ -53,7 +53,11 @@ static int boundary_requests(void *pas)
   for (i = 0; i < 1100; i++) {
     sizes[i] = (size_t)i + 1;
     ptrs[i] = lj_page_alloc_f(pas, NULL, 0, sizes[i]);
-    if (ptrs[i] == NULL || ((uintptr_t)ptrs[i] & 7u) != 0) return 0;
+    if (ptrs[i] == NULL) return 0;
+    if (((uintptr_t)ptrs[i] & 7u) != 0) return 0;
+    /* Pooled blocks of 57 bytes and up are aligned to 16 bytes. */
+    if (sizes[i] > 56 && sizes[i] <= 1024 && ((uintptr_t)ptrs[i] & 15u) != 0)
+      return 0;
     fill_bytes(ptrs[i], sizes[i], (unsigned)i);
   }
   for (i = 1099; i >= 0; i--) {
@@ -227,6 +231,13 @@ int main(void)
     void *pooled;
     void *delegated;
     LJPageAllocTestStats before, after;
+    /* The first pooled request also has to obtain a segment. Fail that. */
+    lj_page_alloc_test_get_stats(&before);
+    lj_page_alloc_test_fail_at(before.request_calls + 2);
+    if (lj_page_alloc_f(pas, NULL, 0, 64) != NULL) return 1;
+    lj_page_alloc_test_fail_at(0);
+    lj_page_alloc_test_get_stats(&after);
+    if (after.segments_created != 0 || after.pages_created != 0) return 1;
     lj_page_alloc_test_get_stats(&before);
     pooled = lj_page_alloc_f(pas, NULL, 0, 1024);
     delegated = lj_page_alloc_f(pas, NULL, 0, 1025);

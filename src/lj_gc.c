@@ -894,6 +894,19 @@ static void atomic(global_State *g, lua_State *L)
   g->gc.estimate = g->gc.total - (GCSize)udsize;  /* Initial estimate. */
 }
 
+/* End of a GC cycle. */
+static void gc_cycle_end(global_State *g)
+{
+  g->gc.state = GCSpause;
+  g->gc.debt = 0;
+  lj_gc_stats_inc(g, cycle_count);
+#if LJ_HASPAGEALLOC
+  /* Let the page allocator give back what went unused for a whole cycle. */
+  if (g->allocf == lj_page_alloc_f)
+    lj_page_alloc_trim(g->allocd);
+#endif
+}
+
 /* GC state machine. Returns a cost estimate for each step performed. */
 static size_t gc_onestep(lua_State *L)
 {
@@ -951,9 +964,7 @@ static size_t gc_onestep(lua_State *L)
       if (gcref(g->gc.mmudata)) {  /* Need any finalizations? */
 	g->gc.state = GCSfinalize;
       } else {  /* Otherwise skip this phase to help the JIT. */
-	g->gc.state = GCSpause;  /* End of GC cycle. */
-	g->gc.debt = 0;
-	lj_gc_stats_inc(g, cycle_count);
+	gc_cycle_end(g);
       }
     }
     return GCSWEEPMAX*GCSWEEPCOST;
@@ -970,9 +981,7 @@ static size_t gc_onestep(lua_State *L)
 	g->gc.estimate -= GCFINALIZECOST;
       return GCFINALIZECOST;
     }
-    g->gc.state = GCSpause;  /* End of GC cycle. */
-    g->gc.debt = 0;
-    lj_gc_stats_inc(g, cycle_count);
+    gc_cycle_end(g);
     return 0;
   default:
     lj_assertG(0, "bad GC state");
@@ -1171,11 +1180,41 @@ void *lj_mem_realloc(lua_State *L, void *p, GCSize osz, GCSize nsz)
   return p;
 }
 
+/* Allocate a fragment. */
+void * LJ_FASTCALL lj_mem_new(lua_State *L, GCSize size)
+{
+  global_State *g = G(L);
+  void *p;
+#if LJ_HASPAGEALLOC
+  /* Pooled size of the bundled page allocator? Skip the generic dispatch. */
+  if (LJ_LIKELY(size-1 < LJ_PAGE_ALLOC_MAX_SIZE) &&
+      LJ_LIKELY(g->allocf == lj_page_alloc_f))
+    p = lj_page_alloc_small(g->allocd, size);
+  else
+#endif
+    p = g->allocf(g->allocd, NULL, 0, size);
+  if (p == NULL && size > 0)
+    lj_err_mem(L);
+  lj_assertG(checkptrGC(p),
+	     "allocated memory address %p outside required range", p);
+  lj_gc_stats_inc(g, alloc_calls);
+  lj_gc_stats_add(g, alloc_bytes, size);
+  g->gc.total += size;
+  return p;
+}
+
 /* Allocate new GC object and link it to the root set. */
 void * LJ_FASTCALL lj_mem_newgco(lua_State *L, GCSize size)
 {
   global_State *g = G(L);
-  GCobj *o = (GCobj *)g->allocf(g->allocd, NULL, 0, size);
+  GCobj *o;
+#if LJ_HASPAGEALLOC
+  if (LJ_LIKELY(size-1 < LJ_PAGE_ALLOC_MAX_SIZE) &&
+      LJ_LIKELY(g->allocf == lj_page_alloc_f))
+    o = (GCobj *)lj_page_alloc_small(g->allocd, size);
+  else
+#endif
+    o = (GCobj *)g->allocf(g->allocd, NULL, 0, size);
   if (o == NULL)
     lj_err_mem(L);
   lj_assertG(checkptrGC(o),
