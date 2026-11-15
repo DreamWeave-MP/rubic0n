@@ -482,35 +482,105 @@ static void gc_preserve_now(global_State *g, GCobj *o)
   }
 }
 
+/* Zero-upvalue C function usable with the direct finalizer ABI, or NULL. */
+static GCfunc *gc_direct_finalizer(cTValue *mo)
+{
+  GCfunc *fn;
+  if (!tvisfunc(mo))
+    return NULL;
+  fn = funcV(mo);
+  if (!iscfunc(fn) || fn->c.nupvalues != 0)
+    return NULL;
+  return fn;
+}
+
+/* Context for direct finalizer calls made from within one sweep step. */
+typedef struct GCSweepFin {
+  lua_State *VL;	/* VM thread. NULL until the first call. */
+  ptrdiff_t base, top;	/* Saved stack levels of the VM thread. */
+  GCSize threshold;	/* Saved GC threshold. */
+  uint8_t hookmask;	/* Saved hook state. */
+} GCSweepFin;
+
+/* Enter the finalizer context. Returns 0 if the VM thread has no room. */
+static int gc_sweepfin_enter(global_State *g, GCSweepFin *sf)
+{
+  lua_State *VL = vmthread(g);
+  if ((char *)(VL->top + 2+LJ_FR2+LUA_MINSTACK) > (char *)tvref(VL->maxstack))
+    return 0;
+  sf->VL = VL;
+  sf->base = savestack(VL, VL->base);
+  sf->top = savestack(VL, VL->top);
+  sf->hookmask = hook_save(g);
+  sf->threshold = g->gc.threshold;
+  lj_trace_abort(g);
+  hook_entergc(g);  /* Disable hooks and new traces during __gc. */
+  if (LJ_HASPROFILE && (sf->hookmask & HOOK_PROFILE)) lj_dispatch_update(g, 0);
+  g->gc.threshold = LJ_MAX_MEM;  /* Prevent GC steps. */
+  return 1;
+}
+
+static void gc_sweepfin_leave(global_State *g, lua_State *L, GCSweepFin *sf)
+{
+  lua_State *VL = sf->VL;
+  VL->base = restorestack(VL, sf->base);
+  VL->top = restorestack(VL, sf->top);
+  setgcref(g->cur_L, obj2gco(L));
+  hook_restore(g, sf->hookmask);
+  if (LJ_HASPROFILE && (sf->hookmask & HOOK_PROFILE)) lj_dispatch_update(g, 0);
+  g->gc.threshold = sf->threshold;
+}
+
 /*
 ** Partial sweep of the userdata candidate segment after atomic marking.
 **
 ** This mode deliberately does not implement stock Lua/LuaJIT atomic finalizer
 ** discovery. It is for static, leaf/native userdata finalizers: late mutation
 ** of metatables or __gc is unsupported after the candidate is scanned, and Lua
-** closure dependency graphs are not recursively preserved here. For a dead
-** finalizable userdata, the userdata is always made current-white. Its metatable
-** and immediate __gc callable are made current-white only if they are still dead
-** in this post-atomic sweep-udata window, so root/table sweeping cannot free
-** required dead objects before GCSfinalize resolves the finalizer.
+** closure dependency graphs are not recursively preserved here.
+**
+** A dead userdata whose __gc is covered by the non-resurrecting direct C
+** finalizer ABI is finalized and freed right here. Weak tables were cleared in
+** the atomic phase and nothing has been swept yet, so the userdata is
+** unreachable while its metatable and finalizer are still allocated. Nothing
+** needs to be queued or preserved for it. This is skipped while a trace is
+** running, as for any other finalizer.
+**
+** Every other dead finalizable userdata is queued for GCSfinalize. It is always
+** made current-white. Its metatable and immediate __gc callable are made
+** current-white only if they are still dead in this post-atomic sweep-udata
+** window, so root/table sweeping cannot free required dead objects before
+** GCSfinalize resolves the finalizer.
 */
-static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
-				    GCSize *queued)
+static GCRef *gc_sweepudata(global_State *g, lua_State *L, GCRef *p,
+			    uint32_t lim, GCSize *queued, uint32_t *finalized)
 {
   int ow = otherwhite(g);
+  int direct = (tvref(g->jit_base) == NULL);  /* No finalizers on trace. */
+  GCtab *lastmt = NULL;  /* Metatable of the previous userdata ... */
+  int lastgc = 0;  /* ... whether it has __gc ... */
+  GCfunc *lastfn = NULL;  /* ... and its direct finalizer, if eligible. */
+  GCSweepFin sf;
   GCobj *o;
+  sf.VL = NULL;
   *queued = 0;
+  *finalized = 0;
   while ((o = gcref(*p)) != NULL && lim-- > 0) {
     GCudata *ud = gco2ud(o);
     GCtab *mt = tabref(ud->metatable);
-    cTValue *mo = lj_meta_fastg(g, mt, MM_gc);
     int alive = ((o->gch.marked ^ LJ_GC_WHITES) & ow);
     lj_gc_stats_inc(g, sweep_udata_steps);
+    if (mt != lastmt) {  /* Runs of userdata tend to share a metatable. */
+      cTValue *mo = lj_meta_fastg(g, mt, MM_gc);
+      lastmt = mt;
+      lastgc = (mo != NULL);
+      lastfn = (mo && direct) ? gc_direct_finalizer(mo) : NULL;
+    }
     if (alive) {  /* Black or current white: keep or park the live userdata. */
       lj_assertG(!isdead(g, o) || (o->gch.marked & LJ_GC_FIXED),
 		 "sweep of undead userdata");
       makewhite(g, o);
-      if (mo) {
+      if (lastgc) {
 	p = &o->gch.nextgc;
       } else {
 	setgcrefr(*p, o->gch.nextgc);
@@ -518,42 +588,81 @@ static GCRef *gc_sweepudata(global_State *g, GCRef *p, uint32_t lim,
 	setgcref(g->gc.root, o);
 	lj_gc_stats_inc(g, sweep_udata_parked);
       }
-    } else {  /* Otherwise the userdata is dead. */
-      lj_assertG(isdead(g, o) || ow == LJ_GC_SFIXED,
-		 "sweep of unlive userdata");
-      setgcrefr(*p, o->gch.nextgc);
-      if (mo) {
-	GCobj *mto;
-	*queued += sizeudata(ud);
-	markfinalized(o);
-	gc_preserve_now(g, o);
-	lj_gc_stats_inc(g, sweep_udata_preserve_udata);
-	mto = obj2gco(mt);
-	if (isdead(g, mto)) {
-	  gc_preserve_now(g, mto);
-	  lj_gc_stats_inc(g, sweep_udata_preserve_mt_dead);
-	} else {
-	  lj_gc_stats_inc(g, sweep_udata_preserve_mt_alive_skip);
-	}
-	if (tvisgcv(mo)) {
-	  GCobj *mmo = gcV(mo);
-	  if (isdead(g, mmo)) {
-	    gc_preserve_now(g, mmo);
-	    lj_gc_stats_inc(g, sweep_udata_preserve_callable_dead);
-	  } else {
-	    lj_gc_stats_inc(g, sweep_udata_preserve_callable_alive_skip);
-	  }
-	} else {
-	  lj_gc_stats_inc(g, sweep_udata_preserve_callable_nongc);
-	}
-	lj_gc_queuefinalizer(g, o);
-	lj_gc_stats_inc(g, sweep_udata_queued);
-      } else {
+      continue;
+    }
+    /* Otherwise the userdata is dead. */
+    lj_assertG(isdead(g, o) || ow == LJ_GC_SFIXED,
+	       "sweep of unlive userdata");
+    setgcrefr(*p, o->gch.nextgc);
+    if (!lastgc) {
+      lj_udata_free(g, ud);
+      lj_gc_stats_inc(g, sweep_udata_freed);
+      continue;
+    }
+    if (lastfn != NULL) {
+      if (sf.VL != NULL || gc_sweepfin_enter(g, &sf)) {
+	/*
+	** Raw destructor ABI, see gc_unprotected_c_finalizer. The userdata is
+	** already unlinked: the finalizer cannot resurrect it and the list is
+	** consistent, should it create userdata itself.
+	*/
+	lua_State *VL = sf.VL;
+	TValue *top = restorestack(VL, sf.top);
+	int nres;
+	/* The finalizer may be dead, too. It is only swept after this phase. */
+	setgcVraw(top++, obj2gco(lastfn), LJ_TFUNC);
+	if (LJ_FR2) setnilV(top++);
+	makewhite(g, o);  /* Hand out a live object for the duration of the call. */
+	setudataV(VL, top, ud);
+	VL->base = top;
+	VL->top = top+1;
+	nres = lastfn->c.f(VL);
+	if (nres != 0)
+	  lj_gc_stats_inc(g, finalizer_direct_cfunc_nonzero_results);
+	UNUSED(nres);
+	lj_gc_stats_inc(g, finalizer_calls);
+	lj_gc_stats_inc(g, finalizer_cfunc_calls);
+	lj_gc_stats_inc(g, finalizer_cfunc_nup0_calls);
+	lj_gc_stats_inc(g, finalizer_direct_cfunc_calls);
+	lj_gc_stats_inc(g, finalizer_nonresurrecting_cfunc_frees);
+	lj_gc_stats_inc(g, sweep_udata_finalized);
 	lj_udata_free(g, ud);
-	lj_gc_stats_inc(g, sweep_udata_freed);
+	(*finalized)++;
+	continue;
       }
+      direct = 0;  /* No stack room. Queue this and the rest of the step. */
+      lastfn = NULL;
+    }
+    {
+      cTValue *mo = lj_meta_fastg(g, mt, MM_gc);
+      GCobj *mto = obj2gco(mt);
+      *queued += sizeudata(ud);
+      markfinalized(o);
+      gc_preserve_now(g, o);
+      lj_gc_stats_inc(g, sweep_udata_preserve_udata);
+      if (isdead(g, mto)) {
+	gc_preserve_now(g, mto);
+	lj_gc_stats_inc(g, sweep_udata_preserve_mt_dead);
+      } else {
+	lj_gc_stats_inc(g, sweep_udata_preserve_mt_alive_skip);
+      }
+      if (tvisgcv(mo)) {
+	GCobj *mmo = gcV(mo);
+	if (isdead(g, mmo)) {
+	  gc_preserve_now(g, mmo);
+	  lj_gc_stats_inc(g, sweep_udata_preserve_callable_dead);
+	} else {
+	  lj_gc_stats_inc(g, sweep_udata_preserve_callable_alive_skip);
+	}
+      } else {
+	lj_gc_stats_inc(g, sweep_udata_preserve_callable_nongc);
+      }
+      lj_gc_queuefinalizer(g, o);
+      lj_gc_stats_inc(g, sweep_udata_queued);
     }
   }
+  if (sf.VL != NULL)
+    gc_sweepfin_leave(g, L, &sf);
   return p;
 }
 
@@ -930,14 +1039,16 @@ static size_t gc_onestep(lua_State *L)
   case GCSsweepudata:
     {
       GCSize old = g->gc.total, queued;
+      uint32_t finalized;
       setmref(g->gc.sweepudata,
-	      gc_sweepudata(g, mref(g->gc.sweepudata, GCRef),
-			    GCSWEEPUDATAMAX, &queued));
-      lj_assertG(old >= g->gc.total, "sweep increased memory");
-      g->gc.estimate -= old - g->gc.total;
+	      gc_sweepudata(g, L, mref(g->gc.sweepudata, GCRef),
+			    GCSWEEPUDATAMAX, &queued, &finalized));
+      /* A finalizer may allocate. Only count what was actually released. */
+      if (old >= g->gc.total)
+	g->gc.estimate -= old - g->gc.total;
       g->gc.estimate -= queued;
       if (gcref(*mref(g->gc.sweepudata, GCRef)) != NULL)
-	return GCSWEEPUDATAMAX*GCSWEEPCOST;
+	return (GCSWEEPUDATAMAX + finalized)*GCSWEEPCOST;
     }
     g->gc.state = GCSsweepstring;  /* Start of sweep phase. */
     g->gc.sweepstr = 0;

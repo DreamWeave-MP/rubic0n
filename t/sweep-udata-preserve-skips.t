@@ -39,9 +39,12 @@ static int leaf_finalizer(lua_State *L)
   return 0;
 }
 
-static int fresh_finalizer(lua_State *L)
+/* A finalizer with an upvalue is not covered by the direct C finalizer ABI.
+** It is queued by the sweep and called in the finalize phase. */
+static int fresh_closure_finalizer(lua_State *L)
 {
-  lua_pushcfunction(L, leaf_finalizer);
+  lua_pushinteger(L, 1);
+  lua_pushcclosure(L, leaf_finalizer, 1);
   return 1;
 }
 
@@ -64,8 +67,8 @@ LUALIB_API int luaopen_sweeppreserve(lua_State *L)
   lua_newtable(L);
   lua_pushcfunction(L, leaf_finalizer);
   lua_setfield(L, -2, "leaf_finalizer");
-  lua_pushcfunction(L, fresh_finalizer);
-  lua_setfield(L, -2, "fresh_finalizer");
+  lua_pushcfunction(L, fresh_closure_finalizer);
+  lua_setfield(L, -2, "fresh_closure_finalizer");
   lua_pushcfunction(L, counters);
   lua_setfield(L, -2, "counters");
   lua_pushcfunction(L, reset);
@@ -127,6 +130,27 @@ local function collect_case()
   return s, calls
 end
 
+-- A zero-upvalue C finalizer is called and its userdata freed by the sweep
+-- itself. Nothing is queued, so nothing needs preserving.
+do
+  reset_case()
+  do
+    local u = newproxy(true)
+    getmetatable(u).__gc = m.leaf_finalizer
+    u = nil
+  end
+  local s, calls = collect_case()
+  assert(calls == 1, calls)
+  assert(s.sweep_udata_finalized == 1, s.sweep_udata_finalized)
+  assert(s.sweep_udata_queued == 0, s.sweep_udata_queued)
+  assert(s.sweep_udata_preserved == 0, s.sweep_udata_preserved)
+  assert(s.finalizer_queued == 0, s.finalizer_queued)
+  assert(s.finalizer_direct_cfunc_calls == 1, s.finalizer_direct_cfunc_calls)
+  assert(s.finalizer_nonresurrecting_cfunc_frees == 1,
+         s.finalizer_nonresurrecting_cfunc_frees)
+end
+
+-- Every other finalizer is queued for the finalize phase.
 do
   local anchors = {}
   reset_case()
@@ -134,12 +158,14 @@ do
     local u = newproxy(true)
     local mt = getmetatable(u)
     anchors.mt = mt
-    anchors.fn = m.leaf_finalizer
+    anchors.fn = m.fresh_closure_finalizer()
     mt.__gc = anchors.fn
     u = nil
   end
   local s, calls = collect_case()
   assert(calls == 1, calls)
+  assert(s.sweep_udata_finalized == 0, s.sweep_udata_finalized)
+  assert(s.sweep_udata_queued == 1, s.sweep_udata_queued)
   assert(s.sweep_udata_preserve_udata >= 1, s.sweep_udata_preserve_udata)
   assert(s.sweep_udata_preserve_mt_alive_skip >= 1, s.sweep_udata_preserve_mt_alive_skip)
   assert(s.sweep_udata_preserve_callable_alive_skip >= 1,
@@ -150,7 +176,7 @@ do
   reset_case()
   do
     local u = newproxy(true)
-    getmetatable(u).__gc = m.fresh_finalizer()
+    getmetatable(u).__gc = m.fresh_closure_finalizer()
     u = nil
   end
   local s, calls = collect_case()

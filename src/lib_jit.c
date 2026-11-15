@@ -228,6 +228,7 @@ static int jit_gcstats(lua_State *L)
   hsize += 11;
   hsize += 3;
   hsize += 2;
+  hsize += 1;
   t = lj_tab_new_ah(L, 0, hsize);
 
   settabV(L, L->top++, t);  /* Root table before interning field names. */
@@ -281,6 +282,7 @@ static int jit_gcstats(lua_State *L)
   gcstats_set(L, t, "sweep_udata_steps", s->sweep_udata_steps);
   gcstats_set(L, t, "sweep_udata_queued", s->sweep_udata_queued);
   gcstats_set(L, t, "sweep_udata_freed", s->sweep_udata_freed);
+  gcstats_set(L, t, "sweep_udata_finalized", s->sweep_udata_finalized);
   gcstats_set(L, t, "sweep_udata_parked", s->sweep_udata_parked);
   gcstats_set(L, t, "sweep_udata_preserved", s->sweep_udata_preserved);
   gcstats_set(L, t, "sweep_udata_preserve_udata", s->sweep_udata_preserve_udata);
