@@ -447,6 +447,43 @@ static GCRef *gc_sweep(global_State *g, GCRef *p, uint32_t lim)
   return p;
 }
 
+/*
+** Partial sweep of the root list for a regular GC cycle.
+**
+** The userdata candidate list hangs off the main thread, which is the last
+** object of the root list. The sweep-udata phase has been over that list in
+** this cycle already, so this stops behind the main thread instead of
+** visiting every live finalizable userdata a second time.
+*/
+static GCRef *gc_sweeproot(global_State *g, GCRef *p, uint32_t lim)
+{
+  int ow = otherwhite(g);
+  GCobj *o;
+  while ((o = gcref(*p)) != NULL && lim-- > 0) {
+    if (o->gch.gct == ~LJ_TTHREAD) {  /* Need to sweep open upvalues, too. */
+      gc_fullsweep(g, &gco2th(o)->openupval);
+      if (o == obj2gco(mainthread(g))) {
+	makewhite(g, o);
+	return &o->gch.nextgc;
+      }
+    }
+    if (((o->gch.marked ^ LJ_GC_WHITES) & ow)) {  /* Black or current white? */
+      lj_assertG(!isdead(g, o) || (o->gch.marked & LJ_GC_FIXED),
+		 "sweep of undead object");
+      makewhite(g, o);  /* Value is alive, change to the current white. */
+      p = &o->gch.nextgc;
+    } else {  /* Otherwise value is dead, free it. */
+      lj_assertG(isdead(g, o) || ow == LJ_GC_SFIXED,
+		 "sweep of unlive object");
+      setgcrefr(*p, o->gch.nextgc);
+      if (o == gcref(g->gc.root))
+	setgcrefr(g->gc.root, o->gch.nextgc);  /* Adjust list anchor. */
+      gc_freefunc[o->gch.gct - ~LJ_TSTR](g, o);
+    }
+  }
+  return p;
+}
+
 /* Sweep one string interning table chain. Preserves hashalg bit. */
 static void gc_sweepstr(global_State *g, GCRef *chain)
 {
@@ -1068,10 +1105,12 @@ static size_t gc_onestep(lua_State *L)
   case GCSsweep: {
     GCSize old = g->gc.total;
     lj_gc_stats_inc(g, sweep_root_steps);
-    setmref(g->gc.sweep, gc_sweep(g, mref(g->gc.sweep, GCRef), GCSWEEPMAX));
+    setmref(g->gc.sweep,
+	    gc_sweeproot(g, mref(g->gc.sweep, GCRef), GCSWEEPMAX));
     lj_assertG(old >= g->gc.total, "sweep increased memory");
     g->gc.estimate -= old - g->gc.total;
-    if (gcref(*mref(g->gc.sweep, GCRef)) == NULL) {
+    if (mref(g->gc.sweep, GCRef) == &mainthread(g)->nextgc ||
+	gcref(*mref(g->gc.sweep, GCRef)) == NULL) {
       if (g->str.num <= (g->str.mask >> 2) && g->str.mask > LJ_MIN_STRTAB*2-1)
 	lj_str_resize(L, g->str.mask >> 1);  /* Shrink string table. */
       if (gcref(g->gc.mmudata)) {  /* Need any finalizations? */
@@ -1170,9 +1209,16 @@ void lj_gc_fullgc(lua_State *L)
 {
   global_State *g = G(L);
   int32_t ostate = g->vmstate;
+  int whiten = 0;
   lj_gc_stats_inc(g, fullgc_calls);
   setvmstate(g, GC);
-  if (g->gc.state <= GCSatomic) {  /* Caught somewhere in the middle. */
+  /*
+  ** Between cycles every object is white already: a regular cycle starts
+  ** from the same state without sweeping first. Only whiten when caught in
+  ** the mark phase.
+  */
+  if (g->gc.state == GCSpropagate || g->gc.state == GCSatomic) {
+    whiten = 1;
     setmref(g->gc.sweep, &g->gc.root);  /* Sweep everything (preserving it). */
     setgcrefnull(g->gc.gray);  /* Reset lists from partial propagation. */
     setgcrefnull(g->gc.grayagain);
@@ -1185,6 +1231,8 @@ void lj_gc_fullgc(lua_State *L)
       g->gc.state == GCSsweepudata ||
       g->gc.state == GCSsweepstring || g->gc.state == GCSsweep)
     gc_onestep(L);  /* Finish sweep. */
+  if (whiten)  /* The root sweep stops short of the userdata candidates. */
+    gc_fullsweep(g, &mainthread(g)->nextgc);
   lj_assertG(g->gc.state == GCSfinalize || g->gc.state == GCSpause,
 	     "bad GC state");
   /* Now perform a full GC. */

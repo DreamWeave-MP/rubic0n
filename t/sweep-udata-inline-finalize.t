@@ -317,6 +317,26 @@ do
   check(50000, 0, 0)
 end
 
+-- 7. A full collection that interrupts a cycle, at every point of its
+-- progress. Userdata that the interrupted cycle already marked have to be
+-- whitened again, or they would survive the collection that follows.
+do
+  for k = 1, 160 do
+    full(); m.reset()
+    local keep = {}
+    for i = 0, 1999 do
+      keep[i+1] = new(i % 4 == 1 and "sweepinline.closure" or "sweepinline.leaf", i)
+    end
+    for _ = 1, k do collectgarbage("step", 0) end
+    keep = nil
+    collectgarbage("collect")  -- A single one has to find them all.
+    local l, c, s, e = m.counters()
+    assert(e == 0, e)
+    assert(l + c == 2000, "after " .. k .. " steps: " .. (l + c))
+    assert(m.seen(0, 2000) == 2000)
+  end
+end
+
 print("ok")
 LUA
 close $lua;
