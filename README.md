@@ -614,15 +614,33 @@ finalizer-discovery contract. It is not compatible with the stock atomic
 userdata-finalizer discovery path because that path can preserve weak-key entries
 whose finalized userdata keys would otherwise be freed immediately by this ABI.
 
-This is not sweep-time immediate finalization. Userdata are still discovered,
-queued on `mmudata`, and finalized during the normal finalizer phase. This ABI
-only changes normal GC `GCSfinalize` processing after sweep-time discovery and
-weak clearing. It is not used by the `lua_close()` finalizer drain. For an
-eligible full userdata selected from the normal GC queue, if its `__gc`
-metamethod is a zero-upvalue C function accepted by the direct C finalizer ABI,
-LuaJIT does not put the userdata back on the GC root list for possible
-resurrection. It calls the direct C finalizer and immediately frees the userdata
-with `lj_udata_free`.
+Finalization happens inside the sweep-udata phase. When that phase meets a dead
+full userdata whose `__gc` metamethod is a zero-upvalue C function accepted by
+the direct C finalizer ABI, LuaJIT unlinks the userdata, calls the finalizer on
+the VM thread and immediately frees the userdata with `lj_udata_free`. Nothing
+is queued on `mmudata`, nothing is put back on the GC root list for possible
+resurrection, and the metatable and finalizer need no preservation: weak tables
+were cleared in the atomic phase and the root sweep has not started, so both are
+still allocated.
+
+Finalizers therefore run earlier in the cycle than they used to, in sweep order
+and before any Lua, cdata or upvalue-carrying C finalizer of the same cycle.
+Those are queued and run in `GCSfinalize` as before. Finalizers covered by this
+ABI must not depend on running after them.
+
+Three cases still go through the queue and the `GCSfinalize` variant of this
+ABI, which calls the finalizer and frees the userdata without resurrection:
+
+* GC steps taken from JIT-compiled code. No finalizer runs on a trace.
+* A VM thread stack with less than `LUA_MINSTACK` free slots.
+* Userdata queued by one of the above when the cycle reaches `GCSfinalize`.
+
+The `lua_close()` finalizer drain uses neither. It keeps the generic path.
+
+The hook state, the GC threshold and the pending trace recording are saved and
+reset once per sweep step, not once per finalizer. A finalizer that runs a GC
+step of its own, for example through `lua_gc`, re-enters the sweep and is a
+contract violation.
 
 Pre-call eligibility is intentionally identical to the direct C finalizer ABI's
 shape checks: full userdata only and zero-upvalue C `__gc` only, called with the
@@ -638,7 +656,8 @@ capable path.
 Violating the no-resurrection contract can leave a live Lua reference to freed
 userdata and corrupt the runtime. Use this only when the embedder owns and audits
 every zero-upvalue C userdata finalizer covered by the ABI. With
-`LUAJIT_ENABLE_GCSTATS`, validate `finalizer_nonresurrecting_cfunc_frees`,
+`LUAJIT_ENABLE_GCSTATS`, validate `sweep_udata_finalized`,
+`finalizer_nonresurrecting_cfunc_frees`,
 `finalizer_nonresurrecting_cfunc_fallbacks`,
 `finalizer_direct_cfunc_nonzero_results`, and the finalizer dispatch counters on
 representative workloads before relying on this ABI in production.
