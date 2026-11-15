@@ -112,3 +112,40 @@ builds for allocator performance claims.
 This first harness intentionally omits transforms, colors, boxes, world state,
 ray casting, and frame integration. Those should be added as distinct workload
 layers after the vector allocator experiment is stable.
+
+## Results for the paged-heap series
+
+Linux x86-64, GCC 13.3, default `make`, Xeon at 2.3 GHz, 2 cores, JIT on,
+20,000 iterations and 15 bursts per scenario. Each figure is the lowest of 7
+interleaved runs of the per-scenario median, in milliseconds per burst.
+"before" is 71f6728e. Both sides ran this harness and this workload file.
+
+With `--gc incremental`:
+
+| scenario             | before |  after | change |
+|----------------------|-------:|-------:|-------:|
+| control-property     |  4.504 |  3.405 | -24.4% |
+| control-dot          |  3.048 |  2.303 | -24.4% |
+| construct-vec2       |  3.526 |  2.301 | -34.7% |
+| construct-vec3       |  3.748 |  2.471 | -34.1% |
+| construct-vec4       |  4.025 |  2.662 | -33.9% |
+| normalize-vec3       |  5.542 |  3.833 | -30.8% |
+| arithmetic-vec3      | 12.632 |  8.109 | -35.8% |
+| cross-vec3           |  6.550 |  4.314 | -34.1% |
+| swizzle-mixed        | 14.721 | 10.005 | -32.0% |
+| producer-position    |  4.569 |  2.950 | -35.4% |
+| producer-chain       |  9.539 |  6.180 | -35.2% |
+| retained-frames      |  5.851 |  3.975 | -32.1% |
+| mixed-table-userdata | 14.265 | 10.683 | -25.1% |
+| openmw-like-chain    | 32.683 | 21.378 | -34.6% |
+| sum                  | 125.24 |  84.61 | -32.4% |
+
+In the default mode the sum of the totals goes from 117.32 to 81.08 (-30.9%).
+The collection phase alone drops by 46% to 60% in every allocating scenario,
+the allocation phase by 22% to 29%.
+
+Where the allocation phase went: these loops are not compiled as loops. A
+userdata metamethod that is a C function ends the trace, so every `.x`, `+`
+and method call runs through the interpreter and Sol. Per bound call that is
+about 2,400 instructions before this series, of which roughly a quarter was
+`luaL_getmetatable` alone. The allocator was under 5%.

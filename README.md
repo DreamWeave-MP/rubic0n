@@ -38,6 +38,8 @@ Table of Contents
         * [Direct zero-upvalue C finalizer ABI](#direct-zero-upvalue-c-finalizer-abi)
         * [Non-resurrecting direct-free C finalizer ABI](#non-resurrecting-direct-free-c-finalizer-abi)
         * [Experimental paged allocator front end](#experimental-paged-allocator-front-end)
+        * [C string interning cache](#c-string-interning-cache)
+        * [C API fast paths](#c-api-fast-paths)
     * [Updated bytecode options](#updated-bytecode-options)
         * [New `-bL` option](#new--bl-option)
         * [Updated `-bl` option](#updated--bl-option)
@@ -723,6 +725,37 @@ LUAJIT_TEST_PAGEALLOC=1 LUAJIT_TEST_PAGEALLOC_FAULTS=1 \
 perl t/pagealloc-boundary.t
 perl t/pagealloc-stress.t
 ```
+
+[Back to TOC](#table-of-contents)
+
+### C string interning cache
+
+C API functions that take a zero-terminated string, such as `lua_getfield`,
+`lua_setfield`, `lua_pushstring` and `luaL_newmetatable`, remember the interned
+string by the address of the C string in a 256 entry direct-mapped cache. A
+repeat from the same address costs one `strcmp` against the interned copy
+instead of `strlen`, hashing and a walk of the intern chain. Lua 5.3 and later
+do the same in `luaS_new`.
+
+This matters for binding layers. Sol looks metatables up by name, with
+`luaL_getmetatable`, several times for every argument of every bound call.
+
+The comparison keeps the cache correct for buffers whose contents change. The
+cached strings are not GC roots: the cache is emptied in the atomic phase of
+every GC cycle, before any string can be freed. It lives at the end of
+`GG_State`, so no offset used by the VM moves.
+
+[Back to TOC](#table-of-contents)
+
+### C API fast paths
+
+* Stack slots and the registry are resolved inline in every API function.
+  Globals, environment and upvalue pseudo-indexes are resolved out of line.
+* `lua_getfield` returns a non-nil field of a table straight from the hash
+  part. Only a miss or a non-table takes the metamethod path.
+* `lua_rawequal` answers values with identical bits inline, NaN excepted.
+
+None of these change behavior. `t/capi-fastpaths.t` covers them.
 
 [Back to TOC](#table-of-contents)
 
