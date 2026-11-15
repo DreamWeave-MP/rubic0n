@@ -678,6 +678,18 @@ typedef struct GCStats {
 } GCStats;
 #endif
 
+/*
+** Cache for interned C strings, keyed by the address of the C string.
+** Lives at the end of GG_State. See lj_str_newz().
+*/
+#define LJ_STRCACHE_BITS	8
+#define LJ_STRCACHE_SIZE	(1u << LJ_STRCACHE_BITS)
+
+typedef struct StrCacheEntry {
+  const char *p;	/* Address the string was interned from. */
+  struct GCstr *s;	/* Interned string. Not a GC reference. */
+} StrCacheEntry;
+
 typedef struct GCState {
   GCSize total;		/* Memory currently allocated. */
   GCSize threshold;	/* Memory threshold. */

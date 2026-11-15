@@ -107,6 +107,8 @@ typedef struct GG_State {
 #endif
   ASMFunction dispatch[GG_LEN_DISP];	/* Instruction dispatch tables. */
   BCIns bcff[GG_NUM_ASMFF];		/* Bytecode for ASM fast functions. */
+  /* Behind everything the VM addresses relative to g or dispatch. */
+  StrCacheEntry strcache[LJ_STRCACHE_SIZE];  /* C string interning cache. */
 } GG_State;
 
 #define GG_OFS(field)	((int)offsetof(GG_State, field))

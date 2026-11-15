@@ -12,6 +12,7 @@
 #include "lj_str.h"
 #include "lj_char.h"
 #include "lj_prng.h"
+#include "lj_dispatch.h"
 
 /* -- String helpers ------------------------------------------------------ */
 
@@ -392,6 +393,32 @@ GCstr *lj_str_new(lua_State *L, const char *str, size_t lenx)
       lj_err_msg(L, LJ_ERR_STROV);
     return &g->strempty;
   }
+}
+
+/*
+** Intern a zero-terminated C string.
+**
+** Embedders pass the same literals and static names over and over, e.g. the
+** metatable names behind luaL_getmetatable(). The result is remembered by
+** the address of the C string, so a repeat costs one strcmp() against the
+** interned copy instead of strlen(), hashing and a walk of the hash chain.
+** The comparison makes this safe for buffers whose contents change.
+**
+** Cached strings are not GC roots. The cache is emptied in the atomic phase
+** of every GC cycle, before any string can be freed.
+*/
+GCstr * LJ_FASTCALL lj_str_newz(lua_State *L, const char *str)
+{
+  uintptr_t u = (uintptr_t)str;
+  uint32_t h = ((uint32_t)u ^ (uint32_t)((uint64_t)u >> 32)) * 0x9e3779b1u;
+  StrCacheEntry *e = &L2GG(L)->strcache[h >> (32-LJ_STRCACHE_BITS)];
+  GCstr *s = e->s;
+  if (e->p == str && s != NULL && strcmp(strdata(s), str) == 0)
+    return s;
+  s = lj_str_new(L, str, strlen(str));
+  e->p = str;
+  e->s = s;
+  return s;
 }
 
 void LJ_FASTCALL lj_str_free(global_State *g, GCstr *s)

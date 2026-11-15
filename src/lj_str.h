@@ -24,7 +24,7 @@ LJ_FUNC void LJ_FASTCALL lj_str_init(lua_State *L);
 #define lj_str_freetab(g) \
   (lj_mem_freevec(g, g->str.tab, g->str.mask+1, GCRef))
 
-#define lj_str_newz(L, s)	(lj_str_new(L, s, strlen(s)))
+LJ_FUNC GCstr * LJ_FASTCALL lj_str_newz(lua_State *L, const char *str);
 #define lj_str_newlit(L, s)	(lj_str_new(L, "" s, sizeof(s)-1))
 #define lj_str_size(len)	(sizeof(GCstr) + (((len)+4) & ~(MSize)3))
 

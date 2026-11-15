@@ -1034,6 +1034,9 @@ static void atomic(global_State *g, lua_State *L)
 
   lj_buf_shrink(L, &g->tmpbuf);  /* Shrink temp buffer. */
 
+  /* Cached C strings are not roots. Forget them before any can be freed. */
+  memset(G2GG(g)->strcache, 0, sizeof(G2GG(g)->strcache));
+
   /* Prepare for sweep phase. */
   g->gc.currentwhite = (uint8_t)otherwhite(g);  /* Flip current white. */
   g->strempty.marked = g->gc.currentwhite;
