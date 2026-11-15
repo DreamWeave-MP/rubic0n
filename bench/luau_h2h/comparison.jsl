@@ -1,0 +1,217 @@
+--!strict
+--[[
+The release comparison image: Luau, Rubic0n before and Rubic0n after, as bars.
+
+  jess run --trusted --package truetype.jpk --package magick.jpk \
+    bench/luau_h2h/comparison.jsl --font-dir ~/.local/share/fonts --font-dir /usr/share/fonts/google-noto
+
+Writes comparison.png and comparison.txt, its alt text, beside this file, or to `--out PATH`.
+
+The figures are the 200,000 object table of README.md in this folder, copied by hand. Change
+them there first. Every bar is drawn to one scale, so the three groups compare with each other.
+
+Drawn in DreamWeave's campaign style (dream_propaganda's docs/STYLE_GUIDE.md): its palette, its
+safe inset, one display face over a supporting and a monospaced one. The display face is Mystic
+Cards, the face OpenMW draws Morrowind's interface in, as on the DreamWind poster. No font is
+shipped here: each is read where it is installed.
+]]
+local fs = require '@dream/fs'
+local magick = require '@magick'
+local path = require '@magick/path'
+local truetype = require '@truetype'
+
+local Width, Height, Safe = 1920, 1080, 72
+
+--- The campaign's palette, by its token names.
+local Palette = {
+  black = '#070707',
+  shadow = '#290430',
+  violet = '#6B3F6F',
+  orchid = '#A269A7',
+  lavender = '#DA96E0',
+  pinkwhite = '#FFE6FF',
+  body = '#F0F0F0',
+}
+
+local FontFiles = {
+  display = 'MysticCards.ttf',
+  support = 'NotoSans-Medium.ttf',
+  mono = 'NotoSansMono-Bold.ttf',
+}
+
+--- Nanoseconds per object for each runtime, in the order the rows are drawn.
+type Group = { title: string, luau: number, before: number, after: number }
+
+local Groups: { Group } = {
+  { title = 'Allocate', luau = 10.0, before = 24.7, after = 10.4 },
+  { title = 'Collect garbage', luau = 5.1, before = 22.9, after = 6.4 },
+  { title = 'Collect, half surviving', luau = 8.5, before = 34.5, after = 16.2 },
+}
+
+local Rows = {
+  { key = 'luau', label = 'LUAU', color = Palette.pinkwhite, ink = Palette.pinkwhite },
+  -- Violet is a bar's color, too dim on the deep purple for a figure.
+  { key = 'before', label = 'BEFORE', color = Palette.violet, ink = Palette.orchid },
+  { key = 'after', label = 'AFTER', color = Palette.lavender, ink = Palette.lavender },
+}
+
+local Destination = 'github.com/DreamWeave-MP/rubic0n'
+
+local AltText = table.concat({
+  'A dark poster in purple and pink. On the left, in the Morrowind interface typeface, the headline',
+  '"One last banger." over the line "Rubic0n now allocates level with Luau and collects garbage',
+  '3.6 times faster than it did." On the right, a bar chart of nanoseconds per object, lower is',
+  'better, for Luau, Rubic0n before and Rubic0n after.',
+  'Allocate: Luau 10.0, before 24.7, after 10.4.',
+  'Collect garbage: Luau 5.1, before 22.9, after 6.4.',
+  'Collect, half surviving: Luau 8.5, before 34.5, after 16.2.',
+  'Measured with 80-byte userdata that have a C destructor, 200,000 objects, through the C API',
+  'only, against Luau 0.747. The method and full results are in bench/luau_h2h.',
+  `{Destination}`,
+}, ' ') .. '\n'
+
+type Align = 'left' | 'right'
+
+--- Where a line of copy went: its ink box.
+type Ink = { left: number, top: number, right: number, bottom: number }
+
+local arguments = { ... }
+local fontFolders: { string } = {}
+local out
+
+local index = 1
+
+while index <= #arguments do
+  local key, value = arguments[index], arguments[index + 1]
+
+  if key == '--font-dir' and value then
+    table.insert(fontFolders, value)
+  elseif key == '--out' and value then
+    out = value
+  else
+    error(`unknown or incomplete argument: {key}\nusage: comparison.jsl [--font-dir DIR]... [--out PATH]`, 0)
+  end
+
+  index += 2
+end
+
+if #fontFolders == 0 then fontFolders = { '/usr/share/fonts/google-noto', '/usr/share/fonts/truetype/noto' } end
+
+--- This file's folder, from its chunk name.
+local function here(): string
+  local source = debug.info(1, 's')
+  local first = string.sub(source, 1, 1)
+  local location = if first == '@' or first == '=' then string.sub(source, 2) else source
+
+  return fs.parent(location) or '.'
+end
+
+local function font(fileName: string): truetype.Font
+  for _, folder in fontFolders do
+    local location = fs.join(folder, fileName)
+    if not fs.isFile(location) then continue end
+
+    local data, problem = fs.readFile(location)
+    if not data then error(`can't read font {location}: {problem}`, 0) end
+
+    return truetype.load(data)
+  end
+
+  error(`{fileName} is in none of: {table.concat(fontFolders, ', ')}. Name its folder with --font-dir.`, 0)
+end
+
+local display, support, mono = font(FontFiles.display), font(FontFiles.support), font(FontFiles.mono)
+
+local image = magick.new(Width, Height, Palette.black)
+
+--- Sets one line with the left or right edge of its ink at `edge`, on a baseline. Copy the face
+--- has no glyph for, or that leaves the safe area, stops the build.
+local function set(face: truetype.Font, words: string, size: number, edge: number, baseline: number, color: string, align: Align?, tracking: number?): Ink
+  local lacking = face:missing(words)
+  if #lacking > 0 then error(`{face.family} has no glyph for {table.concat(lacking, ' ')} in "{words}"`, 0) end
+
+  local options: truetype.Options = { tracking = (tracking or 0) * size }
+  local metrics = face:measure(words, size, options)
+  local origin = if align == 'right' then edge - metrics.right else edge - metrics.left
+  local ink = { left = origin + metrics.left, top = baseline + metrics.top, right = origin + metrics.right, bottom = baseline + metrics.bottom }
+
+  if ink.left < Safe - 0.5 or ink.right > Width - Safe + 0.5 or ink.top < Safe - 0.5 or ink.bottom > Height - Safe + 0.5 then
+    error(`"{words}" reaches {math.floor(ink.left)},{math.floor(ink.top)} to {math.ceil(ink.right)},{math.ceil(ink.bottom)}, past the {Safe} px safe area`, 0)
+  end
+
+  local shape = path.new(0.25)
+
+  face:outline(shape:pen(), words, size, origin, baseline, options)
+  shape:fill(image, color)
+
+  return ink
+end
+
+-- The ground: black for the words, the deep purple for the measurements, one diagonal between.
+local DiagonalTop, DiagonalBottom = 850, 730
+
+path.new():polygon({ { DiagonalTop, 0 }, { Width, 0 }, { Width, Height }, { DiagonalBottom, Height } }):fill(image, Palette.shadow)
+path.new():polygon({ { DiagonalTop - 14, 0 }, { DiagonalTop, 0 }, { DiagonalBottom, Height }, { DiagonalBottom - 14, Height } }):fill(image, Palette.lavender)
+
+-- The words.
+local Left = 112
+
+path.new():rect(Left, 104, Left + 150, 116):fill(image, Palette.lavender)
+set(display, 'One last', 168, Left, 300, Palette.pinkwhite)
+set(display, 'banger.', 168, Left, 470, Palette.lavender)
+set(support, 'Rubic0n now allocates level with', 34, Left, 600, Palette.body)
+set(support, 'Luau and collects garbage 3.6×', 34, Left, 646, Palette.body)
+set(support, 'faster than it did.', 34, Left, 692, Palette.body)
+
+path.new():rect(Left, 944, Left + 520, 946):fill(image, Palette.violet)
+set(mono, Destination, 26, Left, 996, Palette.orchid)
+
+-- The measurements. One scale for every bar: the longest figure fills the track.
+local LabelRight, BarLeft, BarRight = 1090, 1116, 1700
+local longest = 0
+
+for _, group in Groups do
+  longest = math.max(longest, group.luau, group.before, group.after)
+end
+
+set(mono, 'NANOSECONDS PER OBJECT', 22, 930, 132, Palette.orchid, 'left', 0.06)
+set(mono, 'LOWER IS BETTER', 22, Width - Safe, 132, Palette.orchid, 'right', 0.06)
+path.new():rect(930, 152, Width - Safe, 154):fill(image, Palette.violet)
+
+local BarHeight, RowPitch, GroupPitch = 38, 52, 252
+local top = 214
+
+for _, group in Groups do
+  local figures: { [string]: number } = { luau = group.luau, before = group.before, after = group.after }
+
+  set(display, group.title, 48, 930, top + 8, Palette.pinkwhite, 'left', 0.02)
+
+  for row, entry in Rows do
+    local figure = figures[entry.key]
+    local barTop = top + 36 + (row - 1) * RowPitch
+    local barRight = BarLeft + (BarRight - BarLeft) * figure / longest
+    local baseline = barTop + BarHeight - 10
+
+    set(mono, entry.label, 22, LabelRight, baseline, Palette.orchid, 'right', 0.04)
+    path.new():rect(BarLeft, barTop, barRight, barTop + BarHeight):fill(image, entry.color)
+    set(mono, string.format('%.1f', figure), 26, barRight + 16, baseline, entry.ink)
+  end
+
+  top += GroupPitch
+end
+
+-- How it was measured, and where the method is.
+path.new():rect(930, 934, Width - Safe, 936):fill(image, Palette.violet)
+set(mono, '80-BYTE USERDATA WITH A C DESTRUCTOR · 200,000 OBJECTS · C API ONLY', 18, 930, 968, Palette.orchid, 'left', 0.02)
+set(mono, 'LUAU 0.747 · METHOD AND FULL RESULTS: BENCH/LUAU_H2H', 18, 930, 996, Palette.orchid, 'left', 0.02)
+
+local target = out or fs.join(here(), 'comparison.png')
+local altTarget = (string.gsub(target, '%.png$', '')) .. '.txt'
+
+magick.writePNG(target, image, 10)
+
+local written, problem = fs.writeFile(altTarget, AltText, { atomic = true })
+if not written then error(`can't write {altTarget}: {problem}`, 0) end
+
+print(`{target}  {Width}x{Height}`)
+print(altTarget)
