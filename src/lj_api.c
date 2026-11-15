@@ -31,21 +31,13 @@
 #define lj_checkapi_slot(idx) \
   lj_checkapi((idx) <= (L->top - L->base), "stack slot %d out of range", (idx))
 
-static TValue *index2adr(lua_State *L, int idx)
+/* Pseudo-indexes other than the registry: globals, environment, upvalues. */
+static LJ_NOINLINE TValue *index2adr_pseudo(lua_State *L, int idx)
 {
-  if (idx > 0) {
-    TValue *o = L->base + (idx - 1);
-    return o < L->top ? o : niltv(L);
-  } else if (idx > LUA_REGISTRYINDEX) {
-    lj_checkapi(idx != 0 && -idx <= L->top - L->base,
-		"bad stack slot %d", idx);
-    return L->top + idx;
-  } else if (idx == LUA_GLOBALSINDEX) {
+  if (idx == LUA_GLOBALSINDEX) {
     TValue *o = &G(L)->tmptv;
     settabV(L, o, tabref(L->env));
     return o;
-  } else if (idx == LUA_REGISTRYINDEX) {
-    return registry(L);
   } else {
     GCfunc *fn = curr_func(L);
     lj_checkapi(fn->c.gct == ~LJ_TFUNC && !isluafunc(fn),
@@ -58,6 +50,26 @@ static TValue *index2adr(lua_State *L, int idx)
       idx = LUA_GLOBALSINDEX - idx;
       return idx <= fn->c.nupvalues ? &fn->c.upvalue[idx-1] : niltv(L);
     }
+  }
+}
+
+/*
+** Stack slots and the registry are resolved inline. This runs for nearly
+** every API call, and luaL_getmetatable() is a registry lookup.
+*/
+static LJ_AINLINE TValue *index2adr(lua_State *L, int idx)
+{
+  if (idx > 0) {
+    TValue *o = L->base + (idx - 1);
+    return o < L->top ? o : niltv(L);
+  } else if (idx > LUA_REGISTRYINDEX) {
+    lj_checkapi(idx != 0 && -idx <= L->top - L->base,
+		"bad stack slot %d", idx);
+    return L->top + idx;
+  } else if (idx == LUA_REGISTRYINDEX) {
+    return registry(L);
+  } else {
+    return index2adr_pseudo(L, idx);
   }
 }
 
@@ -289,7 +301,12 @@ LUA_API int lua_rawequal(lua_State *L, int idx1, int idx2)
 {
   cTValue *o1 = index2adr(L, idx1);
   cTValue *o2 = index2adr(L, idx2);
-  return (o1 == niltv(L) || o2 == niltv(L)) ? 0 : lj_obj_equal(o1, o2);
+  if (o1 == niltv(L) || o2 == niltv(L))
+    return 0;
+  /* Same bits are the same value, except for a NaN. */
+  if (o1->u64 == o2->u64 && !tvisnum(o1))
+    return 1;
+  return lj_obj_equal(o1, o2);
 }
 
 LUA_API int lua_equal(lua_State *L, int idx1, int idx2)
@@ -799,8 +816,17 @@ LUA_API void lua_gettable(lua_State *L, int idx)
 LUA_API void lua_getfield(lua_State *L, int idx, const char *k)
 {
   cTValue *v, *t = index2adr_check(L, idx);
+  GCstr *str = lj_str_newz(L, k);
   TValue key;
-  setstrV(L, &key, lj_str_newz(L, k));
+  if (tvistab(t)) {  /* A plain hit needs no metamethod lookup. */
+    v = lj_tab_getstr(tabV(t), str);
+    if (v != NULL && !tvisnil(v)) {
+      copyTV(L, L->top, v);
+      incr_top(L);
+      return;
+    }
+  }
+  setstrV(L, &key, str);
   v = lj_meta_tget(L, t, &key);
   if (v == NULL) {
     L->top += 2;
