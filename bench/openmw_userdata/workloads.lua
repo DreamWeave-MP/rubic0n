@@ -22,6 +22,7 @@ local bursts = 20
 local filter = nil
 local retain = 256
 local jit_mode = "on"
+local gc_mode = "stopped"
 local self_test = false
 local list_only = false
 
@@ -43,6 +44,9 @@ while index <= #arg do
   elseif option == "--jit" then
     jit_mode = required_value(index, option)
     index = index + 1
+  elseif option == "--gc" then
+    gc_mode = required_value(index, option)
+    index = index + 1
   elseif option == "--self-test" then
     self_test = true
   elseif option == "--list" then
@@ -56,6 +60,9 @@ usage: bench/openmw_userdata/build/openmw_userdata_bench [options]
   -f, --filter TEXT   run scenarios whose names contain TEXT
       --retain N      retained values in frame-retention scenario (default: 256)
       --jit on|off    select LuaJIT mode (default: on)
+      --gc MODE       stopped: collector off during the workload, then two
+                      full collections (default). incremental: collector
+                      left running, as in a game frame loop
       --self-test     validate bindings and exit
       --list          list scenario names and exit
 ]])
@@ -72,6 +79,10 @@ elseif jit_mode == "off" then
   jit.off()
 else
   fail("--jit must be on or off")
+end
+
+if gc_mode ~= "stopped" and gc_mode ~= "incremental" then
+  fail("--gc must be stopped or incremental")
 end
 
 local function full_gc()
@@ -285,7 +296,9 @@ io.write("# benchmark=openmw_userdata\n")
 io.write("# iterations=", iterations, "\n")
 io.write("# bursts=", bursts, "\n")
 io.write("# jit=", jit_mode, "\n")
-io.write("# gc_mode=stopped-during-workload,then-two-full-collections\n")
+io.write("# gc_mode=", gc_mode == "stopped" and
+    "stopped-during-workload,then-two-full-collections" or
+    "incremental-during-workload", "\n")
 io.write("# warmup_iterations=", math.min(iterations, 2000), "\n")
 io.write("# gcstats=", has_gcstats and "available" or "unavailable", "\n")
 io.write("# cpp_sizes=", bench.cpp_vec2_size, ";", bench.cpp_vec3_size, ";", bench.cpp_vec4_size, "\n")
@@ -307,16 +320,25 @@ for _, item in ipairs(scenarios) do
     local allocation, collection, total = {}, {}, {}
     local sink = 0
     for burst = 1, bursts do
-      collectgarbage("stop")
-      local started = bench.now()
-      sink = sink + item.operation(iterations)
-      local allocated = bench.now()
-      collectgarbage("restart")
-      full_gc()
-      local collected = bench.now()
-      allocation[burst] = allocated - started
-      collection[burst] = collected - allocated
-      total[burst] = collected - started
+      if gc_mode == "stopped" then
+        collectgarbage("stop")
+        local started = bench.now()
+        sink = sink + item.operation(iterations)
+        local allocated = bench.now()
+        collectgarbage("restart")
+        full_gc()
+        local collected = bench.now()
+        allocation[burst] = allocated - started
+        collection[burst] = collected - allocated
+        total[burst] = collected - started
+      else
+        -- The collector paces itself against the allocation of the workload.
+        -- Only the total is meaningful: each burst pays for the share of
+        -- collection it triggers, and garbage carries over between bursts.
+        local started = bench.now()
+        sink = sink + item.operation(iterations)
+        total[burst] = bench.now() - started
+      end
     end
     local stats = has_gcstats and jit.gcstats() or nil
     local function delta(name)
@@ -336,8 +358,10 @@ for _, item in ipairs(scenarios) do
         scenario_counters and delta("alloc_bytes") or "", scenario_counters and delta("free_bytes") or "",
         scenario_counters and delta("finalizer_calls") or ""}, ","), "\n")
     end
-    print_phase("alloc", allocation)
-    print_phase("gc", collection)
+    if gc_mode == "stopped" then
+      print_phase("alloc", allocation)
+      print_phase("gc", collection)
+    end
     print_phase("total", total)
     if item.cleanup then
       item.cleanup()
