@@ -758,7 +758,8 @@ static int gc_unprotected_c_finalizer(global_State *g, lua_State *VL,
 				     cTValue *mo, GCobj *o)
 {
   GCfunc *fn = gc_unprotected_c_finalizer_func(mo, o);
-  TValue *oldbase, *oldtop, *top;
+  ptrdiff_t oldbase, oldtop;
+  TValue *top;
   int nres;
   if (fn == NULL)
     return 0;
@@ -770,9 +771,10 @@ static int gc_unprotected_c_finalizer(global_State *g, lua_State *VL,
   ** no protected error or yield handling and no general lua_CFunction
   ** call-frame semantics.
   */
-  oldbase = VL->base;
-  oldtop = VL->top;
-  top = oldtop;
+  /* Keep offsets: the finalizer may grow and thereby move the stack. */
+  oldbase = savestack(VL, VL->base);
+  oldtop = savestack(VL, VL->top);
+  top = VL->top;
   copyTV(VL, top++, mo);
   if (LJ_FR2) setnilV(top++);
   setgcV(VL, top, o, ~o->gch.gct);
@@ -782,8 +784,8 @@ static int gc_unprotected_c_finalizer(global_State *g, lua_State *VL,
   if (nres != 0)
     lj_gc_stats_inc(g, finalizer_direct_cfunc_nonzero_results);
   lj_gc_stats_inc(g, finalizer_direct_cfunc_calls);
-  VL->base = oldbase;
-  VL->top = oldtop;
+  VL->base = restorestack(VL, oldbase);
+  VL->top = restorestack(VL, oldtop);
   return 1;
 }
 
