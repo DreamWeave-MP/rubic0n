@@ -70,6 +70,18 @@ bench/openmw_userdata/build/openmw_userdata_bench \
   --jit off --iterations 10000 --bursts 20
 ```
 
+To leave the collector running during the workload, as a game frame loop
+does, add `--gc incremental`:
+
+```bash
+bench/openmw_userdata/build/openmw_userdata_bench \
+  --gc incremental --iterations 20000 --bursts 50
+```
+
+That mode only reports `total` rows. Each burst pays for the share of
+collection its own allocation triggers, and garbage carries over from one
+burst to the next.
+
 Output is comment-prefixed CSV with separate allocation, collection, and
 combined timings. Every workload contributes results to a numeric sink so the
 work remains observable. Each scenario receives an untimed warmup before
