@@ -654,20 +654,44 @@ covered by GitHub CI. To build explicitly with the same configuration:
 make clean && make XCFLAGS='-DLUAJIT_USE_PAGEALLOC'
 ```
 
-Requests up to 1,024 bytes use segregated 16 or 32 KiB pages; larger requests
-remain delegated to LuaJIT's bundled allocator. Empty pages return to the
-bundled allocator immediately. The front end has no empty-page cache.
+Requests up to 1,024 bytes are served from 16 KiB pages that each hold blocks
+of a single size class. The 36 classes follow Luau's progression: multiples of
+8 bytes below 64, multiples of 16 below 256, multiples of 32 below 512 and
+multiples of 64 up to 1,024. Blocks are aligned to 8 bytes, and to 16 bytes
+in every class that is a multiple of 16, which covers all requests above 56
+bytes. Larger requests remain delegated to LuaJIT's bundled allocator.
+
+Pages are aligned to their own size, so the page that owns a block is found by
+masking the block's address. Blocks carry no header of their own. Pages are
+carved out of 256 KiB segments obtained from the bundled allocator, which maps
+requests of that size straight from the operating system.
+
+The collector and the VM allocate and free pooled blocks through direct entry
+points (`lj_mem_new`, `lj_mem_newgco`, `lj_mem_free`) that skip the generic
+`lua_Alloc` dispatch. `lj_page_alloc_f` remains the state's `lua_Alloc` and
+accepts every request.
+
+An empty page goes back to its segment immediately and is the first one handed
+out again. Segments are not returned eagerly: the heap grows and shrinks with
+every GC cycle, and giving memory back in between would make each cycle pay
+for mapping and faulting it in again. At the end of a GC cycle the allocator
+returns only the segments that sat unused for that whole cycle, at most 16 at
+a time, and always keeps one. Cycles with no allocation in between, such as
+two full collections in a row, do not count.
 
 For non-null pointers, callers must provide the current logical size as
 `osize`. The allocator uses it to distinguish pooled from delegated pointers.
 
 `LUAJIT_USE_PAGEALLOC` is incompatible with `LUAJIT_USE_SYSMALLOC`. Allocators
-passed to `lua_newstate` bypass the front end.
+passed to `lua_newstate` bypass the front end. OpenMW passes its own allocator
+when `lua profiler = true`, so the front end is only active with the profiler
+off, which is OpenMW's default.
 
-Run the lifecycle smoke test with:
+Run the allocator tests with:
 
 ```bash
 perl t/pagealloc-lifecycle-smoke.t
+perl t/pagealloc-stress.t
 ```
 
 For rollback and teardown fault injection, rebuild with test hooks:
@@ -678,6 +702,7 @@ make clean && make \
 LUAJIT_TEST_PAGEALLOC=1 LUAJIT_TEST_PAGEALLOC_FAULTS=1 \
   perl t/pagealloc-lifecycle-smoke.t
 perl t/pagealloc-boundary.t
+perl t/pagealloc-stress.t
 ```
 
 [Back to TOC](#table-of-contents)
